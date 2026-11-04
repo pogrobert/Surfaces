@@ -1,0 +1,8 @@
+node_modules
+# Built by `pnpm build`.
+dist
+# The contact sheet, built by `pnpm sheet` (about 200 MB of SVGs).
+sheet
+.DS_Store
+*.log
+.env*

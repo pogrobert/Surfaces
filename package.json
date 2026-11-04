@@ -1,0 +1,72 @@
+{
+  "name": "@pogrobert/surfaces",
+  "version": "0.0.0",
+  "description": "Gorgeous covers and backgrounds generated from a seed.",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./png": {
+      "types": "./dist/png.d.ts",
+      "default": "./dist/png.js"
+    },
+    "./http": {
+      "types": "./dist/http.d.ts",
+      "default": "./dist/http.js"
+    },
+    "./dom": {
+      "types": "./dist/dom.d.ts",
+      "default": "./dist/dom.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "default": "./dist/react.js"
+    },
+    "./schema.json": "./dist/schema.json"
+  },
+  "files": [
+    "dist",
+    "AGENTS.md",
+    "README.md",
+    "llms.txt",
+    "docs/api.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/schema.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "pnpm build && node --test test/*.test.ts",
+    "golden": "UPDATE_GOLDEN=1 node --test test/determinism.test.ts",
+    "sheet": "pnpm build && node scripts/contact-sheet.ts",
+    "sheet:serve": "node scripts/serve-sheet.ts",
+    "studio": "pnpm build && node scripts/serve-sheet.ts",
+    "bench:motion": "pnpm build && node scripts/bench-motion.ts"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "2.6.2",
+    "@types/node": "^26.6.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "typescript": "^7.0.2"
+  },
+  "peerDependencies": {
+    "@resvg/resvg-js": ">=2.6.2",
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "@resvg/resvg-js": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
+  },
+  "sideEffects": false
+}

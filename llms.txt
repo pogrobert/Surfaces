@@ -1,0 +1,18 @@
+# @pogrobert/surfaces
+
+> Generative covers for posts, pages and OG images. One brand colour and a few words in, a finished cover out, the same bytes forever. Every option is a word from a fixed list; a wrong input throws an error that names the fix.
+
+Rules for writing code with it are in AGENTS.md. In short: `generate({ style, seed: page.slug, color: "#635bff", areas: [{ place: "bottom-left", size: "lg" }] })`, then `toHtml`, `toSvg` or `toPng` (from `/png`), or `<Surface>` (from `/react`).
+
+## Docs
+
+- [AGENTS.md](AGENTS.md): the rules, under 1 KB
+- [README.md](README.md): examples for React, OG images, DOM, SVG and HTTP
+- [docs/api.md](docs/api.md): the whole API and why each part is there
+
+## Reference
+
+- [dist/schema.json](dist/schema.json): the input as JSON Schema (also `inputSchema`)
+- `catalog`: every style with what it looks like, what it suits, its shapes and whether it takes a photo
+- `validate(input)`: every problem with an input, each with its fix, without drawing
+- `avatar({ style, seed, color })`: a round mark for a person, in one of `AVATAR_STYLES`; `<Avatar>` in React

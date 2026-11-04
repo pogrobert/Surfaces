@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "studio",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["scripts/serve-sheet.ts"],
+      "port": 4177
+    }
+  ]
+}
