@@ -256,7 +256,9 @@ test("no cover is blank, and none is all art", () => {
       assert.ok(spanned > 0.05, `${label(input)}: drawing spans ${spanned}`)
       continue
     }
-    const covered = coverage(scene)
+    // A dark marbled sheet's veins are the pale ink, where a light one's are
+    // the paper: open ground either way.
+    const covered = coverage(scene, 37, scene.style === "marbling" && input.theme === "dark" ? [scene.palette.ink] : [])
     assert.ok(covered > 0.05, `${label(input)}: ${covered} covered`)
     assert.ok(covered < 0.98, `${label(input)}: ${covered} covered`)
   }

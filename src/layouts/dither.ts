@@ -167,6 +167,9 @@ export function dither(frame: Frame, form: ToneForm, p: DitherParams): Art {
   const left = (w - cols * cell) / 2
   const top = (h - rows * cell) / 2
   const inset = cell * p.gap
+  // Cells that touch overlap a little, so no hairline of ground shows where
+  // their antialiased edges meet.
+  const bleed = inset > 0 ? 0 : 0.6
   // Two inks laid by the same screen: the lighter one for the middle tones, so
   // the dark one is kept for the shadows.
   // A moving cover keeps its cells in sixteen groups by their place in the
@@ -182,7 +185,7 @@ export function dither(frame: Frame, form: ToneForm, p: DitherParams): Art {
     const flush = (ink: 0 | 1, end: number) => {
       const start = runs[ink]!
       if (start < 0) return
-      ;(ink ? dark : light)[0]!.push(left + start * cell, top + row * cell, (end - start) * cell)
+      ;(ink ? dark : light)[0]!.push(left + start * cell, top + row * cell, (end - start) * cell + bleed)
       runs[ink] = -1
     }
     for (let col = 0; col < cols; col++) {
@@ -212,7 +215,7 @@ export function dither(frame: Frame, form: ToneForm, p: DitherParams): Art {
           ;(ink ? dark : light)[Math.floor(((threshold - 0.5) * GROUPS) / 64)]!.push(
             left + col * cell + inset / 2,
             top + row * cell + inset / 2,
-            cell - inset
+            cell - inset + bleed
           )
         }
         continue
@@ -227,7 +230,7 @@ export function dither(frame: Frame, form: ToneForm, p: DitherParams): Art {
     flush(1, cols)
   }
   const blocks = (points: number[]): Shape[] =>
-    points.length ? [{ type: "blocks", h: cell - inset, points }] : []
+    points.length ? [{ type: "blocks", h: cell - inset + bleed, points }] : []
   // The light ink prints first and the dark after it, each group popping on
   // in turn. Then now and again a group goes out for a moment, so the screen
   // flickers like a display. Each group is a layer of its own that the

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { catalog, describe, generate, toSvg, THEMES } from "../dist/index.js"
+import { catalog, describe, generate, toHtml, toSvg, THEMES } from "../dist/index.js"
 
 const COLORS = ["#635bff", "#f59e0b", "#0f766e", "#e11d48", "#111111", "#9ca3af"]
 
@@ -46,16 +46,20 @@ test("a labelled SVG is read out, an unlabelled one is hidden", () => {
 test("motion arrives once or keeps going, and is the same every time", () => {
   for (const { style } of catalog) {
     const input = { style, seed: "move", color: "#635bff" }
-    const still = toSvg(generate(input))
-    const initial = toSvg(generate({ ...input, motion: "once" }))
-    const always = toSvg(generate({ ...input, motion: "loop" }))
-    assert.equal(toSvg(generate({ ...input, motion: "loop" })), always)
+    const still = toHtml(generate(input))
+    const initial = toHtml(generate({ ...input, motion: "once" }))
+    const always = toHtml(generate({ ...input, motion: "loop" }))
+    assert.equal(toHtml(generate({ ...input, motion: "loop" })), always)
     assert.doesNotMatch(still, /@keyframes/)
     assert.doesNotMatch(initial, /infinite/, style)
-    for (const svg of [initial, always]) {
-      if (svg.includes("@keyframes")) {
-        assert.match(svg, /<style>@media \(prefers-reduced-motion:no-preference\)\{/, style)
+    for (const html of [initial, always]) {
+      if (html.includes("@keyframes")) {
+        assert.match(html, /@media \(prefers-reduced-motion:no-preference\)\{/, style)
       }
+    }
+    // An SVG goes where nothing can pause it, so it is still however asked.
+    for (const motion of ["once", "loop"] as const) {
+      assert.doesNotMatch(toSvg(generate({ ...input, motion })), /@keyframes/, `${style} ${motion}`)
     }
   }
   assert.throws(() => generate({ style: "riso", seed: 1, motion: "sometimes" as "none" }), /Unknown motion/)

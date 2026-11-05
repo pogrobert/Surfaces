@@ -639,11 +639,15 @@ function drawStipple(
   const still = layer.opacity !== undefined && layer.opacity < 1 ? ` opacity="${fraction(layer.opacity)}"` : ""
   const plate = `<g filter="url(#${id})"${still}>${inner.body.join("")}</g>`
   const { ink } = layer
-  // The finished plate moves whole, inside the ink's own placing.
+  // The finished plate moves whole, inside the ink's own placing. resvg
+  // (resvg-js 2.6.2) panics, taking the process with it, when an ink out of
+  // line by a fraction of a unit is drawn smaller than its own size: the
+  // filter's buffers round to different heights. A whole unit never shows.
+  const place = (value: number) => num(out.target === "resvg" ? Math.round(value) : value)
   const moved = moving(layer.motion, plate, prefix, out, 1, true, { base: layer.opacity ?? 1 })
   out.body.push(
     ink
-      ? `<g transform="translate(${num(ink.dx)} ${num(ink.dy)})"${out.unblend ? "" : ` style="mix-blend-mode:${ink.blend}"`}>${moved}</g>`
+      ? `<g transform="translate(${place(ink.dx)} ${place(ink.dy)})"${out.unblend ? "" : ` style="mix-blend-mode:${ink.blend}"`}>${moved}</g>`
       : moved
   )
 }
@@ -971,10 +975,12 @@ export function toSvg(scene: Scene, options: RenderOptions = {}) {
     }
     themes.push(...themeRules(scene, dark, prefix))
   }
-  // Motion only for readers who haven't asked for less of it.
-  const rules =
-    themes.join("") +
-    (out.css.length ? `@media (prefers-reduced-motion:no-preference){${out.css.join("")}}` : "")
+  // Still, always. An SVG in an <img> can't be paused by its page or rested
+  // off screen, and a browser draws the whole image again on every frame
+  // anything in it moves; a moving cover is toHtml's. What a loop draws over
+  // the still drawing waits at opacity 0, so leaving the rules out leaves the
+  // still drawing.
+  const rules = themes.join("")
   const style = rules ? `<style>${rules}</style>` : ""
 
   return (

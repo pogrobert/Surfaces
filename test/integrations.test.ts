@@ -32,6 +32,15 @@ test("every style, in both themes, exports a PNG at its own size", async () => {
   assert.deepEqual([...(await toPng(photo, { width: 320 })).subarray(0, 4)], PNG)
 })
 
+// An ink out of line by a fraction of a unit, drawn smaller than its scene,
+// once panicked resvg: these seeds did at these widths.
+test("a riso cover exports a PNG smaller than its own size", async () => {
+  for (const [seed, width] of [["pricing", 800], ["about-us", 800], ["changelog", 333], ["docs", 1000]] as const) {
+    const png = await toPng(generate({ style: "riso", seed, color: "#e4572e", areas: [{ place: "bottom-left", size: "lg" }] }), { width })
+    assert.equal(widthOf(png), width, seed)
+  }
+})
+
 test("the browser target is untouched by the resvg one", () => {
   const scene = generate({ style: "sfumato", seed: "target" })
   assert.match(toSvg(scene), /feDisplacementMap/)

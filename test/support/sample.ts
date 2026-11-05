@@ -249,7 +249,9 @@ export function worstTitleContrast(scene: Scene, steps = 14) {
 }
 
 // How much of the art differs from its own ground, sampled over the canvas.
-export function coverage(scene: Scene, steps = 37) {
+// `clear` names other colours that stand for open ground, as the pale veins
+// of a dark marbled sheet do.
+export function coverage(scene: Scene, steps = 37, clear: string[] = []) {
   const ground = scene.palette.ground
   let moved = 0
   for (let i = 0; i < steps; i++) {
@@ -263,7 +265,7 @@ export function coverage(scene: Scene, steps = 37) {
           (scene.size.h * (j + ((i * 0.381966) % 1))) / steps
         )
       )
-      if (contrast(here, ground) > 1.15) moved++
+      if ([ground, ...clear].every((open) => contrast(here, open) > 1.15)) moved++
     }
   }
   return moved / (steps * steps)

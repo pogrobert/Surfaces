@@ -1,6 +1,6 @@
-import { atan2, PI, sin, smoothstep, TAU } from "../core/math.ts"
+import { atan2, cos, PI, radians, sin, smoothstep, TAU } from "../core/math.ts"
 import type { Art, Frame } from "../core/recipe.ts"
-import type { Enter, Layer, Mark, Shapes } from "../core/scene.ts"
+import type { Enter, Layer, Mark, Motion, Shapes } from "../core/scene.ts"
 import { center, furthestAlong } from "./geometry.ts"
 import { lines } from "./lines.ts"
 import { clearing } from "./stage.ts"
@@ -157,10 +157,56 @@ export function fringe(frame: Frame, p: FringeParams): Art {
   // the way across themselves, along the edge rather than out of it, so
   // nothing travels toward the title on the way in.
   let moves: Art["moves"]
+  const turning = rng.fork("motion")
+  const way = turning.next() < 0.5 ? 1 : -1
+  // A second set of the same fringes lies over the first at part strength,
+  // turned a little about the middle of the fringes. Where the two sets cross
+  // they make the bands that give the style its name, wide where the turn is
+  // small. The turn is in the drawing itself, so it costs nothing. On a loop
+  // the second set comes up as it slides across its own lines and goes back
+  // again, so the bands sweep. It slides rather than turns: a browser moves a
+  // softened layer for nothing but redraws one that turns.
+  const across = { x: -away.y * p.spacing * way, y: away.x * p.spacing * way }
+  let sx = 0
+  let sy = 0
+  let count = 0
+  for (const shape of shapes) {
+    if (shape.type !== "ribbon") continue
+    for (let i = 0; i < shape.points.length; i += 3) {
+      sx += shape.points[i]!
+      sy += shape.points[i + 1]!
+      count++
+    }
+  }
+  const pivot = { x: sx / Math.max(count, 1), y: sy / Math.max(count, 1) }
+  const turn = radians(4 * way)
+  const ghostLines: Shapes = {
+    ...lineMark,
+    id: "ghost-lines",
+    shapes: shapes.map((shape) => {
+      if (shape.type !== "ribbon") return shape
+      const points = shape.points.slice()
+      for (let i = 0; i < points.length; i += 3) {
+        const dx = points[i]! - pivot.x
+        const dy = points[i + 1]! - pivot.y
+        points[i] = pivot.x + dx * cos(turn) - dy * sin(turn)
+        points[i + 1] = pivot.y + dx * sin(turn) + dy * cos(turn)
+      }
+      return { ...shape, points }
+    }),
+  }
+  const GHOST = 0.55
+  const ghost = (fine: Motion | undefined, motion: Motion | undefined): Layer => ({
+    kind: "clip",
+    id: "ghost",
+    shape: { type: "rect", x: 0, y: 0, w, h, radii: [0, 0, 0, 0] },
+    opacity: GHOST,
+    layers: [{ kind: "soften", id: "ghost-fine", radius: p.focus, layers: [ghostLines], ...(fine ? { motion: fine } : null) }],
+    ...(motion ? { motion } : null),
+  })
   const over: Layer[] = []
-  if (frame.motion !== "none") {
-    const turning = rng.fork("motion")
-    const way = turning.next() < 0.5 ? 1 : -1
+  if (frame.motion === "none") over.push(ghost(undefined, undefined))
+  else {
     const settle = p.spacing * 1.4 * way
     const enter: Enter = {
       kind: "fade",
@@ -171,53 +217,29 @@ export function fringe(frame: Frame, p: FringeParams): Art {
     }
     // Every loop keeps one clock, from the moment the fringes are in place.
     const settled = 2.6
-    if (frame.motion === "loop") {
-      // A second set of the same fringes, hidden in the still drawing, comes
-      // up as it slides across its own lines and goes again as it slides
-      // back. Where the two sets cross they make the bands that give the
-      // style its name, and the bands sweep as the copy moves. It slides
-      // rather than turns: a browser moves a softened layer for nothing but
-      // redraws one that turns.
+    // The second set arrives with the first.
+    if (frame.motion === "once") over.push(ghost({ enter }, undefined))
+    else {
       const period = 12
-      over.push({
-        kind: "clip",
-        id: "ghost",
-        shape: { type: "rect", x: 0, y: 0, w, h, radii: [0, 0, 0, 0] },
-        opacity: 0,
-        layers: [
+      over.push(
+        ghost(
+          { enter, loop: { kind: "drift", dx: across.x * 1.5, dy: across.y * 1.5, period, start: settled } },
           {
-            kind: "soften",
-            id: "ghost-fine",
-            radius: p.focus,
-            layers: [{ ...lineMark, id: "ghost-lines" }],
-            motion: {
-              loop: {
-                kind: "drift",
-                dx: -away.y * p.spacing * 1.5 * way,
-                dy: away.x * p.spacing * 1.5 * way,
-                period,
-                start: settled,
-              },
+            loop: {
+              kind: "fades",
+              points: [
+                [0, GHOST],
+                [0.25, 0.62],
+                [0.5, 0.85],
+                [0.75, 0.62],
+                [1, GHOST],
+              ],
+              period,
+              start: settled,
             },
-          },
-        ],
-        motion: {
-          loop: {
-            kind: "fades",
-            points: [
-              [0, 0],
-              [0.2, 0.25],
-              [0.35, 0.7],
-              [0.5, 0.85],
-              [0.65, 0.7],
-              [0.8, 0.25],
-              [1, 0],
-            ],
-            period,
-            start: settled,
-          },
-        },
-      })
+          }
+        )
+      )
     }
     moves = {
       plate: { enter: { kind: "fade", delay: 0, duration: 1.8 } },

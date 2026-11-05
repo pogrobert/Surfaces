@@ -355,7 +355,10 @@ export function marbling(frame: Frame, pattern: Pattern, p: MarblingParams): Art
     h: Math.min(bounds.y + bounds.h, h + margin) - Math.max(bounds.y, -margin) + drift * 2,
   }
 
-  const inks = marble(seen, unit, pattern, ramp, rng.fork("bath"), p)
+  // The veins are pale on a dark cover too: there the ground is the darkest
+  // tone, and its drops would print as holes, so they take the pale ink.
+  const veined = frame.theme === "dark" ? ramp.map((tone): Tone => (tone === "ground" ? "ink" : tone)) : ramp
+  const inks = marble(seen, unit, pattern, veined, rng.fork("bath"), p)
   const marks: Mark[] = [
     { kind: "shapes", id: "bath", paint: { type: "solid", tone: ramp.includes("ground") ? "quiet" : "ground", opacity: 1 }, shapes: [rect(seen)] },
     ...inks.map(

@@ -389,8 +389,11 @@ export function linework(frame: Frame, diagram: Diagram, p: LineworkParams): Art
     const rise = draw.between([0.35, 0.7])
     const f = draw.between([1.5, 3.2])
     const ph = draw.next() * TAU
-    const value = (u: number) =>
+    // Its readings run from -0.08 to 1.02 at the very most, fitted between
+    // the axis and the top of the chart so the line never crosses either.
+    const reading = (u: number) =>
       0.12 + rise * u + 0.14 * sin(u * f * TAU + ph) + 0.06 * sin(u * 11 + ph * 2)
+    const value = (u: number) => 0.04 + ((reading(u) + 0.08) * 0.92) / 1.1
     const points: Point[] = []
     for (let i = 0; i <= 120; i++) {
       const u = i / 120

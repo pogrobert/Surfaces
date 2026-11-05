@@ -28,6 +28,16 @@ export type ObjectParams = {
 
 type Placed = { outline: Shape; box: Box }
 
+// How much of its size an object seated at x, y keeps so its rim stays off
+// the canvas's edges. It shrinks about where it sits rather than moving,
+// which could take it toward the title, and never below most of its size.
+function fit(frame: Frame, x: number, y: number, bw: number, bh: number) {
+  const { w, h } = frame
+  const m = Math.min(w, h) * 0.03
+  const most = Math.min(1, (2 * (x - m)) / bw, (2 * (w - m - x)) / bw, (2 * (y - m)) / bh, (2 * (h - m - y)) / bh)
+  return Math.max(0.6, most)
+}
+
 function place(frame: Frame, shape: ObjectShape, size: number): Placed {
   const { w, h, keep } = frame
   const { area, away } = clearing(frame)
@@ -37,22 +47,27 @@ function place(frame: Frame, shape: ObjectShape, size: number): Placed {
     const long = Math.min(Math.max(area.w, area.h) * 0.8, unit * 1.7) * size
     const short = Math.min(long * 0.36, unit * 0.42)
     const flat = area.w >= area.h
-    const bw = flat ? long : short
-    const bh = flat ? short : long
-    const { x, y } = seat({ area, safe: keep, w, h, away }, Math.max(bw, bh) / 2)
+    const { x, y } = seat({ area, safe: keep, w, h, away }, Math.max(flat ? long : short, flat ? short : long) / 2)
+    const k = fit(frame, x, y, flat ? long : short, flat ? short : long)
+    const bw = (flat ? long : short) * k
+    const bh = (flat ? short : long) * k
     const box = { x: x - bw / 2, y: y - bh / 2, w: bw, h: bh }
     const round = Math.min(bw, bh) / 2
     return { box, outline: { type: "rect", ...box, radii: [round, round, round, round] } }
   }
   if (shape === "arch") {
-    const bw = unit * 0.56 * size
-    const bh = Math.min(bw * 1.45, area.h * 0.86)
-    const { x, y } = seat({ area, safe: keep, w, h, away }, Math.max(bw, bh) / 2)
+    const aw = unit * 0.56 * size
+    const ah = Math.min(aw * 1.45, area.h * 0.86)
+    const { x, y } = seat({ area, safe: keep, w, h, away }, Math.max(aw, ah) / 2)
+    const k = fit(frame, x, y, aw, ah)
+    const bw = aw * k
+    const bh = ah * k
     const box = { x: x - bw / 2, y: y - bh / 2, w: bw, h: bh }
     return { box, outline: { type: "rect", ...box, radii: [bw / 2, bw / 2, 0, 0] } }
   }
-  const r = unit * 0.42 * size
-  const { x, y } = seat({ area, safe: keep, w, h, away }, r)
+  const seated = unit * 0.42 * size
+  const { x, y } = seat({ area, safe: keep, w, h, away }, seated)
+  const r = seated * fit(frame, x, y, seated * 2, seated * 2)
   const box = { x: x - r, y: y - r, w: r * 2, h: r * 2 }
   if (shape === "ring") {
     return { box, outline: { type: "ring", cx: x, cy: y, r, inner: r * 0.56 } }
