@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Surfaces mockups</title>
+<link rel="preload" href="/fonts/atkinson-hyperlegible-next-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+  /* The portfolio's face, and Arial sized to its metrics while it loads,
+     so nothing moves when it arrives. */
+  @font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 200 800; font-display: swap; src: url(/fonts/atkinson-hyperlegible-next-latin-wght-normal.woff2) format("woff2"); }
+  @font-face { font-family: "Atkinson Fallback"; src: local("Arial"), local("Helvetica"); size-adjust: 98.6%; ascent-override: 99.4%; descent-override: 32.5%; line-gap-override: 0%; }
+  :root { --paper: #f4f5f2; --ink: #18203a; --quiet: #5b6478; --rule: #d9dcd6; --action: #0078bf; color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: var(--paper); color: var(--ink); font: 17px/1.5 "Atkinson Hyperlegible Next", "Atkinson Fallback", sans-serif; }
+  button, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
+  .art { position: relative; overflow: hidden; line-height: 0; }
+  .art > div { position: absolute; inset: 0; }
+
+  /* The address field: one piece, the button inside it. */
+  .field { display: flex; align-items: center; height: 58px; width: min(480px, 100%); background: #fff; border-radius: 15px; box-shadow: 0 0 0 1px rgb(24 32 58 / 0.14); padding: 6px 6px 6px 18px; gap: 8px; }
+  .field:focus-within { box-shadow: 0 0 0 2px var(--ink); }
+  .field .pre { color: var(--quiet); font-size: 17px; user-select: none; }
+  .field input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 18px; padding: 0; height: 100%; color: var(--ink); }
+  .field input::placeholder { color: #9aa1b0; }
+  .field button { height: 46px; border: 0; border-radius: 11px; padding: 0 18px; background: var(--ink); color: #fff; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .field.on-dark { background: #fff; box-shadow: none; }
+  .aside { font-size: 15px; color: var(--quiet); margin-top: 14px; }
+  .aside a { color: inherit; font-weight: 700; text-underline-offset: 3px; }
+</style>
+</head>
+<body>
+<main id="page"></main>
+<script type="module">
+import { createBrand, toHtml, toSvg, generate } from "/dist/index.js"
+
+const page = document.querySelector("#page")
+const v = Number(new URLSearchParams(location.search).get("v") ?? 1)
+const el = (tag, props = {}, ...children) => {
+  const node = Object.assign(document.createElement(tag), props)
+  node.append(...children)
+  return node
+}
+const field = (dark) => {
+  const form = el("form", { className: `field${dark ? " on-dark" : ""}`, onsubmit: (event) => event.preventDefault() })
+  form.append(el("span", { className: "pre", textContent: "https://" }), el("input", { placeholder: "yoursite.com", ariaLabel: "Your site's address" }), el("button", { textContent: "Make my set" }))
+  return form
+}
+const aside = () => {
+  const p = el("p", { className: "aside" }, "No site yet? ")
+  p.append(el("a", { href: "#", textContent: "Browse the styles" }))
+  return p
+}
+// A drawing filling an element of its own shape.
+const art = (scene, style = {}) => {
+  const box = el("div", { className: "art" })
+  Object.assign(box.style, { aspectRatio: `${scene.output.w} / ${scene.output.h}`, ...style })
+  const inner = el("div")
+  inner.innerHTML = toHtml(scene, { fill: true })
+  box.append(inner)
+  return box
+}
+const svgUrl = (scene) => `url("data:image/svg+xml,${encodeURIComponent(toSvg(scene))}")`
+const BRANDS = [
+  { name: "harbour.dev", style: "screenprint", color: "#0078bf" },
+  { name: "fernhouse.co", style: "stencil", color: "#00838a" },
+  { name: "quietpages.org", style: "engraving", color: "#3d5588" },
+  { name: "ottoloop.fm", style: "riso", color: "#f15060" },
+  { name: "pantry.app", style: "halftone", color: "#ff6c2f" },
+  { name: "longfield.press", style: "marbling", color: "#00a95c" },
+].map((look) => createBrand(look))
+const TITLE = "How we cut our build times in half"
+const css = (text) => document.head.append(el("style", { textContent: text }))
+
+const DESIGNS = {
+  // The name itself, printed: the art seen through the letters.
+  1() {
+    css(`.v1 { min-height: 100vh; display: grid; place-content: center; justify-items: center; text-align: center; padding: 24px; }
+      .v1 h1 { margin: 0; font-size: clamp(90px, 17vw, 260px); line-height: 0.9; letter-spacing: -0.06em; font-weight: 800; color: transparent; -webkit-background-clip: text; background-clip: text; padding: 0 0.04em 0.08em; }
+      .v1 p.line { margin: 18px 0 30px; font-size: 22px; color: var(--quiet); }`)
+    const scene = generate({ ...BRANDS[5].input("card", { id: "letters" }), width: 1800, height: 700 })
+    const h1 = el("h1", { textContent: "Surfaces" })
+    // The drawing's middle, large, so every letter is full of it.
+    Object.assign(h1.style, { backgroundImage: svgUrl(scene), backgroundSize: "230% auto", backgroundPosition: "50% 50%" })
+    page.append(el("section", { className: "v1" }, h1, el("p", { className: "line", textContent: "Covers and link previews, printed in your site's own look." }), field(), aside()))
+  },
+
+  // What it makes, where it is seen: a shared link.
+  2() {
+    css(`.v2 { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: center; gap: 72px; padding: 48px 7vw; }
+      .v2 h1 { margin: 0 0 6px; font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
+      .v2 h2 { margin: 0 0 30px; font-size: clamp(40px, 4.6vw, 68px); line-height: 1.02; letter-spacing: -0.035em; font-weight: 750; max-width: 12ch; }
+      .post { background: #fff; border-radius: 22px; padding: 22px; box-shadow: 0 0 0 1px var(--rule); max-width: 620px; }
+      .post .who { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+      .post .face { width: 44px; height: 44px; border-radius: 50%; }
+      .post .who b { display: block; line-height: 1.2; } .post .who span { color: var(--quiet); font-size: 15px; }
+      .post p { margin: 0 0 14px; }
+      .post .card { border-radius: 16px; overflow: hidden; box-shadow: 0 0 0 1px var(--rule); }
+      .post .card .meta { padding: 10px 14px 12px; font-size: 15px; } .post .card .meta span { color: var(--quiet); display: block; }`)
+    const brand = BRANDS[0]
+    const face = art(brand.avatar("ada"), { borderRadius: "50%", width: "44px", height: "44px", flex: "none" })
+    const who = el("div", { className: "who" }, face, el("div", {}, el("b", { textContent: "Ada at Harbour" }), el("span", { textContent: "@harbourdev" })))
+    const card = el("div", { className: "card" }, art(brand.og({ title: TITLE })), el("div", { className: "meta" }, el("span", { textContent: "harbour.dev" }), "How we cut our build times in half"))
+    const post = el("article", { className: "post" }, who, el("p", { textContent: "We wrote up how the new cache works." }), card)
+    page.append(el("section", { className: "v2" }, el("div", {}, el("h1", { textContent: "Surfaces" }), el("h2", { textContent: "Every link you share, in your own look." }), field(), aside()), post))
+  },
+
+  // A studio's wall of proofs, with the ask on a slip of paper in front.
+  3() {
+    css(`.v3 { position: relative; height: 100vh; overflow: hidden; }
+      .wall { position: absolute; inset: -40px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; transform: rotate(-4deg) scale(1.08); }
+      .slip { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: var(--paper); padding: 40px 44px 34px; border-radius: 4px; text-align: center; width: min(600px, calc(100% - 32px)); box-shadow: 0 30px 60px -30px rgb(0 0 0 / 0.45); }
+      .slip h1 { margin: 0; font-size: 58px; letter-spacing: -0.045em; line-height: 1; }
+      .slip p.line { margin: 10px 0 26px; color: var(--quiet); font-size: 19px; }
+      .slip .field { margin: 0 auto; }`)
+    const wall = el("div", { className: "wall" })
+    for (let i = 0; i < 30; i++) {
+      const brand = BRANDS[i % BRANDS.length]
+      wall.append(art(brand.cover({ id: `wall-${i}` })))
+    }
+    page.append(el("section", { className: "v3" }, wall, el("div", { className: "slip" }, el("h1", { textContent: "Surfaces" }), el("p", { className: "line", textContent: "Art for your covers and link previews, drawn from your site." }), field(), aside())))
+  },
+
+  // The idea in one look: one title, six sites, six looks.
+  4() {
+    css(`.v4 { min-height: 100vh; padding: 12vh 0 40px; text-align: center; overflow: hidden; }
+      .v4 h1 { margin: 0; font-size: 26px; font-weight: 800; }
+      .v4 h2 { margin: 10px auto 30px; font-size: clamp(40px, 4.8vw, 72px); letter-spacing: -0.04em; line-height: 1.02; font-weight: 750; }
+      .v4 .field { margin: 0 auto; }
+      .row { display: flex; gap: 20px; margin-top: 64px; width: max-content; transform: translateX(calc(50vw - 50%)); }
+      .row figure { margin: 0; width: 380px; text-align: left; }
+      .row figcaption { font-size: 15px; color: var(--quiet); margin-top: 8px; }
+      .row .art { border-radius: 10px; }`)
+    const row = el("div", { className: "row" })
+    for (const brand of BRANDS) row.append(el("figure", {}, art(brand.og({ title: TITLE })), el("figcaption", { textContent: brand.name })))
+    page.append(el("section", { className: "v4" }, el("h1", { textContent: "Surfaces" }), el("h2", { innerHTML: "One title. Six sites.<br>Six looks." }), field(), row))
+  },
+
+  // A poster: the page is one print, the name set big at its foot.
+  5() {
+    css(`.v5 { position: relative; height: 100vh; overflow: hidden; }
+      .v5 > .art { position: absolute; inset: 0; aspect-ratio: auto !important; }
+      .v5 .foot { position: absolute; left: 6vw; right: 6vw; bottom: 7vh; display: flex; justify-content: space-between; align-items: end; gap: 40px; }
+      .v5 h1 { margin: 0; font-size: clamp(90px, 13vw, 210px); line-height: 0.82; letter-spacing: -0.065em; font-weight: 800; }
+      .v5 .ask { width: min(480px, 40vw); }
+      .v5 .ask p { margin: 0 0 16px; font-size: 21px; line-height: 1.35; }
+      .v5 .corner { position: absolute; top: 28px; left: 6vw; font-size: 15px; }`)
+    const brand = createBrand({ name: "surfaces", style: "riso", color: "#f15060" })
+    const { areas, ...input } = brand.input("hero", { id: "poster" })
+    const scene = generate({ ...input, motion: "none", width: innerWidth, height: innerHeight, areas: [{ box: { x: 0.05, y: 0.62, w: 0.5, h: 0.32 } }, { box: { x: 0.6, y: 0.7, w: 0.35, h: 0.24 } }] })
+    const ask = el("div", { className: "ask" }, el("p", { textContent: "Covers, link previews and headers for your site, printed in its own colours." }), field())
+    page.append(el("section", { className: "v5" }, art(scene), el("p", { className: "corner", innerHTML: "Drawn in code<br>The same on every build" }), el("div", { className: "foot" }, el("h1", { textContent: "Surfaces" }), ask)))
+    page.querySelector(".v5").style.color = scene.ink
+  },
+
+  // The set, laid out like proofs beside the ask.
+  6() {
+    css(`.v6 { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); }
+      .v6 .left { padding: 14vh 5vw 40px 7vw; }
+      .v6 h1 { margin: 0 0 22px; font-size: clamp(56px, 6.4vw, 96px); letter-spacing: -0.05em; line-height: 0.95; font-weight: 800; }
+      .v6 .line { margin: 0 0 32px; font-size: 21px; max-width: 30ch; color: var(--quiet); }
+      .v6 dl { margin: 48px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 8px 18px; font-size: 16px; max-width: 460px; }
+      .v6 dt { font-weight: 700; } .v6 dd { margin: 0; color: var(--quiet); }
+      .v6 .right { background: #e9ebe6; padding: 9vh 5vw; display: grid; gap: 18px; align-content: center; }
+      .v6 .right .art { border-radius: 8px; box-shadow: 0 1px 0 rgb(0 0 0 / 0.04), 0 18px 40px -24px rgb(0 0 0 / 0.35); }
+      .v6 .faces { display: flex; gap: 10px; } .v6 .faces .art { width: 52px; border-radius: 50%; box-shadow: none; }`)
+    const brand = BRANDS[1]
+    const dl = el("dl")
+    for (const [term, text] of [["Reads", "your colours, type and logo"], ["Draws", "in code, never an image model"], ["Keeps", "the same picture on every build"]]) dl.append(el("dt", { textContent: term }), el("dd", { textContent: text }))
+    const faces = el("div", { className: "faces" }, ...["ada", "grace", "linus", "hedy", "alan"].map((person) => art(brand.avatar(person))))
+    page.append(el("section", { className: "v6" },
+      el("div", { className: "left" }, el("h1", { textContent: "Surfaces" }), el("p", { className: "line", textContent: "Your site's covers, link previews and headers, in its own look." }), field(), aside(), dl),
+      el("div", { className: "right" }, art(brand.og({ title: TITLE })), art(brand.banner({ for: "x" })), faces)))
+  },
+
+  // Dark ink, an engraver's plate across the right.
+  7() {
+    css(`body { background: #121a30; color: #eef1f7; }
+      .v7 { position: relative; height: 100vh; overflow: hidden; }
+      .v7 > .art { position: absolute; right: -6vw; top: 0; height: 100%; aspect-ratio: auto !important; width: 70vw; }
+      .v7 .words { position: relative; padding: 24vh 0 0 7vw; max-width: 640px; }
+      .v7 h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 0.01em; color: #9fb4e8; }
+      .v7 h2 { margin: 14px 0 34px; font-size: clamp(44px, 5vw, 76px); line-height: 1.02; letter-spacing: -0.04em; font-weight: 750; }
+      .v7 .aside { color: #a8b1c6; }`)
+    const brand = createBrand({ name: "surfaces", style: "engraving", color: "#9fb4e8", theme: "dark" })
+    const { areas, ...input } = brand.input("card", { id: "plate" })
+    const scene = generate({ ...input, width: 1000, height: 900 })
+    document.body.style.background = scene.palette.ground
+    page.append(el("section", { className: "v7" }, art(scene), el("div", { className: "words" }, el("h1", { textContent: "Surfaces" }), el("h2", { textContent: "Link previews that look like you made them." }), field(true), aside())))
+  },
+
+  // Quiet: a single mark, the name, the ask, and a strip of covers below.
+  8() {
+    css(`.v8 { min-height: 100vh; display: grid; grid-template-rows: 1fr auto; }
+      .v8 .top { display: grid; place-content: center; justify-items: center; text-align: center; padding: 40px 24px; }
+      .v8 .mark { width: 120px; border-radius: 28px; margin-bottom: 28px; }
+      .v8 h1 { margin: 0; font-size: 64px; letter-spacing: -0.05em; line-height: 1; font-weight: 800; }
+      .v8 .line { margin: 12px 0 30px; font-size: 21px; color: var(--quiet); max-width: 34ch; }
+      .v8 .strip { display: flex; gap: 12px; padding: 0 0 28px; overflow: hidden; justify-content: center; }
+      .v8 .strip .art { width: 220px; flex: none; border-radius: 8px; }`)
+    const mark = art(createBrand({ name: "surfaces", style: "stencil", color: "#00838a" }).avatar("surfaces", { square: true }))
+    mark.className += " mark"
+    const strip = el("div", { className: "strip" }, ...[...BRANDS, ...BRANDS].slice(0, 8).map((brand, i) => art(brand.card({ id: `strip-${i}` }))))
+    page.append(el("section", { className: "v8" }, el("div", { className: "top" }, mark, el("h1", { textContent: "Surfaces" }), el("p", { className: "line", textContent: "Covers and link previews in your site's own look, ready in a minute." }), field(), aside()), strip))
+  },
+}
+
+await document.fonts.ready
+DESIGNS[v]?.()
+</script>
+</body>
+</html>

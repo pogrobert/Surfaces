@@ -50,6 +50,7 @@
     "node": ">=24"
   },
   "devDependencies": {
+    "@fontsource-variable/atkinson-hyperlegible-next": "^5.3.0",
     "@fontsource/fraunces": "^5.3.0",
     "@fontsource/inter": "^5.3.0",
     "@resvg/resvg-js": "2.6.2",
@@ -63,8 +64,8 @@
   },
   "peerDependencies": {
     "@resvg/resvg-js": ">=2.6.2",
-    "react": ">=18",
-    "@resvg/resvg-wasm": ">=2.6.2"
+    "@resvg/resvg-wasm": ">=2.6.2",
+    "react": ">=18"
   },
   "peerDependenciesMeta": {
     "@resvg/resvg-js": {
