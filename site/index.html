@@ -40,19 +40,31 @@
      marks are drawn. */
   .hero { position: relative; overflow: hidden; height: max(100svh, 560px); }
   .marks { position: absolute; inset: 0; }
-  .marks .mark { position: absolute; line-height: 0; overflow: hidden; }
+  /* Each mark at its spot, its size scaled from a 1440-wide window. */
+  .marks .mark { position: absolute; left: var(--x); top: var(--y); width: clamp(calc(var(--s) * 0.62px), calc(var(--s) * 100vw / 1440), calc(var(--s) * 1.15px)); aspect-ratio: 1; transform: translate(-50%, -50%) rotate(var(--r)); line-height: 0; overflow: hidden; }
+  .marks .mark.over { visibility: hidden; }
+  @media (max-width: 760px) { .marks .mark.mid { display: none; } }
   .marks .mark > div { position: absolute; inset: 0; }
   .pitch { position: absolute; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, calc(100% - 32px)); text-align: center; display: grid; justify-items: center; }
   .pitch h1 { margin: 0; font-size: clamp(56px, 7vw, 104px); line-height: 0.95; letter-spacing: -0.05em; font-weight: 800; }
   .pitch p { margin: 14px 0 28px; max-width: 34ch; font-size: 21px; line-height: 1.4; color: var(--quiet); text-wrap: balance; }
   /* The address: one piece, the button inside it. */
-  .ask { display: flex; align-items: center; height: 58px; width: min(480px, 100%); background: var(--sheet); border-radius: 15px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 14%, transparent); padding: 6px 6px 6px 18px; gap: 8px; }
+  .ask { position: relative; display: flex; align-items: center; height: 58px; width: min(480px, 100%); background: var(--sheet); border-radius: 15px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 14%, transparent); padding: 6px 6px 6px 18px; gap: 8px; }
   .ask:focus-within { box-shadow: 0 0 0 2px var(--ink); }
   .ask .pre { color: var(--quiet); font-size: 17px; user-select: none; }
   .ask input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 18px; padding: 0; height: 100%; }
   .ask input::placeholder { color: color-mix(in srgb, var(--quiet) 70%, transparent); }
   .ask button { height: 46px; border: 0; border-radius: 11px; padding: 0 18px; background: var(--ink); color: var(--paper); font-weight: 700; cursor: pointer; white-space: nowrap; }
   .ask button:disabled { opacity: 0.6; cursor: progress; }
+  /* Sites for what is typed, under the field. */
+  .suggest { position: absolute; left: 0; right: 0; top: calc(100% + 8px); z-index: 3; margin: 0; padding: 6px; list-style: none; text-align: left; background: var(--sheet); border-radius: 14px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 14%, transparent), 0 18px 40px -24px rgb(0 0 0 / 0.35); }
+  .suggest[hidden] { display: none; }
+  .suggest li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 9px; cursor: pointer; font-size: 16px; }
+  .suggest .icon { width: 22px; height: 22px; border-radius: 5px; object-fit: contain; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: var(--quiet); background: color-mix(in srgb, var(--ink) 7%, transparent); }
+  .suggest img.icon { background: none; }
+  .suggest li[aria-selected="true"], .suggest li:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+  .suggest b { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .suggest span { color: var(--quiet); white-space: nowrap; }
   .pitch .or { margin: 14px 0 0; font-size: 15px; }
   .link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font-weight: 700; }
   .pitch .status { min-height: 1.5em; margin: 8px 0 0; font-size: 15px; }
@@ -120,13 +132,28 @@
     <form class="ask" id="ask">
       <span class="pre" aria-hidden="true">https://</span>
       <label class="sr" for="url">Your site's address</label>
-      <input id="url" type="text" inputmode="url" autocomplete="url" spellcheck="false" placeholder="yoursite.com">
+      <input id="url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="yoursite.com" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggest">
       <button id="go" type="submit">Make my set</button>
+      <ul class="suggest" id="suggest" role="listbox" aria-label="Sites" hidden></ul>
     </form>
     <p class="or">No site yet? <button class="link" type="button" id="browse">Browse the styles</button></p>
     <p class="status" id="status" role="status" aria-live="polite"></p>
   </div>
 </section>
+
+<script>
+  // Any mark that would touch the words is left out, before the first paint
+  // and whenever the window changes shape.
+  function clearWords() {
+    const words = document.getElementById("pitch").getBoundingClientRect()
+    for (const mark of document.querySelectorAll("#marks .mark")) {
+      const box = mark.getBoundingClientRect()
+      mark.classList.toggle("over", box.left < words.right + 28 && words.left - 28 < box.right && box.top < words.bottom + 28 && words.top - 28 < box.bottom)
+    }
+  }
+  clearWords()
+  addEventListener("resize", clearWords)
+</script>
 
 <main class="work" id="work" hidden>
   <aside class="controls" aria-label="Choices">
@@ -207,68 +234,128 @@
 <script type="module">
 import { createBrand, directions, readPage, toHtml, catalog } from "/dist/index.js"
 import { toPngInBrowser } from "/dist/png.js"
+import { marks } from "/marks.js"
 
 const $ = (selector) => document.querySelector(selector)
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i
 const STYLES = catalog.map((entry) => entry.style)
 const NAMES = Object.fromEntries(catalog.map((entry) => [entry.style, entry.style[0].toUpperCase() + entry.style.slice(1)]))
 const PEOPLE = ["ada", "grace", "linus", "margaret", "alan", "hedy"]
-// Sites like yours, whose marks the hero shows until yours is read.
-const SAMPLES = [
-  { name: "harbour.dev", style: "screenprint", color: "#0078bf" },
-  { name: "fernhouse.co", style: "stencil", color: "#00838a" },
-  { name: "quietpages.org", style: "engraving", color: "#3d5588" },
-  { name: "ottoloop.fm", style: "riso", color: "#f15060" },
-  { name: "pantry.app", style: "halftone", color: "#ff6c2f" },
-  { name: "longfield.press", style: "marbling", color: "#00a95c" },
-]
-
 // What the page knows: the site's facts once read, its logo, and what the
 // person has chosen over the brand's own pick.
 const state = { name: "yoursite.com", facts: {}, logo: undefined, logoUrl: "", read: false, chosen: {}, title: "", every: false }
 
 // ---- The hero: marks round the words ----
 
-let heroBrands = SAMPLES
-// Where the marks go, in shares of the hero: a loose ring round the middle.
-// Any that would touch the words, as on a narrow screen, is left out.
-const SPOTS = [[8, 12], [24, 6], [44, 9], [66, 5], [86, 10], [93, 34], [88, 62], [90, 86], [70, 90], [50, 88], [30, 92], [10, 84], [5, 58], [9, 34], [76, 28], [20, 30], [80, 74], [18, 66]]
-function drawHero() {
-  const hero = $("#hero")
-  const width = hero.clientWidth
-  // Not laid out yet, as in a tab opened behind another: drawn once it is.
-  if (!width || !window.innerHeight) return requestAnimationFrame(drawHero)
-  // The whole window until there is work below it; then most of it, so the
-  // work shows it is there.
-  if (!$("#work").hidden) hero.style.height = `${Math.max(Math.round(window.innerHeight * 0.9), $("#pitch").offsetHeight + 280, 560)}px`
-  const height = hero.clientHeight
-  const base = hero.getBoundingClientRect()
-  const words = $("#pitch").getBoundingClientRect()
-  const clear = { x: words.left - base.left - 28, y: words.top - base.top - 28, w: words.width + 56, h: words.height + 56 }
-  const scale = Math.min(Math.max(width / 1440, 0.62), 1.15)
-  const brands = heroBrands.map((choices) => createBrand(choices))
-  const marks = []
-  SPOTS.forEach(([sx, sy], i) => {
-    const size = Math.round((70 + ((i * 37) % 80)) * scale)
-    const x = (sx / 100) * width - size / 2
-    const y = (sy / 100) * height - size / 2
-    if (x < clear.x + clear.w && clear.x < x + size && y < clear.y + clear.h && clear.y < y + size) return
-    const brand = brands[i % brands.length]
-    const square = i % 3 === 0
-    const mark = document.createElement("div")
-    mark.className = "mark"
-    Object.assign(mark.style, { left: `${x}px`, top: `${y}px`, width: `${size}px`, height: `${size}px`, borderRadius: square ? "22%" : "50%", transform: `rotate(${((i * 53) % 40) - 20}deg)` })
-    const art = document.createElement("div")
-    art.innerHTML = toHtml(brand.avatar(`mark-${i}`, { square }), { fill: true })
-    mark.append(art)
-    marks.push(mark)
-  })
-  $("#marks").replaceChildren(...marks)
+// The first marks come drawn into the page; these are a site's own, once
+// one is read, drawn again only when its look changes.
+let shown = ""
+function drawHero(looks) {
+  const key = JSON.stringify(looks)
+  if (key === shown) return
+  shown = key
+  $("#marks").innerHTML = marks(looks, createBrand, toHtml)
+  clearWords()
 }
-let resizing
-window.addEventListener("resize", () => {
-  clearTimeout(resizing)
-  resizing = setTimeout(drawHero, 160)
+
+// ---- Suggestions as the address is typed ----
+
+// Sites read here before come first, then sites whose names match.
+const RECENT = "surfaces:recent"
+const recent = () => {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT) ?? "[]")
+  } catch {
+    return []
+  }
+}
+const remember = (domain) => {
+  try {
+    localStorage.setItem(RECENT, JSON.stringify([domain, ...recent().filter((other) => other !== domain)].slice(0, 6)))
+  } catch {}
+}
+const suggestions = { list: [], active: -1, asked: 0, waiting: 0 }
+function showSuggestions(list) {
+  suggestions.list = list
+  suggestions.active = -1
+  renderSuggestions()
+}
+function renderSuggestions() {
+  const { list, active } = suggestions
+  $("#suggest").replaceChildren(
+    ...list.map((site, index) => {
+      const item = document.createElement("li")
+      item.id = `suggest-${index}`
+      item.setAttribute("role", "option")
+      item.setAttribute("aria-selected", String(index === active))
+      // The site's favicon, or its first letter where it has none.
+      const icon = document.createElement("img")
+      icon.className = "icon"
+      icon.alt = ""
+      icon.src = `/icon?domain=${encodeURIComponent(site.domain)}`
+      icon.addEventListener("error", () => {
+        const letter = document.createElement("span")
+        letter.className = "icon"
+        letter.textContent = site.name.trim()[0]?.toUpperCase() ?? ""
+        icon.replaceWith(letter)
+      })
+      const name = document.createElement("b")
+      name.textContent = site.name
+      const domain = document.createElement("span")
+      domain.textContent = site.recent ? "read before" : site.domain
+      item.append(icon, name, domain)
+      // Down, not click, so the field doesn't lose focus and close the list first.
+      item.addEventListener("mousedown", (event) => {
+        event.preventDefault()
+        pick(site.domain)
+      })
+      return item
+    })
+  )
+  $("#suggest").hidden = !list.length
+  $("#url").setAttribute("aria-expanded", String(list.length > 0))
+  if (active >= 0) $("#url").setAttribute("aria-activedescendant", `suggest-${active}`)
+  else $("#url").removeAttribute("aria-activedescendant")
+}
+function pick(domain) {
+  $("#url").value = domain
+  showSuggestions([])
+  $("#ask").requestSubmit()
+}
+function suggestFor(typed) {
+  clearTimeout(suggestions.waiting)
+  const query = typed.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "")
+  const mine = recent().filter((domain) => domain.startsWith(query)).map((domain) => ({ name: domain, domain, recent: true }))
+  if (query.length < 2) return showSuggestions(mine)
+  showSuggestions(mine)
+  suggestions.waiting = setTimeout(async () => {
+    const asked = ++suggestions.asked
+    const found = await fetch(`/suggest?q=${encodeURIComponent(query)}`).then((response) => response.json()).catch(() => [])
+    // A slower answer to an earlier query never replaces a newer one.
+    if (asked !== suggestions.asked || $("#url").value.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "") !== query) return
+    const seen = new Set(mine.map((site) => site.domain))
+    showSuggestions([...mine, ...found.filter((site) => !seen.has(site.domain))].slice(0, 6))
+  }, 140)
+}
+$("#url").addEventListener("input", () => suggestFor($("#url").value))
+$("#url").addEventListener("focus", () => suggestFor($("#url").value))
+$("#url").addEventListener("blur", () => showSuggestions([]))
+$("#url").addEventListener("keydown", (event) => {
+  const { list, active } = suggestions
+  if (event.key === "ArrowDown" && list.length) {
+    event.preventDefault()
+    suggestions.active = (active + 1) % list.length
+    renderSuggestions()
+  } else if (event.key === "ArrowUp" && list.length) {
+    event.preventDefault()
+    suggestions.active = active <= 0 ? list.length - 1 : active - 1
+    renderSuggestions()
+  } else if (event.key === "Enter" && active >= 0) {
+    event.preventDefault()
+    pick(list[active].domain)
+  } else if (event.key === "Escape") {
+    showSuggestions([])
+  }
 })
 
 // ---- Reading a site ----
@@ -296,6 +383,7 @@ $("#ask").addEventListener("submit", async (event) => {
     setLogo(site.logo?.svg ?? (site.logo?.png ? { data: bytes(site.logo.png), type: "image/png" } : undefined))
     state.title = firstTitle(state.facts.words) ?? "How we cut our build times in half"
     const found = [state.facts.colors?.length && "its colours", state.facts.fonts && "its type", site.logo && "its logo"].filter(Boolean)
+    remember(site.name)
     say(found.length ? `Read ${list(found)} from ${site.name}.` : `${site.name} shows little before its scripts run, so the choices below are ours.`)
     open()
   } catch (error) {
@@ -350,8 +438,7 @@ function draw() {
     return
   }
   // The hero repaints in the brand: the page becomes the site's own.
-  heroBrands = [{ name: brand.name, ...brand.look }]
-  drawHero()
+  drawHero([{ name: brand.name, ...brand.look }])
   drawControls(brand)
   drawSheet(brand)
 }
@@ -542,8 +629,6 @@ $("#logoNone").addEventListener("click", () => {
 })
 $("#copy").addEventListener("click", () => navigator.clipboard?.writeText($("#code").textContent))
 
-await document.fonts.ready
-drawHero()
 </script>
 </body>
 </html>
