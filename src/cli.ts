@@ -15,6 +15,7 @@ import { readProject } from "./project.ts"
 import type { Project } from "./project.ts"
 import { rasterize } from "./raster.ts"
 import { outlinePath } from "./render/glyphs.ts"
+import { encodeIco } from "./render/ico.ts"
 import { encodeJpeg } from "./render/jpeg.ts"
 import { toSvg } from "./render/svg.ts"
 
@@ -32,6 +33,7 @@ const HELP = `Usage: surfaces <command> [options]
 
   init         Read this site, choose its look, write the brand and wire it in
   directions   Draw a board of looks for this site, to choose from
+  kit          Write the brand's icons, link preview and headers into the public folder
   preview      Draw the brand's covers as images, to look at
   check        Say whether the brand's covers hold, and why not
 
@@ -42,7 +44,8 @@ Options
   --use <use>         post, card, hero, og, x, linkedin, email or icon (preview, check; default og)
   --brand <file>      The brand module (default: surfaces.ts beside the source)
   --out <path>        Where images go (default .surfaces/)
-  --dry-run           Say what init would write, and write nothing
+  --force             Let kit replace files that are there already
+  --dry-run           Say what init or kit would write, and write nothing
 `
 
 type Args = { command: string; flags: Map<string, string[]> }
@@ -54,7 +57,7 @@ function parse(argv: string[]): Args {
     const arg = rest[i]!
     if (!arg.startsWith("--")) throw new Error(`Unexpected "${arg}". ${HELP}`)
     const name = arg.slice(2)
-    const value = name === "dry-run" ? "true" : rest[++i]
+    const value = name === "dry-run" || name === "force" ? "true" : rest[++i]
     if (value === undefined) throw new Error(`"--${name}" needs a value`)
     flags.set(name, [...(flags.get(name) ?? []), value])
   }
@@ -361,6 +364,117 @@ export const brand = createBrand(look)
   log(`  Look at the result: npx @pogrobert/surfaces preview --title "A real post title"`)
 }
 
+// What the site's shell already points at: its icons, its apple-touch-icon,
+// its link preview and its manifest, from <link> and <meta> tags or the
+// objects frameworks write them as.
+function references(project: Project, publicDir: string) {
+  const found: { icon?: string; svg?: string; apple?: string; og?: string; manifest?: { src: string; size: number }[] } = {}
+  for (const chunk of project.html.match(/<link\b[^>]*>|<meta\b[^>]*>|\{[^{}]*\}/g) ?? []) {
+    const value = (key: string) => chunk.match(new RegExp(String.raw`\b${key}\s*[:=]\s*["'\`]([^"'\`]+)["'\`]`))?.[1]
+    const rel = value("rel")
+    const href = value("href")
+    if (rel && href) {
+      if (/apple-touch-icon/.test(rel)) found.apple ??= href
+      else if (/\bicon\b/.test(rel) && /\.svg(\?|$)/.test(href)) found.svg ??= href
+      else if (/\bicon\b/.test(rel)) found.icon ??= href
+    }
+    if (/og:image["'\s]/.test(chunk) && !/og:image:/.test(chunk)) found.og ??= value("content")
+  }
+  for (const file of ["manifest.webmanifest", "site.webmanifest", "manifest.json"]) {
+    const path = join(project.root, publicDir, file)
+    if (!existsSync(path)) continue
+    try {
+      const icons = (JSON.parse(readFileSync(path, "utf8")).icons ?? []) as { src?: string; sizes?: string }[]
+      found.manifest = icons.flatMap((icon) => {
+        const size = Number(icon.sizes?.split(/\s+/)[0]?.split("x")[0])
+        return icon.src && /\.png(\?|$)/.test(icon.src) && size ? [{ src: icon.src, size }] : []
+      })
+    } catch {}
+    break
+  }
+  return found
+}
+
+// A path a page links to, as the file in the public folder that serves it;
+// nothing for one on another host.
+function served(publicDir: string, url: string | undefined, name: string) {
+  if (!url) return undefined
+  const match = url.match(/^https?:\/\/(?:www\.)?([^/]+)(\/[^?#]*)/)
+  if (match && name && match[1] !== name.replace(/^www\./, "")) return undefined
+  const path = (match ? match[2]! : url).split(/[?#]/)[0]!
+  return path.startsWith("/") ? join(publicDir, path.slice(1)) : undefined
+}
+
+async function kitCommand(root: string, args: Args, log: (line: string) => void) {
+  const dry = Boolean(one(args, "dry-run"))
+  const force = Boolean(one(args, "force"))
+  const project = readProject(root)
+  const brand = createBrand(readLook(brandFile(project, args)))
+  const publicDir = one(args, "out") ?? (project.framework === "sveltekit" ? "static" : "public")
+  const facts = factsOf(project)
+  const title = one(args, "title") ?? facts.words?.split(/[.·|–—]/)[0]?.trim() ?? brand.name
+  const has = references(project, publicDir)
+  // The site's own pictures all carry one mark, the icon's, as a studio's
+  // would; a post's covers each draw their own.
+  const mark = brand.look.shape ?? (brand.icon().style === brand.look.style ? brand.icon().shape : undefined)
+  const look = { ...brand.look, ...(mark ? { shape: mark } : null) }
+  // Pictures have one theme; a brand that follows the reader shows its light
+  // side in them, and its SVG favicon follows the reader still.
+  const flat = createBrand({ name: brand.name, ...look, theme: brand.look.theme === "dark" ? "dark" : "light" })
+  // Film grain is noise at a few pixels across and weight in a file, so
+  // icons go with the least of it.
+  const small = createBrand({ name: brand.name, ...look, theme: flat.look.theme, grain: "smooth" })
+  const png = async (scene: Scene, size: number) => (await rasterize(toSvg(scene, { target: "resvg", outlines: outlinePath }), size)).asPng()
+
+  type Asset = { path: string; what: string; make: () => Promise<Uint8Array | string> }
+  const assets: Asset[] = []
+  const at = (url: string | undefined, fallback: string) => served(publicDir, url, brand.name) ?? join(publicDir, fallback)
+  assets.push({
+    path: at(has.icon, "favicon.ico"),
+    what: "favicon, 16, 32 and 48 pixels",
+    make: async () => encodeIco(await Promise.all([16, 32, 48].map(async (size) => ({ size, png: await png(small.icon(), size) })))),
+  })
+  assets.push({ path: at(has.svg, "favicon.svg"), what: "favicon for browsers that take SVG, light and dark", make: async () => toSvg(createBrand({ ...look, name: brand.name, grain: "smooth" }).icon()) })
+  assets.push({ path: at(has.apple, "apple-touch-icon.png"), what: "home-screen icon, 180 pixels", make: () => png(small.icon(), 180) })
+  const manifest = has.manifest?.length ? has.manifest : [{ src: "/icon-192.png", size: 192 }, { src: "/icon-512.png", size: 512 }]
+  for (const icon of manifest) {
+    const path = served(publicDir, icon.src, brand.name)
+    if (path) assets.push({ path, what: `app icon, ${icon.size} pixels`, make: () => png(small.icon(), icon.size) })
+  }
+  const og = at(has.og, "og.jpg")
+  assets.push({
+    path: og,
+    what: `link preview, "${title}"`,
+    make: async () => (/\.png$/i.test(og) ? png(flat.og({ title }), 1200) : jpeg(flat.og({ title }))),
+  })
+  assets.push({ path: join(publicDir, "x-header.jpg"), what: "X header", make: () => jpeg(flat.banner({ for: "x" })) })
+  assets.push({ path: join(publicDir, "linkedin-banner.jpg"), what: "LinkedIn banner", make: () => jpeg(flat.banner({ for: "linkedin" })) })
+  assets.push({ path: join(publicDir, "email-header.jpg"), what: "email header", make: () => jpeg(flat.banner({ for: "email", title })) })
+
+  for (const asset of assets) {
+    const path = join(root, asset.path)
+    if (existsSync(path) && !force) {
+      log(`Left ${asset.path}: it is there already (--force replaces it)`)
+      continue
+    }
+    log(`${dry ? "Would write" : existsSync(path) ? "Replaced" : "Wrote"} ${asset.path}  ${asset.what}`)
+    if (!dry) {
+      mkdirSync(dirname(path), { recursive: true })
+      writeFileSync(path, await asset.make())
+    }
+  }
+
+  if (/\.png$/i.test(og)) log(`The site's link preview is a PNG, about a megabyte with grain, which some chat apps won't show; og.jpg is a tenth of that: point og:image at it.`)
+  const url = (path: string) => `/${relative(join(root, publicDir), join(root, path))}`
+  log(`In the <head>, where the site doesn't have them yet:`)
+  // Browsers ask for /favicon.ico by themselves; anywhere else needs a link.
+  if (!has.icon && url(at(undefined, "favicon.ico")) !== "/favicon.ico") log(`  <link rel="icon" href="${url(at(undefined, "favicon.ico"))}" sizes="48x48">`)
+  if (!has.svg) log(`  <link rel="icon" href="${url(at(undefined, "favicon.svg"))}" type="image/svg+xml">`)
+  if (!has.apple) log(`  <link rel="apple-touch-icon" href="${url(at(undefined, "apple-touch-icon.png"))}">`)
+  if (!has.og) log(`  <meta property="og:image" content="https://${brand.name}${url(og)}">`)
+  if (!has.manifest) log(`  In a web app manifest: "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }, { "src": "/icon-512.png", "sizes": "512x512" }]`)
+}
+
 export async function main(argv: string[], root = process.cwd(), log: (line: string) => void = console.log): Promise<number> {
   try {
     const args = parse(argv)
@@ -373,6 +487,9 @@ export async function main(argv: string[], root = process.cwd(), log: (line: str
         return 0
       case "preview":
         await previewCommand(root, args, log)
+        return 0
+      case "kit":
+        await kitCommand(root, args, log)
         return 0
       case "check":
         return checkCommand(root, args, log)

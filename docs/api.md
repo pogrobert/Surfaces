@@ -32,7 +32,8 @@ brand.input("post", { title })          // the input any of those draws, for com
 - A banner's title is its own choice: with one it is set in, without one
   the banner is art alone. An X header always keeps its bottom left clear,
   where X lays the profile's photo. The icon is the brand's mark filling a
-  square, the same every time.
+  square, the same every time, composed to its middle as an avatar is; a
+  style too fine to read at 16 pixels draws it in its nearest bold style.
 - A cover is about its `title`. An `id`, such as the slug, keeps its art when
   the title is edited. A `tag`, such as the post's category, makes every
   cover with it the same mark, so a category reads as one family while each
@@ -114,6 +115,7 @@ anywhere, and it changes nothing it didn't write.
 | Command | Does |
 |---|---|
 | `init` | Reads the site (stylesheets, Tailwind config, root layout, fonts, metadata in code), writes the brand module (`surfaces.ts` in `src/`, `app/` or the root), a marked block in `AGENTS.md` (and `CLAUDE.md` when it doesn't already point there), Next.js's `app/opengraph-image.tsx`, and a board of directions. `--pick <n>` takes another direction; `--name` names the brand; `--dry-run` writes nothing. Run again, it leaves what is set up. |
+| `kit` | Writes the brand's asset set into the public folder (`static/` for SvelteKit): `favicon.ico` (16, 32, 48), `favicon.svg` (light and dark), `apple-touch-icon.png`, the manifest's icons, the link preview, and X, LinkedIn and email headers. It writes to the paths the site already points at, in its `<link>` and `<meta>` tags, the objects frameworks write them as, and its web manifest, and the standard paths for the rest. It leaves files that are there unless `--force`, and prints the `<head>` tags the site doesn't have yet. Every one carries the icon's mark. |
 | `directions` | Prints the directions with their reasons and draws them as `.surfaces/directions.jpg`. |
 | `preview` | Draws the brand's covers (`--use`, default `og`; `--title`, repeatable) into `.surfaces/`, each with its alt text. |
 | `check` | One line of JSON for each cover in each use and theme: whether it holds, its contrast, coverage, problems and warnings. Exits 1 if any doesn't. |
