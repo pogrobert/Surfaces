@@ -204,6 +204,144 @@ const DESIGNS = {
     const strip = el("div", { className: "strip" }, ...[...BRANDS, ...BRANDS].slice(0, 8).map((brand, i) => art(brand.card({ id: `strip-${i}` }))))
     page.append(el("section", { className: "v8" }, el("div", { className: "top" }, mark, el("h1", { textContent: "Surfaces" }), el("p", { className: "line", textContent: "Covers and link previews in your site's own look, ready in a minute." }), field(), aside()), strip))
   },
+  // What a link looks like today, and with Surfaces.
+  9() {
+    css(`.v9 { min-height: 100vh; padding: 11vh 7vw 40px; text-align: center; }
+      .v9 h1 { margin: 0; font-size: 24px; font-weight: 800; }
+      .v9 h2 { margin: 10px auto 28px; font-size: clamp(40px, 4.6vw, 68px); letter-spacing: -0.04em; line-height: 1.02; font-weight: 750; max-width: 16ch; }
+      .v9 .field { margin: 0 auto; }
+      .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; max-width: 1120px; margin: 64px auto 0; text-align: left; }
+      .pair figcaption { font-size: 15px; color: var(--quiet); margin-top: 10px; } .pair figure { margin: 0; }
+      .bare { aspect-ratio: 1200 / 630; background: #e4e5e1; border-radius: 10px; display: grid; place-content: center; padding: 40px; color: #7b8090; font: 600 26px/1.2 Arial, sans-serif; text-align: center; }
+      .pair .art { border-radius: 10px; }`)
+    const brand = BRANDS[3]
+    page.append(el("section", { className: "v9" }, el("h1", { textContent: "Surfaces" }), el("h2", { textContent: "Your links deserve more than a grey box." }), field(),
+      el("div", { className: "pair" }, el("figure", {}, el("div", { className: "bare", textContent: TITLE }), el("figcaption", { textContent: "Today" })), el("figure", {}, art(brand.og({ title: TITLE })), el("figcaption", { textContent: "With Surfaces, in ottoloop.fm's own look" })))))
+  },
+
+  // The address is the headline: type it and press the button.
+  10() {
+    css(`.v10 { min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; }
+      .v10 header { padding: 28px 6vw; font-size: 17px; } .v10 header b { font-weight: 800; margin-right: 10px; }
+      .v10 .big { display: grid; place-content: center; justify-items: center; gap: 26px; padding: 0 6vw; }
+      .v10 .big label { font-size: 19px; color: var(--quiet); }
+      .v10 .big input { border: 0; border-bottom: 3px solid var(--ink); background: transparent; outline: 0; width: min(1000px, 88vw); text-align: center; font-size: clamp(54px, 8.4vw, 132px); font-weight: 750; letter-spacing: -0.045em; padding: 0 0 8px; color: var(--ink); }
+      .v10 .big input::placeholder { color: #c3c7cf; }
+      .v10 .big button { height: 56px; border: 0; border-radius: 14px; padding: 0 28px; background: var(--ink); color: #fff; font-weight: 700; font-size: 18px; }
+      .v10 .art { width: 100%; }`)
+    const brand = BRANDS[4]
+    const header = el("header", {}, el("b", { textContent: "Surfaces" }), "Covers and link previews in your site's own look.")
+    const big = el("form", { className: "big", onsubmit: (event) => event.preventDefault() }, el("label", { htmlFor: "big", textContent: "Your site" }), el("input", { id: "big", placeholder: "yoursite.com", spellcheck: false }), el("button", { textContent: "Make my set" }))
+    page.append(el("section", { className: "v10" }, header, big, art(brand.banner({ for: "linkedin" }))))
+  },
+
+  // A printer's press sheet: crop marks, a colour bar, the print, its caption.
+  11() {
+    const brand = BRANDS[0]
+    const scene = brand.card({ id: "press" })
+    css(`.v11 { min-height: 100vh; display: grid; place-content: center; padding: 40px; }
+      .sheet { position: relative; padding: 56px 64px 44px; background: #fff; box-shadow: 0 0 0 1px var(--rule); }
+      .sheet .bar { display: flex; gap: 0; position: absolute; top: 18px; left: 64px; } .sheet .bar span { width: 22px; height: 10px; }
+      .sheet .crop { position: absolute; width: 22px; height: 22px; border-color: var(--ink); border-style: solid; border-width: 0; }
+      .crop.tl { top: 30px; left: 38px; border-top-width: 1px; border-left-width: 1px; } .crop.tr { top: 30px; right: 38px; border-top-width: 1px; border-right-width: 1px; }
+      .crop.bl { bottom: 30px; left: 38px; border-bottom-width: 1px; border-left-width: 1px; } .crop.br { bottom: 30px; right: 38px; border-bottom-width: 1px; border-right-width: 1px; }
+      .sheet .reg { position: absolute; top: 50%; width: 18px; height: 18px; margin-top: -9px; border: 1px solid var(--ink); border-radius: 50%; }
+      .sheet .reg::before, .sheet .reg::after { content: ""; position: absolute; background: var(--ink); } .sheet .reg::before { left: 50%; top: -6px; bottom: -6px; width: 1px; } .sheet .reg::after { top: 50%; left: -6px; right: -6px; height: 1px; }
+      .reg.l { left: 18px; } .reg.r { right: 18px; }
+      .sheet .art { width: min(820px, 70vw); }
+      .caption { display: flex; justify-content: space-between; align-items: end; gap: 30px; margin-top: 26px; }
+      .caption h1 { margin: 0; font-size: 44px; letter-spacing: -0.04em; line-height: 1; } .caption p { margin: 6px 0 0; color: var(--quiet); }
+      .caption .field { width: 420px; }`)
+    const bar = el("div", { className: "bar" }, ...["ground", "quiet", "soft", "body", "strong", "accent", "partner", "ink"].map((tone) => {
+      const chip = el("span")
+      chip.style.background = scene.palette[tone]
+      return chip
+    }))
+    const marks = ["tl", "tr", "bl", "br"].map((corner) => el("i", { className: `crop ${corner}` }))
+    page.append(el("section", { className: "v11" }, el("div", { className: "sheet" }, bar, ...marks, el("i", { className: "reg l" }), el("i", { className: "reg r" }), art(scene),
+      el("div", { className: "caption" }, el("div", {}, el("h1", { textContent: "Surfaces" }), el("p", { textContent: "Covers and link previews, printed in your site's own look." })), field()))))
+  },
+
+  // A swatch book of styles, fanned open beside the ask.
+  12() {
+    css(`.v12 { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; padding: 0 7vw; overflow: hidden; }
+      .v12 h1 { margin: 0 0 14px; font-size: clamp(56px, 6.4vw, 96px); letter-spacing: -0.05em; line-height: 0.95; font-weight: 800; }
+      .v12 .line { margin: 0 0 30px; font-size: 21px; color: var(--quiet); max-width: 30ch; }
+      .fan { position: relative; height: 620px; }
+      .chip { position: absolute; left: 50%; bottom: 40px; width: 150px; margin-left: -75px; background: #fff; border-radius: 10px; padding: 8px 8px 30px; box-shadow: 0 0 0 1px var(--rule), 0 16px 30px -22px rgb(0 0 0 / 0.5); transform-origin: 50% 100%; }
+      .chip .art { border-radius: 5px; } .chip span { position: absolute; bottom: 7px; left: 10px; font-size: 13px; font-weight: 700; }`)
+    const styles = ["stencil", "riso", "engraving", "screenprint", "halftone", "marbling", "linework"]
+    const colors = ["#00838a", "#f15060", "#3d5588", "#0078bf", "#ff6c2f", "#00a95c", "#0078bf"]
+    const fan = el("div", { className: "fan" })
+    styles.forEach((style, i) => {
+      const brand = createBrand({ name: "swatch", style, color: colors[i] })
+      const scene = generate({ ...brand.input("card", { id: "chip" }), width: 300, height: 900 })
+      const chip = el("div", { className: "chip" }, art(scene), el("span", { textContent: style[0].toUpperCase() + style.slice(1) }))
+      chip.style.transform = `rotate(${-36 + i * 12}deg)`
+      fan.append(chip)
+    })
+    page.append(el("section", { className: "v12" }, el("div", {}, el("h1", { textContent: "Surfaces" }), el("p", { className: "line", textContent: "Pick a look, or let your site pick it. Every cover after follows." }), field(), aside()), fan))
+  },
+
+  // A profile made from the set: header, face and a link card.
+  13() {
+    css(`.v13 { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); align-items: center; gap: 64px; padding: 0 7vw; }
+      .v13 h1 { margin: 0 0 6px; font-size: 22px; font-weight: 800; }
+      .v13 h2 { margin: 0 0 30px; font-size: clamp(40px, 4.4vw, 64px); line-height: 1.03; letter-spacing: -0.035em; font-weight: 750; }
+      .profile { background: #fff; border-radius: 20px; overflow: hidden; box-shadow: 0 0 0 1px var(--rule); }
+      .profile .who { position: relative; padding: 64px 24px 18px; }
+      .profile .who .face { position: absolute; top: -52px; left: 24px; width: 104px; border-radius: 50%; box-shadow: 0 0 0 5px #fff; }
+      .profile .who b { font-size: 21px; display: block; } .profile .who span { color: var(--quiet); }
+      .profile .who p { margin: 10px 0 0; }
+      .profile .link { margin: 0 24px 24px; border-radius: 14px; overflow: hidden; box-shadow: 0 0 0 1px var(--rule); }`)
+    const brand = BRANDS[2]
+    const face = art(brand.avatar("quiet pages"))
+    face.className += " face"
+    const profile = el("div", { className: "profile" }, art(brand.banner({ for: "x" })), el("div", { className: "who" }, face, el("b", { textContent: "Quiet Pages" }), el("span", { textContent: "@quietpages" }), el("p", { textContent: "A journal of slow reading. New essay every Sunday." })), el("div", { className: "link" }, art(brand.og({ title: "On keeping a notebook" }))))
+    page.append(el("section", { className: "v13" }, el("div", {}, el("h1", { textContent: "Surfaces" }), el("h2", { textContent: "Your header, your avatars, your link cards. One look." }), field(), aside()), profile))
+  },
+
+  // Type as print: the name in two inks, out of line, as a riso prints it.
+  14() {
+    css(`.v14 { min-height: 100vh; display: grid; place-content: center; justify-items: center; text-align: center; padding: 24px; }
+      .ink { position: relative; font-size: clamp(110px, 19vw, 300px); font-weight: 800; letter-spacing: -0.06em; line-height: 0.9; isolation: isolate; }
+      .ink span { display: block; mix-blend-mode: multiply; }
+      .ink span + span { position: absolute; inset: 0; transform: translate(0.05em, 0.035em); }
+      .v14 .line { margin: 22px 0 30px; font-size: 22px; color: var(--quiet); }`)
+    const pink = el("span", { textContent: "Surfaces" })
+    const teal = el("span", { textContent: "Surfaces", ariaHidden: "true" })
+    pink.style.color = "#ff48b0"
+    teal.style.color = "#ffe800"
+    page.append(el("section", { className: "v14" }, el("h1", { className: "ink" }, pink, teal), el("p", { className: "line", textContent: "Covers and link previews, printed in your site's own inks." }), field(), aside()))
+  },
+
+  // For the agent: the one line it runs, and what comes out.
+  15() {
+    css(`.v15 { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 56px; padding: 0 7vw; }
+      .v15 h1 { margin: 0 0 6px; font-size: 22px; font-weight: 800; }
+      .v15 h2 { margin: 0 0 26px; font-size: clamp(40px, 4.4vw, 64px); line-height: 1.03; letter-spacing: -0.035em; font-weight: 750; }
+      .term { background: #fff; border-radius: 16px; box-shadow: 0 0 0 1px var(--rule); padding: 22px 24px; font: 15px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink); }
+      .term .cmd::before { content: "$ "; color: var(--quiet); } .term .out { color: var(--quiet); }
+      .v15 .or { margin: 26px 0 12px; color: var(--quiet); }
+      .v15 .made { display: grid; gap: 14px; } .v15 .made .art { border-radius: 10px; }`)
+    const brand = BRANDS[0]
+    const term = el("div", { className: "term" }, el("div", { className: "cmd", textContent: "npx @pogrobert/surfaces init" }),
+      ...["Read harbour.dev: #0078bf, Inter, a dark mode", "Chose screenprint: the page talks about building software", "Wrote app/surfaces.ts, AGENTS.md and app/opengraph-image.tsx"].map((line) => el("div", { className: "out", textContent: line })))
+    page.append(el("section", { className: "v15" }, el("div", {}, el("h1", { textContent: "Surfaces" }), el("h2", { textContent: "Ask your agent for it. It runs one line." }), term, el("p", { className: "or", textContent: "Or see yours here first:" }), field()),
+      el("div", { className: "made" }, art(brand.og({ title: TITLE })), art(brand.banner({ for: "linkedin" })))))
+  },
+
+  // A grid of covers, the ask in its middle cell.
+  16() {
+    css(`.v16 { height: 100vh; display: grid; grid-template-columns: 1fr 1.25fr 1fr; grid-template-rows: 1fr 1.1fr 1fr; gap: 10px; padding: 10px; }
+      .v16 .art { aspect-ratio: auto !important; border-radius: 8px; }
+      .v16 .middle { display: grid; place-content: center; justify-items: center; text-align: center; padding: 20px; background: #fff; border-radius: 8px; }
+      .v16 h1 { margin: 0; font-size: 52px; letter-spacing: -0.045em; line-height: 1; } .v16 .line { margin: 8px 0 22px; color: var(--quiet); }
+      .v16 .field { width: min(440px, 100%); }`)
+    const cells = BRANDS.concat(BRANDS.slice(0, 2)).map((brand, i) => art(generate({ ...brand.input("card", { id: `cell-${i}` }), width: 800, height: 520 })))
+    const middle = el("div", { className: "middle" }, el("h1", { textContent: "Surfaces" }), el("p", { className: "line", textContent: "Covers and link previews in your site's own look." }), field(), aside())
+    page.append(el("section", { className: "v16" }, ...cells.slice(0, 4), middle, ...cells.slice(4)))
+  },
 }
 
 await document.fonts.ready
