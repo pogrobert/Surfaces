@@ -170,6 +170,47 @@ function assemble(shape: string, p: Record<string, number>): { units: Unit[]; vo
       const void_ = b * 1.15
       return { units: cut([tile(0, 0, a, 1), tile(1 - a, 0, a, 1)], [[0.5, 0.5, void_]]), voids: [{ cx: 0.5, cy: 0.5, r: void_ }] }
     }
+    case "petals": {
+      // Four petals reaching for the corners from a small open middle, each
+      // fuller as the tiles are rounder: points along a line, pushed out
+      // each side by a sine.
+      const units: Unit[] = []
+      const inner = g * 1.6
+      const reach = 0.5 * Math.SQRT2 * 0.96
+      const full = 0.3 + p.round! * 0.34
+      for (const [ux, uy] of [[1, -1], [1, 1], [-1, 1], [-1, -1]] as const) {
+        const [dx, dy] = [ux / Math.SQRT2, uy / Math.SQRT2]
+        const [nx, ny] = [-dy, dx]
+        const steps = 24
+        const at = (t: number, side: number) => {
+          const along = inner + t * (reach - inner)
+          const out = side * (full / 2) * sin(PI * t)
+          return [0.5 + dx * along + nx * out, 0.5 + dy * along + ny * out]
+        }
+        const points: number[] = []
+        for (let i = 0; i <= steps; i++) points.push(...at(i / steps, 1))
+        for (let i = steps - 1; i > 0; i--) points.push(...at(i / steps, -1))
+        units.push({ points })
+      }
+      return { units, voids: [] }
+    }
+    case "bars": {
+      // Three pills stacked, of three lengths, flush to one side.
+      const h = (1 - g * 2) / 3
+      const lengths = [1, 0.62 + p.bite!, 0.78]
+      const units = lengths.map((length, row) => ({ points: tile(0, row * (h + g), length, h, [h / 2, h / 2, h / 2, h / 2]) }))
+      return { units, voids: [] }
+    }
+    case "steps": {
+      // Three columns rising a third at a time, standing on one line.
+      const w = (1 - g * 2) / 3
+      const radius = p.round! * w
+      const units = [1, 2, 3].map((rise, i) => {
+        const h = (rise * (1 + g)) / 3 - g
+        return { points: tile(i * (w + g), 1 - h, w, h, [radius, radius, radius, radius]) }
+      })
+      return { units, voids: [] }
+    }
     default: {
       // An arch: a round top over a round doorway.
       return { units: cut([tile(0, 0, 1, 1, [0.5, 0.5, r, r])], [[0.5, 1, b * 1.2]]), voids: [] }
@@ -189,7 +230,7 @@ export const tiles: FigurePart = {
     calm: { round: [0.24, 0.32], gap: [0.045, 0.06] },
     bold: { size: [0.9, 0.96], round: [0.14, 0.22] },
   },
-  shapes: ["grid", "star", "pinwheel", "pair", "arch"],
+  shapes: ["grid", "star", "pinwheel", "pair", "arch", "petals", "bars", "steps"],
 
   draw(context: Context, stage: FigureStage, shape: string, p): DrawnFigure {
     const { w, h, keep } = context
@@ -200,7 +241,7 @@ export const tiles: FigurePart = {
     const start = context.fill
       ? Math.min(w, h) * 0.66
       : context.calm.length
-        ? Math.min(w, h) * 0.88
+        ? Math.min(w, h) * 1.06
       : Math.min(Math.min(stage.area.w, stage.area.h) * p.size!, Math.min(w, h) * 0.78)
     // Seated as a round subject would be, kept on the canvas by `bleed` of
     // its side or more, and, shrinking if it must, off every area.
@@ -209,6 +250,9 @@ export const tiles: FigurePart = {
       let x = w / 2
       let y = h / 2
       for (let attempt = 0; attempt < 12; attempt++) {
+        // Behind a title in the middle, it is centred on the title, larger
+        // than the canvas is tall, so its ends show above and below it.
+        if (context.calm.length) break
         if (!context.fill) {
           const at = seat({ area: stage.area, safe: keep, w, h, away: stage.away }, side / 2)
           const edge = side / 2 + margin - side * bleed
@@ -230,8 +274,11 @@ export const tiles: FigurePart = {
     const { x, y, side } = placed
     const { units, voids } = assemble(shape, p)
     // A quarter turn or a mirror, so one assembly faces several ways.
-    const turns = shape === "grid" || shape === "star" ? 0 : rng.int(0, 4)
-    const mirror = shape === "pinwheel" && rng.next() < 0.5
+    // A staircase stands on its line, so it only mirrors; a grid and a star
+    // look the same every way round.
+    const upright = shape === "grid" || shape === "star" || shape === "steps" || shape === "petals"
+    const turns = upright ? 0 : rng.int(0, 4)
+    const mirror = (shape === "pinwheel" || shape === "steps") && rng.next() < 0.5
     const left = x - side / 2
     const top = y - side / 2
     const place = (u: number, v: number): [number, number] => {

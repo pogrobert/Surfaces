@@ -15,10 +15,10 @@ combination, and a new answer to one decision works with every other.
 | Layer | Question | Parts so far |
 |---|---|---|
 | ground | What is it printed on? | `plain`, `paper` (warm stock, one fold) |
-| figure | What is the subject? | `tiles` (grid, pinwheel, pair, arch) |
+| figure | What is the subject? | `tiles` (grid, star, pinwheel, pair, arch, petals, bars, steps) |
 | fill | What is the ink? | `paint` (torn blots in three coats), `flat` |
 | relation | How do figure and fill meet? | `inside` (fill seen through the figure), `cutout` (figure cut from a slab of fill) |
-| process | How was it reproduced? | `film`, `wash` (soft inside, sharp edge), `plate` (one-ink aquatint) |
+| process | How was it reproduced? | `film`, `wash` (soft inside, sharp edge), `plate` (one-ink aquatint), `press` (two inks out of line, Riso's own print) |
 
 Each part brings its own ranges, mood and grain narrowing, and the parts it
 avoids (`src/grammar/parts.ts`). `compose()` (`src/grammar/compose.ts`) turns
@@ -27,7 +27,9 @@ catalog and every renderer then treat it like any other recipe. It refuses
 clashing parts, naming the fix.
 
 A style is a preset: one combination, looked at and named. Stencil is the
-first (`paper`, `tiles`, `paint`, `inside`, `wash`).
+first (`paper`, `tiles`, `paint`, `inside`, `wash`); Screenprint the second
+(`paper`, `tiles`, `flat`, `inside`, `press`), built from Riso's print finish
+ported as a process.
 
 ## The judge
 

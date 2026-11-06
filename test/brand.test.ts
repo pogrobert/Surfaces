@@ -130,3 +130,17 @@ test("a brand can always make one mark", () => {
   assert.match(errorOf(() => createBrand({ name: "a", style: "riso", shape: "arch" })), /isn't a riso shape.*Did you mean "arches"\?/)
   assert.match(errorOf(() => createBrand({ name: "a", style: "underpaint", shape: "disc" })), /no shapes to choose from/)
 })
+
+test("covers with one tag make one mark, and a tag never overrides a brand's own", () => {
+  const brand = createBrand({ name: "acme.dev", style: "riso" })
+  const marks = (tag: string) => ["Alpha", "Beta", "Gamma", "Delta"].map((title) => brand.cover({ title, tag }).shape)
+  assert.equal(new Set(marks("engineering")).size, 1)
+  assert.equal(new Set(marks("Engineering")).size, 1)
+  assert.equal(marks("engineering")[0], marks("Engineering")[0])
+  const tags = ["engineering", "design", "company", "product", "notes", "events"]
+  assert.ok(new Set(tags.map((tag) => marks(tag)[0])).size > 1)
+  // Without a tag, each title draws its own.
+  assert.ok(new Set(["Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta"].map((title) => brand.cover({ title }).shape)).size > 1)
+  assert.equal(createBrand({ name: "acme.dev", style: "riso", shape: "bars" }).cover({ title: "A", tag: "design" }).shape, "bars")
+  assert.equal(createBrand({ name: "acme.dev", style: "underpaint" }).cover({ title: "A", tag: "design" }).shape, undefined)
+})

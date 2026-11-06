@@ -28,7 +28,9 @@ brand.input("post", { title })          // the input any of those draws, for com
   every seed, so the same title in one brand is always the same art and two
   brands never share a drawing. There is no seed to choose.
 - A cover is about its `title`. An `id`, such as the slug, keeps its art when
-  the title is edited.
+  the title is edited. A `tag`, such as the post's category, makes every
+  cover with it the same mark, so a category reads as one family while each
+  title still draws its own; a brand's own `shape` outranks it.
 - `color`, `style`, `theme`, `mood`, `grain` and `shape` are decisions a brand
   may make. `shape` is one of the style's shapes for every cover, a mark the
   brand always makes; without it each title draws its own. Whatever it

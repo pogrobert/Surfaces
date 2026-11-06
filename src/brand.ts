@@ -1,6 +1,7 @@
 import { avatar as drawAvatar, AVATAR_STYLES } from "./avatar.ts"
 import type { AvatarStyle } from "./avatar.ts"
 import { generate } from "./core/generate.ts"
+import { hash } from "./core/random.ts"
 import type { SurfaceInput } from "./core/generate.ts"
 import { GRAINS, MOODS, THEMES } from "./core/intent.ts"
 import { FONTS } from "./core/type.ts"
@@ -43,10 +44,12 @@ export type BrandChoices = PageFacts & {
 }
 
 // What a cover is about: its title, or an id that names it, such as the
-// post's slug, so its art stays when the title is edited. `drawTitle` sets
+// post's slug, so its art stays when the title is edited. `tag` is the
+// post's category: every cover with one tag makes one mark, so a category
+// reads as a family while each title still draws its own. `drawTitle` sets
 // the title into the image itself, for a cover that goes out as a file; a
 // link preview always does, since nothing else can show it there.
-export type Content = { title?: string; id?: string; drawTitle?: boolean }
+export type Content = { title?: string; id?: string; tag?: string; drawTitle?: boolean }
 
 export type Brand = {
   name: string
@@ -91,6 +94,7 @@ const AVATAR_OF: Record<StyleName, AvatarStyle> = {
   chrome: "sfumato",
   glass: "sfumato",
   stencil: "riso",
+  screenprint: "riso",
 }
 
 // Every problem with the choices, each with its fix.
@@ -180,7 +184,7 @@ function build(name: string, look: Brand["look"], why: string[]): Brand {
       theme: look.theme,
       ...(look.mood ? { mood: look.mood } : null),
       ...(look.grain ? { grain: look.grain } : null),
-      ...(look.shape ? { shape: look.shape } : null),
+      ...(look.shape ? { shape: look.shape } : content.tag?.trim() ? familyShape(look.style, name, content.tag.trim()) : null),
       ...(drawn ? { title: content.title!.trim(), ...(look.font ? { font: look.font } : null) } : null),
       ...(placing.motion && !drawn ? { motion: placing.motion } : null),
     }
@@ -209,10 +213,17 @@ function build(name: string, look: Brand["look"], why: string[]): Brand {
   }
 }
 
+// The mark every cover with a tag makes, picked by the tag so it stays when
+// posts come and go; nothing for a style without shapes.
+function familyShape(style: StyleName, name: string, tag: string) {
+  const shapes = (STYLES[style].shapes ?? []) as readonly string[]
+  return shapes.length ? { shape: shapes[hash(`${name}/tag/${tag.toLowerCase()}`) % shapes.length]! } : null
+}
+
 // Styles in kinds that look alike, so a set of directions can show one of
 // each kind before it shows two of any.
 const KINDS: readonly (readonly StyleName[])[] = [
-  ["stencil", "riso", "photocopy", "halftone", "dither"],
+  ["stencil", "screenprint", "riso", "photocopy", "halftone", "dither"],
   ["engraving", "linework", "moire"],
   ["underpaint", "sfumato", "fluted"],
   ["aquatint", "mezzotint", "chrome", "glass"],

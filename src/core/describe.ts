@@ -193,9 +193,15 @@ const ART: Record<string, Phrase> = {
       shape,
       `two overlapping grainy ${both(inks)} circles`
     ),
+  screenprint: (shape, inks) =>
+    `${pick(
+      { grid: "four rounded tiles round a round gap", star: "four rounded tiles pointing outward like a star", pinwheel: "four rounded tiles turning like a pinwheel", pair: "two tall tiles around a round gap", arch: "an arch", petals: "four petals", bars: "three stacked bars", steps: "three columns rising like steps" },
+      shape,
+      "a bold mark"
+    )}, printed in ${both(inks)} ink that doesn't quite line up`,
   stencil: (shape, inks) =>
     `${pick(
-      { grid: "four rounded tiles round a round gap", star: "four rounded tiles pointing outward like a star", pinwheel: "four rounded tiles turning like a pinwheel", pair: "two tall tiles around a round gap", arch: "an arch" },
+      { grid: "four rounded tiles round a round gap", star: "four rounded tiles pointing outward like a star", pinwheel: "four rounded tiles turning like a pinwheel", pair: "two tall tiles around a round gap", arch: "an arch", petals: "four petals", bars: "three stacked bars", steps: "three columns rising like steps" },
       shape,
       "a stencilled shape"
     )}, filled with loose ${both(inks)} paint, on folded paper`,

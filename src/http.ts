@@ -57,7 +57,7 @@ class Forbidden extends BadRequest {}
 // when its title changes, `theme` for one side of a brand that follows the
 // reader, and `format`. The title is set into the image wherever the cover
 // keeps room for it, since an image has nowhere else to show it.
-const BRAND_PARAMETERS = ["title", "id", "use", "theme", "format", "sig"]
+const BRAND_PARAMETERS = ["title", "id", "tag", "use", "theme", "format", "sig"]
 
 function readBrand(url: URL, brand: Brand): SurfaceInput {
   const query = url.searchParams
@@ -73,7 +73,8 @@ function readBrand(url: URL, brand: Brand): SurfaceInput {
   const themed = theme ? createBrand({ name: brand.name, ...brand.look, theme }) : brand
   const title = query.get("title") ?? undefined
   const id = query.get("id") ?? undefined
-  return themed.input(use, { ...(title ? { title } : null), ...(id ? { id } : null), drawTitle: use !== "card" && Boolean(title) })
+  const tag = query.get("tag") ?? undefined
+  return themed.input(use, { ...(title ? { title } : null), ...(id ? { id } : null), ...(tag ? { tag } : null), drawTitle: use !== "card" && Boolean(title) })
 }
 
 // The URL without its signature, its parameters in order, as both sides sign it.

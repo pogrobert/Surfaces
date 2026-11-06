@@ -35,6 +35,7 @@ const brand = createBrand({ name: "acme.dev", color: "#635bff" })
 // or let the site decide: createBrand({ name: "acme.dev", ...readPage(html, css) })
 
 brand.cover({ title: post.title })   // a post's cover
+brand.cover({ title, tag: post.category })  // a category's posts make one mark
 brand.og({ title: post.title })      // its link preview
 brand.hero({ title: "Pricing" })
 brand.avatar(user.id)
@@ -214,4 +215,4 @@ a photo.
 
 underpaint, halftone, endpaper, aquatint, mezzotint, sfumato, engraving, riso,
 moire, strata, marbling, linework, dither, fluted, photocopy, chrome, glass,
-stencil.
+stencil, screenprint.

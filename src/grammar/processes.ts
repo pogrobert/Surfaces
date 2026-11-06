@@ -1,4 +1,6 @@
+import { cos, radians, sin } from "../core/math.ts"
 import type { Art, Piece } from "../core/recipe.ts"
+import { print } from "../finishes/index.ts"
 import type { Layer, Mark, Tone } from "../core/scene.ts"
 import type { ProcessPart } from "./parts.ts"
 
@@ -132,4 +134,64 @@ export const plate: ProcessPart = {
   },
 }
 
-export const PROCESSES = { film, wash, plate }
+// Two inks through a stencil duplicator, as Riso's own print is: each piece
+// printed whole in the brand's ink, every other one again in its partner,
+// out of line with the first, so the overlap makes a third colour. A piece
+// prints as its own shape, so the fill inside it has to be one flat coat.
+export const press: ProcessPart = {
+  name: "press",
+  ranges: {
+    register: [6, 14],
+    registerAngle: [0, 360],
+    grainSize: [0.62, 0.8],
+    hardness: [2.2, 3.6],
+    wash: [0.44, 0.66],
+    paper: [0.08, 0.16],
+  },
+  moods: {
+    calm: { register: [6, 8], wash: [0.56, 0.66], paper: [0.08, 0.11] },
+    bold: { register: [10, 14], hardness: [3, 3.6], paper: [0.12, 0.16] },
+  },
+  grain: {
+    smooth: { grainSize: [0.82, 0.95], hardness: [1.6, 2.2], wash: [0.92, 0.97], paper: [0.02, 0.05] },
+    heavy: { grainSize: [0.52, 0.62], hardness: [3.4, 4.4], wash: [0.3, 0.4], paper: [0.2, 0.28] },
+  },
+  avoid: ["paint"],
+  // The first ink is the brand colour itself, as a spot ink is; the second
+  // its partner, and never grey.
+  palette: (spec) => ({
+    ...spec,
+    maxChroma: Math.max(spec.maxChroma, 0.2),
+    partnerFloor: 0.09,
+    accent: { light: [0.55, 0.82], dark: [0.5, 0.84] },
+    light: { ...spec.light, partner: { l: [0.74, 0.82], c: [0.8, 1] } },
+    dark: { ...spec.dark, partner: { l: [0.58, 0.66], c: [0.8, 1] } },
+  }),
+  finish(art, { p, rng, theme }) {
+    const shapes = (art.pieces ?? []).map((piece) => ({
+      kind: "shapes" as const,
+      id: piece.id,
+      paint: { type: "solid" as const, tone: "accent" as const, opacity: 1 },
+      shapes: [piece.clip],
+    }))
+    const second = shapes.length < 2 ? shapes : shapes.filter((_, index) => index % 2 === 1)
+    const seeds = rng.fork("press")
+    const angle = radians(p.registerAngle!)
+    return print(
+      { ...art, marks: [...art.marks, ...shapes], second, pieces: [] },
+      {
+        scale: p.grainSize!,
+        hardness: p.hardness!,
+        wash: p.wash!,
+        seed: seeds.int(1, 9998),
+        dx: cos(angle) * p.register!,
+        dy: sin(angle) * p.register!,
+        blend: theme === "dark" ? "screen" : "multiply",
+        paper: p.paper!,
+        paperSeed: seeds.int(1, 9999),
+      }
+    )
+  },
+}
+
+export const PROCESSES = { film, wash, plate, press }

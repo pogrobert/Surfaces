@@ -131,8 +131,8 @@ export type CoverProps = Content & {
   label?: string | true
 }
 
-export function Cover({ brand, use = "post", title, id, children, ...rest }: CoverProps): ReactElement {
-  const { areas, ...input } = brand.input(use, { ...(title !== undefined ? { title } : null), ...(id !== undefined ? { id } : null) })
+export function Cover({ brand, use = "post", title, id, tag, children, ...rest }: CoverProps): ReactElement {
+  const { areas, ...input } = brand.input(use, { ...(title !== undefined ? { title } : null), ...(id !== undefined ? { id } : null), ...(tag !== undefined ? { tag } : null) })
   const content = children ?? title
   return createElement(Surface, {
     ...input,

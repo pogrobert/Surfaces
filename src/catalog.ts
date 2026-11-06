@@ -22,6 +22,7 @@ const ABOUT: Record<StyleName, { looks: string; suits: string }> = {
   fluted: { looks: "Soft colour behind a pane of ribbed glass.", suits: "Glossy, modern product covers." },
   photocopy: { looks: "Shapes or a page in toner, with a copier's streaks and specks.", suits: "Raw, zine-flavoured covers." },
   chrome: { looks: "A polished chrome object in a pool of the brand's light.", suits: "Bold, glossy heroes." },
+  screenprint: { looks: "A bold mark of rounded tiles printed in two flat inks that don't quite line up, on folded paper.", suits: "Confident, graphic covers that read like a brand mark." },
   stencil: { looks: "Loose paint seen through a stencil of rounded tiles, on folded paper.", suits: "Warm, crafted covers with one bold mark." },
   glass: { looks: "A glass object showing the light behind it, bent and dimmed.", suits: "Soft, glossy heroes." },
 }

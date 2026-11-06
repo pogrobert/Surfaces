@@ -92,16 +92,16 @@ const TONES: Record<Tone, RegExp> = {
 const LEANS: Record<Face | Tone | "dark" | "bright", Partial<Record<StyleName, number>>> = {
   serif: { engraving: 3, mezzotint: 2, aquatint: 2, marbling: 2, halftone: 1 },
   mono: { linework: 3, dither: 3, halftone: 1, photocopy: 1 },
-  rounded: { stencil: 3, riso: 3, underpaint: 2, strata: 1 },
+  rounded: { stencil: 3, riso: 3, screenprint: 2, underpaint: 2, strata: 1 },
   grotesk: { underpaint: 2, halftone: 2, fluted: 1, sfumato: 1, riso: 1 },
   technical: { linework: 3, dither: 2, engraving: 1, moire: 1 },
   editorial: { halftone: 2, engraving: 2, mezzotint: 2, marbling: 1, photocopy: 1 },
-  playful: { riso: 3, photocopy: 2, stencil: 2, endpaper: 1 },
+  playful: { riso: 3, screenprint: 3, photocopy: 2, stencil: 2, endpaper: 1 },
   warm: { stencil: 3, underpaint: 2, marbling: 1, strata: 1 },
   glossy: { chrome: 3, glass: 3, fluted: 2, sfumato: 1 },
   calm: { underpaint: 3, sfumato: 2, aquatint: 2 },
   dark: { mezzotint: 1, moire: 1, sfumato: 1, chrome: 1 },
-  bright: { stencil: 2, riso: 2, underpaint: 1, strata: 1, halftone: 1, marbling: 1, engraving: -2, mezzotint: -2, aquatint: -1, moire: -1 },
+  bright: { stencil: 2, riso: 2, screenprint: 2, underpaint: 1, strata: 1, halftone: 1, marbling: 1, engraving: -2, mezzotint: -2, aquatint: -1, moire: -1 },
 }
 
 const SAID: Record<Face | Tone | "bright", string> = {
