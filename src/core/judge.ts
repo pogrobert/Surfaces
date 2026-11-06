@@ -297,7 +297,7 @@ export const HAIRLINE = new Set(["linework", "dither"])
 
 // Whether a cover is fit to show: every area's content reads at 4.5:1, the art
 // is neither blank nor, where content sits on it, a wall, and its subject
-// stays out of every area. Art with no content on it, an icon or a bare
+// stays out of every area. Art with no content on it, such as a bare
 // banner, may fill its canvas.
 export function judge(scene: Scene, steps = 8): Verdict {
   const problems: string[] = []

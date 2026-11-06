@@ -13,7 +13,7 @@ import type { StyleName } from "./styles/index.ts"
 // an agent can pass on.
 
 // Where the cover goes on the page, which sets its size and where its title is.
-export const USES = ["post", "card", "hero", "og", "x", "linkedin", "email", "icon"] as const
+export const USES = ["post", "card", "hero", "og", "x", "linkedin", "email"] as const
 export type Use = (typeof USES)[number]
 
 export type PageFacts = {
@@ -119,7 +119,7 @@ const SAID: Record<Face | Tone | "bright", string> = {
 }
 
 // Where a cover goes. A banner's title is its own choice: with one, it is set
-// in the banner's area; without, the banner is art alone, and so is an icon.
+// in the banner's area; without, the banner is art alone.
 export const PLACING: Record<Use, { size: { width: number; height: number }; areas: Area[]; motion?: MotionLevel; said: string; optional?: true; keep?: Area[] }> = {
   post: { size: { width: 1600, height: 900 }, areas: [{ place: "bottom-left", size: "lg" }], said: "a post's cover carries its title at the bottom left" },
   card: { size: { width: 1600, height: 900 }, areas: [], said: "a card's title sits beside the cover, so the art fills it" },
@@ -131,8 +131,6 @@ export const PLACING: Record<Use, { size: { width: number; height: number }; are
   linkedin: { size: { width: 1584, height: 396 }, areas: [{ place: "center", size: "md" }], optional: true, said: "a LinkedIn banner" },
   // A newsletter's header, at twice the 600 by 200 an email shows it at.
   email: { size: { width: 1200, height: 400 }, areas: [{ place: "left", size: "lg" }], optional: true, said: "an email header" },
-  // An app's icon or a site's favicon: the brand's mark filling a square.
-  icon: { size: { width: 512, height: 512 }, areas: [], optional: true, said: "an icon" },
 }
 
 // Every problem with the facts given, each with its fix.

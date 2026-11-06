@@ -1,6 +1,6 @@
 import { avatar as drawAvatar, AVATAR_STYLES } from "./avatar.ts"
 import type { AvatarStyle } from "./avatar.ts"
-import { drawFilled, generate } from "./core/generate.ts"
+import { generate } from "./core/generate.ts"
 import { hash } from "./core/random.ts"
 import type { SurfaceInput } from "./core/generate.ts"
 import { GRAINS, MOODS, THEMES } from "./core/intent.ts"
@@ -68,8 +68,6 @@ export type Brand = {
   // A profile's or a newsletter's header: X (1500x500), LinkedIn (1584x396)
   // or email (1200x400). With a title it is set in; without, art alone.
   banner(content: Content & { for: "x" | "linkedin" | "email" }): Scene
-  // A square mark for an app icon or a favicon, 512 pixels across.
-  icon(): Scene
   // A person's mark, from their id or handle.
   avatar(person: string | number, options?: { size?: number; square?: boolean }): Scene
   // The input any of those draws, for the components and the HTTP handler.
@@ -101,10 +99,6 @@ const AVATAR_OF: Record<StyleName, AvatarStyle> = {
   stencil: "riso",
   screenprint: "riso",
 }
-
-// The styles whose icons still read at favicon sizes, by what the icons
-// showed at 16 and 32 pixels; the rest draw theirs in their avatar style.
-const SMALL = new Set<StyleName>([...AVATAR_STYLES, "stencil", "screenprint", "chrome", "glass"])
 
 // Every problem with the choices, each with its fix.
 function check(choices: unknown): string[] {
@@ -177,12 +171,11 @@ export function createBrand(choices: BrandChoices): Brand {
 function build(name: string, look: Brand["look"], why: string[]): Brand {
   const input = (use: Use, content: Content = {}): SurfaceInput => {
     const placing = PLACING[use]
-    // A banner or an icon is one of a kind, so it needs no name of its own.
+    // A banner is one of a kind, so it needs no name of its own.
     const about = content?.id ?? content?.title ?? (placing.optional ? use : undefined)
     if (typeof about !== "string" || !about.trim()) {
       throw new Error(`Give the ${use} a "title", or an "id" that names it, such as the post's slug`)
     }
-    if (use === "icon" && content.drawTitle) throw new Error(`An icon has no room for a title`)
     const drawn = content.drawTitle ?? (use === "og" || (placing.optional === true && Boolean(content.title?.trim())))
     if (drawn && !content.title?.trim()) throw new Error(`A ${use} drawn with its title needs a "title"`)
     if (drawn && !placing.areas.length) throw new Error(`A ${use} has no area for a title; draw it as a "post" or "og" instead`)
@@ -214,20 +207,6 @@ function build(name: string, look: Brand["look"], why: string[]): Brand {
       if (!["x", "linkedin", "email"].includes(where)) throw new Error(`Unknown banner "${String(where)}". Use "x", "linkedin" or "email".`)
       return generate(input(where, content))
     },
-    // Composed to the middle and filling its square, as an avatar is, in a
-    // style that still reads at 16 pixels, and in the brand's own colour.
-    icon: () =>
-      drawFilled({
-        style: SMALL.has(look.style) ? look.style : AVATAR_OF[look.style],
-        seed: `${name}/icon`,
-        width: 512,
-        height: 512,
-        ...(look.color ? { color: look.color } : null),
-        theme: look.theme,
-        ...(look.mood ? { mood: look.mood } : null),
-        ...(look.grain ? { grain: look.grain } : null),
-        ...(look.shape && SMALL.has(look.style) ? { shape: look.shape } : null),
-      }),
     avatar: (person, options = {}) =>
       drawAvatar({
         style: (AVATAR_STYLES as readonly string[]).includes(look.style) ? (look.style as AvatarStyle) : AVATAR_OF[look.style],

@@ -42,7 +42,7 @@ Options
   --name <domain>     The brand's name (init and directions; default: the site's domain)
   --pick <n>          Take the nth direction (init; default 1, our pick)
   --title <text>      A title to draw (preview, check; repeatable)
-  --use <use>         post, card, hero, og, x, linkedin, email or icon (preview, check; default og)
+  --use <use>         post, card, hero, og, x, linkedin or email (preview, check; default og)
   --brand <file>      The brand module (default: surfaces.ts beside the source)
   --out <path>        Where images go (default .surfaces/)
   --force             Let kit replace files that are there already
@@ -98,8 +98,8 @@ async function jpeg(scene: Scene, width = scene.output.w) {
 }
 
 // Whether a use sets its title into the image: everywhere but a card, which
-// has it beside, and an icon, which has no room.
-const titled = (use: Use) => use !== "card" && use !== "icon"
+// has it beside.
+const titled = (use: Use) => use !== "card"
 
 const drawn = (brand: Brand, use: Use, title: string) => {
   const light = brand.look.theme === "auto" ? createBrand({ name: brand.name, ...brand.look, theme: "light" }) : brand
@@ -387,8 +387,8 @@ function served(publicDir: string, url: string | undefined, name: string) {
 }
 
 // The pictures a site shows of itself that are art, not identity: its link
-// preview and its headers. Never an icon: an icon is the brand's own, and
-// the site keeps the one it has.
+// preview and its headers. Never an icon: an icon is the brand's identity,
+// and the site keeps the one it has.
 async function kitCommand(root: string, args: Args, log: (line: string) => void) {
   const dry = Boolean(one(args, "dry-run"))
   const force = Boolean(one(args, "force"))
