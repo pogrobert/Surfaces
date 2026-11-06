@@ -1,5 +1,7 @@
 import type { Scene } from "./core/scene.ts"
 import { outlinePath } from "./render/glyphs.ts"
+import { rasterize } from "./raster.ts"
+import type { WasmSource } from "./raster.ts"
 import { encodeJpeg } from "./render/jpeg.ts"
 import { toSvg } from "./render/svg.ts"
 
@@ -18,14 +20,7 @@ import { toSvg } from "./render/svg.ts"
 //   import wasm from "@resvg/resvg-wasm/index_bg.wasm"
 //   await toPng(scene, { wasm })
 
-type Resvg = new (
-  svg: string,
-  options: { fitTo: { mode: "width"; value: number }; font?: { loadSystemFonts: boolean } }
-) => { render(): { asPng(): Uint8Array; pixels: Uint8Array; width: number; height: number } }
-
-// What resvg's WebAssembly can start from: the compiled module, its bytes, or
-// a fetch of them.
-export type WasmSource = WebAssembly.Module | ArrayBuffer | Uint8Array | Response | Promise<Response>
+export type { WasmSource }
 
 export type PngOptions = {
   // Pixels across; the scene's own size by default.
@@ -33,75 +28,9 @@ export type PngOptions = {
   wasm?: WasmSource
 }
 
-const NATIVE = "@resvg/resvg-js"
-const WASM = "@resvg/resvg-wasm"
-const HOW = `PNG export needs resvg. On Node, install ${NATIVE} (fastest) or ${WASM}. On an edge runtime or a worker, install ${WASM} and pass its module: import wasm from "${WASM}/index_bg.wasm", then toPng(scene, { wasm }).`
-
-let native: Promise<Resvg> | undefined
-let wasm: Promise<Resvg> | undefined
-
-// The names are held in variables so bundlers leave the imports alone when
-// nobody asks for a PNG.
-function loadNative() {
-  const name = NATIVE
-  native ??= import(name).then(
-    (module: { Resvg: Resvg }) => module.Resvg,
-    (error) => {
-      native = undefined
-      throw error
-    }
-  )
-  return native
-}
-
-// resvg's WebAssembly starts once per process, from whatever it is given.
-function loadWasm(source: WasmSource | Promise<WasmSource>) {
-  const name = WASM
-  wasm ??= import(name).then(
-    async (module: { Resvg: Resvg; initWasm(source: unknown): Promise<void> }) => {
-      await module.initWasm(await source)
-      return module.Resvg
-    },
-    (error) => {
-      wasm = undefined
-      throw error
-    }
-  )
-  return wasm
-}
-
-// The WebAssembly's bytes from the installed package, on Node.
-async function wasmOnDisk(): Promise<Uint8Array> {
-  const fs = "node:fs/promises"
-  const nodeModule = "node:module"
-  const { readFile } = await import(fs)
-  const { createRequire } = await import(nodeModule)
-  return readFile(createRequire(import.meta.url).resolve(`${WASM}/index_bg.wasm`))
-}
-
-async function renderer(source?: WasmSource): Promise<Resvg> {
-  if (source) return loadWasm(source).catch(() => Promise.reject(new Error(HOW)))
-  if (wasm) return wasm
-  try {
-    return await loadNative()
-  } catch {
-    try {
-      return await loadWasm(wasmOnDisk())
-    } catch {
-      wasm = undefined
-      throw new Error(HOW)
-    }
-  }
-}
-
-async function render(scene: Scene, { width, wasm: source }: PngOptions) {
+async function render(scene: Scene, { width, wasm }: PngOptions) {
   oneTheme(scene)
-  const Resvg = await renderer(source)
-  const svg = toSvg(scene, { target: "resvg", outlines: outlinePath })
-  return new Resvg(svg, {
-    fitTo: { mode: "width", value: Math.round(width ?? scene.output.w) },
-    font: { loadSystemFonts: false },
-  }).render()
+  return rasterize(toSvg(scene, { target: "resvg", outlines: outlinePath }), Math.round(width ?? scene.output.w), wasm)
 }
 
 // Drawn at the size the scene was asked for, or `width` pixels wide.

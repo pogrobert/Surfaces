@@ -36,7 +36,7 @@
     "docs/api.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && node scripts/schema.ts",
+    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.cli.json && node scripts/schema.ts",
     "typecheck": "tsc --noEmit",
     "test": "pnpm build && node --test test/*.test.ts",
     "golden": "UPDATE_GOLDEN=1 node --test test/determinism.test.ts",
@@ -76,5 +76,8 @@
       "optional": true
     }
   },
-  "sideEffects": false
+  "sideEffects": false,
+  "bin": {
+    "surfaces": "./dist/cli.js"
+  }
 }

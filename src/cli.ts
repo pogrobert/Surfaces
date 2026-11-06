@@ -1,0 +1,392 @@
+#!/usr/bin/env node
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { dirname, join, relative } from "node:path"
+import { createBrand, directions } from "./brand.ts"
+import type { Brand, BrandChoices } from "./brand.ts"
+import { describe } from "./core/describe.ts"
+import { judge } from "./core/judge.ts"
+import type { Scene, TextLayer } from "./core/scene.ts"
+import { measure } from "./core/type.ts"
+import { validate } from "./core/validate.ts"
+import { readPage } from "./page.ts"
+import type { PageFacts, Use } from "./page.ts"
+import { readProject } from "./project.ts"
+import type { Project } from "./project.ts"
+import { rasterize } from "./raster.ts"
+import { outlinePath } from "./render/glyphs.ts"
+import { encodeJpeg } from "./render/jpeg.ts"
+import { toSvg } from "./render/svg.ts"
+
+// The command line, for a person or an agent in a project:
+//
+//   npx @pogrobert/surfaces init         reads the site, writes its brand, wires it in
+//   npx @pogrobert/surfaces directions   a board of looks to choose from, as an image
+//   npx @pogrobert/surfaces preview      the brand's covers as images, to look at
+//   npx @pogrobert/surfaces check        whether they hold, said plainly
+//
+// Everything it does is a rule on the project's own files. Nothing is sent
+// anywhere; images go in .surfaces/, which an agent can open and look at.
+
+const HELP = `Usage: surfaces <command> [options]
+
+  init         Read this site, choose its look, write the brand and wire it in
+  directions   Draw a board of looks for this site, to choose from
+  preview      Draw the brand's covers as images, to look at
+  check        Say whether the brand's covers hold, and why not
+
+Options
+  --name <domain>     The brand's name (init and directions; default: the site's domain)
+  --pick <n>          Take the nth direction (init; default 1, our pick)
+  --title <text>      A title to draw (preview, check; repeatable)
+  --use <use>         post, card, hero or og (preview, check; default og)
+  --brand <file>      The brand module (default: surfaces.ts beside the source)
+  --out <path>        Where images go (default .surfaces/)
+  --dry-run           Say what init would write, and write nothing
+`
+
+type Args = { command: string; flags: Map<string, string[]> }
+
+function parse(argv: string[]): Args {
+  const [command = "help", ...rest] = argv
+  const flags = new Map<string, string[]>()
+  for (let i = 0; i < rest.length; i++) {
+    const arg = rest[i]!
+    if (!arg.startsWith("--")) throw new Error(`Unexpected "${arg}". ${HELP}`)
+    const name = arg.slice(2)
+    const value = name === "dry-run" ? "true" : rest[++i]
+    if (value === undefined) throw new Error(`"--${name}" needs a value`)
+    flags.set(name, [...(flags.get(name) ?? []), value])
+  }
+  return { command, flags }
+}
+
+const one = (args: Args, name: string) => args.flags.get(name)?.at(-1)
+const OUT = ".surfaces"
+const SAMPLES = ["How the new search works", "What we learned from ten thousand bookings", "Notes on shipping every day"]
+
+// The look a brand module keeps, read as data so the CLI needs nothing of
+// the project's own build to see it.
+function readLook(file: string): BrandChoices {
+  const text = readFileSync(file, "utf8")
+  const literal = text.match(/export const look\s*=\s*(\{[\s\S]*?\})(?:\s*as const)?\s*\n/)?.[1]
+  if (!literal) throw new Error(`${file} has no "export const look = { ... }"; run "surfaces init" to write one`)
+  try {
+    return JSON.parse(literal)
+  } catch {
+    // Hand-edited: unquoted keys, single quotes, a trailing comma.
+    return JSON.parse(literal.replace(/([{,]\s*)([A-Za-z_]\w*)\s*:/g, '$1"$2":').replace(/'/g, '"').replace(/,\s*\}/g, "}"))
+  }
+}
+
+function brandFile(project: Project, args: Args) {
+  const given = one(args, "brand")
+  if (given) return join(project.root, given)
+  const candidates = [join(project.source, "surfaces.ts"), "surfaces.ts", join(project.source, "surfaces.js"), "surfaces.js"]
+  const found = candidates.map((file) => join(project.root, file)).find(existsSync)
+  if (!found) throw new Error(`No brand module here; run "surfaces init" first, or pass --brand <file>`)
+  return found
+}
+
+async function jpeg(scene: Scene, width = scene.output.w) {
+  const image = await rasterize(toSvg(scene, { target: "resvg", outlines: outlinePath }), width)
+  return encodeJpeg(image.pixels, image.width, image.height)
+}
+
+const drawn = (brand: Brand, use: Use, title: string) => {
+  const light = brand.look.theme === "auto" ? createBrand({ name: brand.name, ...brand.look, theme: "light" }) : brand
+  return light[use === "post" ? "cover" : use]({ title, drawTitle: use !== "card" })
+}
+
+// One line of type as a path, for labels on a board.
+function label(text: string, x: number, y: number, size: number, fill: string, font: "sans" | "serif" = "sans") {
+  const layer: TextLayer = { kind: "text", id: "label", font, size, tone: "ink", align: "start", lines: [{ text, x, y, width: measure(text, font) * size }] }
+  return `<path d="${outlinePath(layer)}" fill="${fill}"/>`
+}
+
+// A scene as a nested SVG at x, y, w across.
+function placed(scene: Scene, x: number, y: number, w: number) {
+  const h = (w * scene.output.h) / scene.output.w
+  const svg = toSvg(scene, { target: "resvg", outlines: outlinePath })
+    .replace(/^<\?xml[^>]*>/, "")
+    .replace(/^(<svg[^>]*?) width="[^"]*" height="[^"]*"/, "$1")
+    .replace(/^<svg /, `<svg x="${x}" y="${y}" width="${w}" height="${h}" `)
+  return { svg, h }
+}
+
+// Every direction as a row: its number, its look and why, a post's cover and
+// a link preview with their titles, and a few people.
+async function board(options: Brand[], titles: string[]) {
+  const W = 1360
+  const pad = 24
+  const cover = 560
+  const og = 500
+  const parts: string[] = []
+  let y = pad
+  for (const [index, brand] of options.entries()) {
+    const head = `${index + 1}. ${brand.look.style}${index === 0 ? " (our pick)" : ""}`
+    parts.push(label(head, pad, y + 24, 24, "#17171a"))
+    const reason = (brand.why.find((line) => line.startsWith("style ")) ?? "").replace(/^style \w+: /, "")
+    if (reason) parts.push(label(reason.length > 120 ? `${reason.slice(0, 117)}…` : reason, pad, y + 50, 15, "#6b6b72"))
+    const top = y + 66
+    const a = placed(drawn(brand, "post", titles[index % titles.length]!), pad, top, cover)
+    const b = placed(drawn(brand, "og", titles[(index + 1) % titles.length]!), pad * 2 + cover, top, og)
+    parts.push(a.svg, b.svg)
+    const people = ["ada", "grace", "linus", "margaret"]
+    people.forEach((person, i) => {
+      const face = placed(brand.avatar(person), pad * 3 + cover + og, top + i * 72, 64)
+      parts.push(face.svg)
+    })
+    y = top + Math.max(a.h, b.h, people.length * 72) + pad * 1.5
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${Math.ceil(y)}" viewBox="0 0 ${W} ${Math.ceil(y)}"><rect width="100%" height="100%" fill="#f5f4f1"/>${parts.join("")}</svg>`
+  const image = await rasterize(svg, W)
+  return encodeJpeg(image.pixels, image.width, image.height, 88)
+}
+
+function factsOf(project: Project): PageFacts {
+  return readPage(project.html, project.css)
+}
+
+function nameOf(project: Project, args: Args) {
+  const name = one(args, "name") ?? project.name
+  if (!name) throw new Error(`No name for the brand: pass --name <domain>, such as --name acme.dev`)
+  return name
+}
+
+async function writeBoard(root: string, args: Args, options: Brand[], log: (line: string) => void) {
+  try {
+    const file = join(root, one(args, "out") ?? OUT, "directions.jpg")
+    mkdirSync(dirname(file), { recursive: true })
+    writeFileSync(file, await board(options, SAMPLES))
+    log(`Board of directions: ${relative(root, file)}`)
+  } catch (error) {
+    log(`No board drawn: ${(error as Error).message}`)
+  }
+}
+
+const describeLook = (brand: Brand) => JSON.stringify({ name: brand.name, ...brand.look })
+
+async function directionsCommand(root: string, args: Args, log: (line: string) => void) {
+  const project = readProject(root)
+  const options = directions({ name: nameOf(project, args), ...factsOf(project) })
+  options.forEach((brand, index) => {
+    log(`${index + 1}. ${describeLook(brand)}`)
+    for (const reason of brand.why) log(`   ${reason}`)
+  })
+  await writeBoard(root, args, options, log)
+  log(`Keep one with: surfaces init --pick <n>`)
+}
+
+async function previewCommand(root: string, args: Args, log: (line: string) => void) {
+  const project = readProject(root)
+  const file = brandFile(project, args)
+  const brand = createBrand(readLook(file))
+  const use = (one(args, "use") ?? "og") as Use
+  const titles = args.flags.get("title") ?? SAMPLES
+  const out = join(root, one(args, "out") ?? OUT)
+  mkdirSync(out, { recursive: true })
+  for (const [index, title] of titles.entries()) {
+    const scene = drawn(brand, use, title)
+    const path = join(out, `${use}-${index + 1}.jpg`)
+    writeFileSync(path, await jpeg(scene))
+    log(`${relative(root, path)}  ${describe(scene, { title })}`)
+  }
+}
+
+function checkCommand(root: string, args: Args, log: (line: string) => void) {
+  const project = readProject(root)
+  const brand = createBrand(readLook(brandFile(project, args)))
+  const uses = (args.flags.get("use") ?? ["post", "og", "hero", "card"]) as Use[]
+  const titles = args.flags.get("title") ?? SAMPLES
+  const themes = brand.look.theme === "auto" ? (["light", "dark"] as const) : [brand.look.theme]
+  let failed = 0
+  for (const theme of themes) {
+    const themed = createBrand({ name: brand.name, ...brand.look, theme })
+    for (const use of uses) {
+      for (const title of titles) {
+        const input = themed.input(use, { title, drawTitle: use !== "card" })
+        const scene = themed[use === "post" ? "cover" : use]({ title, drawTitle: use !== "card" })
+        const verdict = judge(scene)
+        // A title set without some of its letters doesn't hold either.
+        const warnings = validate(input).warnings
+        const ok = verdict.ok && !warnings.length
+        if (!ok) failed++
+        log(JSON.stringify({ use, theme, title, ok, contrast: Number(verdict.contrast.toFixed(2)), coverage: Number(verdict.coverage.toFixed(3)), problems: verdict.problems, warnings }))
+      }
+    }
+  }
+  log(failed ? `${failed} cover${failed > 1 ? "s" : ""} don't hold; see "problems" and "warnings" above.` : `Every cover holds: content reads at 4.5:1 or better, every title is set whole, and no cover is blank or a wall.`)
+  return failed ? 1 : 0
+}
+
+// The block a project's agent instructions carry, between markers so init can
+// update it in place.
+function agentBlock(module: string) {
+  return `<!-- surfaces:start -->
+## Covers and link previews (@pogrobert/surfaces)
+
+- The brand is \`brand\`, exported from \`${module}\`. Change its look there; \`npx @pogrobert/surfaces directions\` draws others to choose from.
+- A cover is \`brand.cover({ title })\`, \`brand.card\`, \`brand.hero\`; a person's mark \`brand.avatar(user.id)\`. React: \`<Cover brand={brand} title={title} />\` from \`@pogrobert/surfaces/react\`.
+- A link preview is \`toJpeg(brand.og({ title }))\` from \`@pogrobert/surfaces/png\`, the title drawn in; alt \`describe(scene, { title })\`.
+- \`id: post.slug\` keeps a cover's art when its title is edited. There are no seeds to choose.
+- Look before shipping: \`npx @pogrobert/surfaces preview --title "..."\` writes images to .surfaces/; \`check\` says whether they hold.
+<!-- surfaces:end -->`
+}
+
+function withBlock(existing: string, block: string) {
+  const marked = /<!-- surfaces:start -->[\s\S]*?<!-- surfaces:end -->/
+  if (marked.test(existing)) return existing.replace(marked, block)
+  return `${existing.replace(/\s*$/, "")}${existing.trim() ? "\n\n" : ""}${block}\n`
+}
+
+// The Next.js link preview for the whole site, from the App Router's own
+// convention: the site's title, set into its brand.
+function nextImage(fromApp: string, title: string) {
+  return `import { toJpeg } from "@pogrobert/surfaces/png"
+import { brand } from "${fromApp}"
+
+// The site's link preview, drawn from its brand. A route of its own, such as
+// a post, gets one the same way, with that page's title.
+export const size = { width: 1200, height: 630 }
+export const contentType = "image/jpeg"
+export const alt = ${JSON.stringify(title)}
+
+export default async function Image() {
+  const jpeg = await toJpeg(brand.og({ title: alt }))
+  return new Response(jpeg as BodyInit, { headers: { "content-type": contentType } })
+}
+`
+}
+
+const RECIPES: Record<string, string> = {
+  "react-router": `A route module that returns the image, e.g. app/routes/og.$slug.ts:
+  export async function loader({ params }) {
+    const jpeg = await toJpeg(brand.og({ title: titleOf(params.slug) }))
+    return new Response(jpeg, { headers: { "content-type": "image/jpeg", "cache-control": "public, max-age=31536000, immutable" } })
+  }`,
+  astro: `A static endpoint, e.g. src/pages/og/[slug].jpg.ts, with getStaticPaths from your collection:
+  export async function GET({ props }) {
+    return new Response(await toJpeg(brand.og({ title: props.title })), { headers: { "content-type": "image/jpeg" } })
+  }`,
+  sveltekit: `A server route, e.g. src/routes/og/[slug].jpg/+server.ts, prerendered:
+  export const prerender = true
+  export async function GET({ params }) {
+    return new Response(await toJpeg(brand.og({ title: titleOf(params.slug) })), { headers: { "content-type": "image/jpeg" } })
+  }`,
+  nuxt: `A server route, e.g. server/routes/og/[slug].jpg.ts:
+  export default defineEventHandler(async (event) => {
+    setHeader(event, "content-type", "image/jpeg")
+    return await toJpeg(brand.og({ title: titleOf(getRouterParam(event, "slug")) }))
+  })`,
+}
+
+async function initCommand(root: string, args: Args, log: (line: string) => void) {
+  const dry = Boolean(one(args, "dry-run"))
+  const project = readProject(root)
+  const name = nameOf(project, args)
+  const facts = factsOf(project)
+  log(`Read ${project.read.length} files (${project.framework}${project.typescript ? ", TypeScript" : ""}): ${project.read.slice(0, 6).join(", ")}${project.read.length > 6 ? ", ..." : ""}`)
+  const options = directions({ name, ...facts })
+  const pick = Number(one(args, "pick") ?? 1)
+  if (!Number.isInteger(pick) || pick < 1 || pick > options.length) throw new Error(`"--pick" must be from 1 to ${options.length}`)
+  const brand = options[pick - 1]!
+  log(`Look: ${describeLook(brand)}`)
+  for (const reason of brand.why) log(`  ${reason}`)
+
+  const writes: { path: string; text: string; skip?: string }[] = []
+  const extension = project.typescript ? "ts" : "js"
+  const module = join(project.source, `surfaces.${extension}`)
+  const look = JSON.stringify({ name, ...brand.look }, null, 2)
+  writes.push({
+    path: module,
+    text: `import { createBrand } from "@pogrobert/surfaces"
+
+// This site's brand: every cover, link preview and avatar comes from it.
+// Written by \`npx @pogrobert/surfaces init\`; change any choice here, or run
+// \`npx @pogrobert/surfaces directions\` to see others.
+export const look = ${look}${project.typescript ? " as const" : ""}
+
+export const brand = createBrand(look)
+`,
+  })
+  for (const file of ["AGENTS.md", "CLAUDE.md"]) {
+    const path = join(root, file)
+    if (file === "CLAUDE.md" && !existsSync(path)) continue
+    const existing = existsSync(path) ? readFileSync(path, "utf8") : ""
+    // A CLAUDE.md that already points at AGENTS.md needs nothing of its own.
+    if (file === "CLAUDE.md" && /AGENTS\.md/.test(existing) && !/surfaces:start/.test(existing)) continue
+    writes.push({ path: file, text: withBlock(existing, agentBlock(module)) })
+  }
+  // The images preview and directions draw are for looking at, not keeping.
+  const ignore = join(root, ".gitignore")
+  if (existsSync(ignore) && !/^\/?\.surfaces\/?$/m.test(readFileSync(ignore, "utf8"))) {
+    writes.push({ path: ".gitignore", text: `${readFileSync(ignore, "utf8").replace(/\s*$/, "")}\n.surfaces/\n` })
+  }
+  if (project.framework === "next" && project.app) {
+    const path = join(project.app, `opengraph-image.${extension === "ts" ? "tsx" : "jsx"}`)
+    const title = facts.words?.split(/[.·|–—-]/)[0]?.trim() || name
+    const fromApp = relative(join(root, project.app), join(root, module)).replace(/\.(ts|js)$/, "").replace(/^(?!\.)/, "./")
+    const taken = ["tsx", "ts", "jsx", "js", "png", "jpg"].some((ext) => existsSync(join(root, project.app!, `opengraph-image.${ext}`)))
+    writes.push({ path, text: nextImage(fromApp, title), ...(taken ? { skip: "the site has a link preview image already" } : null) })
+  }
+
+  for (const write of writes) {
+    const path = join(root, write.path)
+    const exists = existsSync(path)
+    if (write.skip) {
+      log(`Left ${write.path}: ${write.skip}`)
+      continue
+    }
+    if (write.path === module && exists && !one(args, "pick")) {
+      log(`Left ${write.path}: it is set up already; pass --pick <n> to take another direction`)
+      continue
+    }
+    log(`${dry ? "Would write" : exists ? "Updated" : "Wrote"} ${write.path}`)
+    if (!dry) {
+      mkdirSync(dirname(path), { recursive: true })
+      writeFileSync(path, write.text)
+    }
+  }
+  if (!dry) await writeBoard(root, args, options, log)
+
+  log(`Next:`)
+  log(`  npm install @pogrobert/surfaces @resvg/resvg-js`)
+  if (project.framework === "next") log(`  In next.config, add serverExternalPackages: ["@resvg/resvg-js"], so Next leaves its native module alone.`)
+  else if (RECIPES[project.framework]) log(`  Serve link previews from a route. ${RECIPES[project.framework]}`)
+  log(`  Look at the result: npx @pogrobert/surfaces preview --title "A real post title"`)
+}
+
+export async function main(argv: string[], root = process.cwd(), log: (line: string) => void = console.log): Promise<number> {
+  try {
+    const args = parse(argv)
+    switch (args.command) {
+      case "init":
+        await initCommand(root, args, log)
+        return 0
+      case "directions":
+        await directionsCommand(root, args, log)
+        return 0
+      case "preview":
+        await previewCommand(root, args, log)
+        return 0
+      case "check":
+        return checkCommand(root, args, log)
+      case "help":
+      case "--help":
+      case "-h":
+        log(HELP)
+        return 0
+      default:
+        log(`Unknown command "${args.command}".\n${HELP}`)
+        return 1
+    }
+  } catch (error) {
+    log((error as Error).message)
+    return 1
+  }
+}
+
+// Run when called as a program, not when imported by the tests.
+if (process.argv[1] && /cli\.(ts|js)$/.test(process.argv[1])) {
+  process.exitCode = await main(process.argv.slice(2))
+}

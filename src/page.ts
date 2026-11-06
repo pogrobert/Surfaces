@@ -315,7 +315,9 @@ export function readPage(html = "", css = ""): Omit<PageFacts, "covers"> {
     const shade = Number(name.match(/-(\d{2,3})$/)?.[1] ?? 500)
     return kind * 1e6 + Math.abs(shade - 500) * 1000 + name.length
   }
-  const named = [...source.matchAll(new RegExp(String.raw`--([\w-]*(?:brand|primary|accent)[\w-]*)\s*:\s*${COLOR}`, "gi"))]
+  // Named in a CSS variable, an SCSS variable, or a key of a config such as
+  // Tailwind's.
+  const named = [...source.matchAll(new RegExp(String.raw`(?:--|\$|\b)([\w-]*(?:brand|primary|accent)[\w-]*)["']?\s*:\s*["']?${COLOR}`, "gi"))]
     .map((match) => ({ name: match[1]!.toLowerCase(), color: hex(match[2]!) }))
     .filter((entry): entry is { name: string; color: string } => Boolean(entry.color))
     .sort((a, b) => rank(a.name) - rank(b.name))

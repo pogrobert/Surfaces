@@ -6,6 +6,26 @@ title always draws the same cover.
 
 Not published yet. The full design is in [docs/api.md](docs/api.md).
 
+## Set up a site
+
+```sh
+npx @pogrobert/surfaces init
+```
+
+It reads the site's own files (its stylesheets, Tailwind config, root
+layout, fonts and metadata), chooses a look with a reason for each choice,
+and writes:
+
+- `surfaces.ts` beside the source, the brand everything comes from;
+- a short block in `AGENTS.md`, so coding agents use it rightly;
+- on Next.js, `app/opengraph-image.tsx`, the site's link preview;
+- `.surfaces/directions.jpg`, a board of other looks; `init --pick 3` takes one.
+
+Nothing is sent anywhere and nothing it didn't write is changed.
+`npx @pogrobert/surfaces preview --title "A real title"` draws the brand's
+covers into `.surfaces/` to look at, and `check` says whether they hold, so
+an agent can look, fix and look again.
+
 ## Brands
 
 ```ts
@@ -97,6 +117,20 @@ and pass its module:
 import wasm from "@resvg/resvg-wasm/index_bg.wasm"
 await toJpeg(brand.og({ title }), { wasm })
 ```
+
+## Link previews from a URL
+
+```ts
+import { createHandler, signUrl } from "@pogrobert/surfaces/http"
+import { toJpeg } from "@pogrobert/surfaces/png"
+
+export const GET = createHandler({ brand, jpeg: (input) => toJpeg(generate(input)), secret: process.env.OG_SECRET })
+// <meta property="og:image" content={await signUrl(`https://acme.dev/og?title=${encodeURIComponent(title)}&format=jpeg`, secret)}>
+```
+
+With a brand, a URL says only what the cover is about: `title`, `id`,
+`use` and `format`. With a `secret`, only signed URLs are drawn, so no one
+else can have it draw what they like.
 
 ## Plain DOM, SVG, HTTP
 

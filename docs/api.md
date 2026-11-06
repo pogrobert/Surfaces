@@ -97,6 +97,22 @@ directions({ name: "acme.dev", ...readPage(html, css), style: "riso" })    // mo
 
 `generate(input)` stays, for one exact cover outside a brand.
 
+## Command line
+
+`npx @pogrobert/surfaces <command>`, for a person or an agent in a project.
+Everything it does is a rule on the project's own files; nothing is sent
+anywhere, and it changes nothing it didn't write.
+
+| Command | Does |
+|---|---|
+| `init` | Reads the site (stylesheets, Tailwind config, root layout, fonts, metadata in code), writes the brand module (`surfaces.ts` in `src/`, `app/` or the root), a marked block in `AGENTS.md` (and `CLAUDE.md` when it doesn't already point there), Next.js's `app/opengraph-image.tsx`, and a board of directions. `--pick <n>` takes another direction; `--name` names the brand; `--dry-run` writes nothing. Run again, it leaves what is set up. |
+| `directions` | Prints the directions with their reasons and draws them as `.surfaces/directions.jpg`. |
+| `preview` | Draws the brand's covers (`--use`, default `og`; `--title`, repeatable) into `.surfaces/`, each with its alt text. |
+| `check` | One line of JSON for each cover in each use and theme: whether it holds, its contrast, coverage, problems and warnings. Exits 1 if any doesn't. |
+
+The brand module keeps its look as a plain object (`export const look`), so
+the CLI reads it without the project's build.
+
 ## Input
 
 ```ts
@@ -213,7 +229,15 @@ and the HTTP handler, `createHandler({ defaults, png })`, a fetch handler whose
 parameters are the input's own names:
 `/cover?style=riso&seed=x&color=635bff&width=1200&height=630&area=bottom-left:lg`
 (`area` repeats, as `place:size:art`; `title` and `font` set a title in;
-`format=png` when given a `png` function).
+`format=png` or `format=jpeg` when given a `png` or `jpeg` function).
+
+With `brand`, the handler draws that brand's covers and a URL says only what
+one is about: `title`, `id`, `use` (default `og`), `theme` for one side of a
+brand that follows the reader, and `format`. The title is set into the image
+wherever the cover keeps room for it. With `secret`, only URLs signed by
+`signUrl(url, secret)` are drawn; anything else gets a 403 that says how to
+sign it. Signing is HMAC-SHA-256 through WebCrypto, so it runs wherever the
+handler does.
 A wrong URL gets a 400 with the same fix-it message `validate` gives.
 
 ## Alt text

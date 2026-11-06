@@ -152,3 +152,6 @@ export function positions(text: string, font: Font) {
   }
   return placed
 }
+
+// A run's width in ems, kerned: for setting a label by hand.
+export const measure = (text: string, font: Font) => width(text, face(font))
