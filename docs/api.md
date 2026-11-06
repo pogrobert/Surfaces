@@ -45,7 +45,9 @@ brand.input("post", { title })          // the input any of those draws, for com
   already, so it has none. An SVG file's text, or `{ data, type }` for a PNG,
   JPEG or WebP; `{ light, dark }` gives one for each ground, and a logo whose
   colours all fall under 3:1 on its ground says so. It is drawn as an image,
-  never recoloured, and nothing in it runs.
+  never recoloured, and nothing in it runs; only `currentColor`, the text's
+  colour, which an image has none of, becomes the cover's ink, as the title's
+  is.
 - A cover is about its `title`. An `id`, such as the slug, keeps its art when
   the title is edited. A `tag`, such as the post's category, makes every
   cover with it the same mark, so a category reads as one family while each

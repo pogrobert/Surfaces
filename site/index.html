@@ -23,7 +23,7 @@
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --paper: #0f1320; --sheet: #161b2b; --ink: #e9ecf3; --quiet: #9aa3b8; --rule: #2a3146; --action: #4fb3f0;
+      --paper: #0c0f16; --sheet: #151a24; --ink: #eceef3; --quiet: #9ba3b4; --rule: #252c3a; --action: #5ab8f0;
       color-scheme: dark;
     }
   }
@@ -43,6 +43,11 @@
   /* Each mark at its spot, its size scaled from a 1440-wide window. */
   .marks .mark { position: absolute; left: var(--x); top: var(--y); width: clamp(calc(var(--s) * 0.62px), calc(var(--s) * 100vw / 1440), calc(var(--s) * 1.15px)); aspect-ratio: 1; transform: translate(-50%, -50%) rotate(var(--r)); line-height: 0; overflow: hidden; }
   .marks .mark.over { visibility: hidden; }
+  /* On a dark page a mark's own dark ground needs an edge to sit apart. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .marks .mark { box-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.6); }
+    :root:not([data-theme="light"]) .marks .mark::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08); pointer-events: none; }
+  }
   @media (max-width: 760px) { .marks .mark.mid { display: none; } }
   .marks .mark > div { position: absolute; inset: 0; }
   .pitch { position: absolute; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, calc(100% - 32px)); text-align: center; display: grid; justify-items: center; }
@@ -302,7 +307,7 @@ function renderSuggestions() {
       const name = document.createElement("b")
       name.textContent = site.name
       const domain = document.createElement("span")
-      domain.textContent = site.recent ? "read before" : site.domain
+      domain.textContent = site.recent ? "read before" : site.name === site.domain ? "" : site.domain
       item.append(icon, name, domain)
       // Down, not click, so the field doesn't lose focus and close the list first.
       item.addEventListener("mousedown", (event) => {
@@ -565,9 +570,20 @@ function picture(target, scene, name, caption, file) {
   holder.replaceChildren(pic, label)
 }
 
+// The reader's own light or dark, which the pictures of a brand that follows
+// the reader take, and the card shows the other.
+const darkMode = matchMedia("(prefers-color-scheme: dark)")
+darkMode.addEventListener("change", () => {
+  if (!$("#work").hidden) draw()
+})
+
 function drawSheet(brand) {
-  // A picture has one ground; a brand that follows the reader shows its light one.
-  const flat = brand.look.theme === "auto" ? createBrand({ ...choices(), theme: "light" }) : brand
+  // A picture has one ground; a brand that follows the reader shows the one
+  // the reader sees, and its card the other.
+  const follows = brand.look.theme === "auto"
+  const seen = darkMode.matches ? "dark" : "light"
+  const other = seen === "dark" ? "light" : "dark"
+  const flat = follows ? createBrand({ ...choices(), theme: seen }) : brand
   const title = state.title.trim() || "How we cut our build times in half"
   $("#sheetHeading").textContent = `${NAMES[brand.look.style]} for ${brand.name}`
   $("#sheetNote").textContent = catalog.find((entry) => entry.style === brand.look.style)?.looks ?? ""
@@ -576,7 +592,7 @@ function drawSheet(brand) {
   picture("#linkedin", flat.banner({ for: "linkedin" }), "LinkedIn banner", "1584 × 396", "linkedin-banner")
   picture("#email", flat.banner({ for: "email", title }), "Email header", "1200 × 400", "email-header")
   picture("#cover", flat.cover({ title, drawTitle: true }), "Post cover", "each post's title draws its own", "cover")
-  picture("#card", (brand.look.theme === "auto" ? createBrand({ ...choices(), theme: "dark" }) : flat).card({ title: `${title} 2` }), brand.look.theme === "auto" ? "Card, dark" : "Card", "for a list of posts, art only", "card")
+  picture("#card", (follows ? createBrand({ ...choices(), theme: other }) : flat).card({ title: `${title} 2` }), follows ? `Card, ${other}` : "Card", "for a list of posts, art only", "card")
   $("#people").replaceChildren(
     ...PEOPLE.map((person) => {
       const face = document.createElement("div")

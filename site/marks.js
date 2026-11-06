@@ -16,11 +16,12 @@ export const SAMPLES = [
 // Each size is in pixels on a 1440-wide window; CSS scales it from there.
 export const SPOTS = [[8, 12], [24, 6], [44, 9], [66, 5], [86, 10], [93, 34], [88, 62], [90, 86], [70, 90], [50, 88], [30, 92], [10, 84], [5, 58], [9, 34], [76, 28], [20, 30], [80, 74], [18, 66]]
 
-// The marks as HTML, one look after another round the ring. Those in the
-// middle band are marked, so a narrow screen can leave them out before any
-// script runs.
+// The marks as HTML, one look after another round the ring. Each is drawn
+// on both its grounds, so it follows the reader's light or dark mode as the
+// page does. Those in the middle band are marked, so a narrow screen can
+// leave them out before any script runs.
 export function marks(looks, createBrand, toHtml) {
-  const brands = looks.map((look) => createBrand(look))
+  const brands = looks.map((look) => createBrand({ ...look, theme: "auto" }))
   return SPOTS.map(([x, y], i) => {
     const square = i % 3 === 0
     const size = 70 + ((i * 37) % 80)

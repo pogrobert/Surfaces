@@ -180,6 +180,17 @@ test("a brand's logo is set as it is on its link previews and headers, clear of 
   const dark = createBrand({ name: "harbour.test", theme: "dark", logo: { light: logo, dark: logo.replace("#0f766e", "#5eead4") } })
   assert.match(Buffer.from(String((logoOf(dark.og({ title: "Hi" })) as { href: string }).href.split(",")[1]), "base64").toString(), /#5eead4/)
   assert.match(errorOf(() => createBrand({ name: "a", logo: "logo.svg" })), /"logo": Expected the logo as an SVG file's text/)
+  // One drawn in the text's colour takes the cover's ink on each ground.
+  const ink = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path fill="currentColor" d="M5 0 10 10H0z"/></svg>`
+  const drawn = (theme: "light" | "dark") => {
+    const scene = createBrand({ name: "harbour.test", theme, logo: ink }).og({ title: "Hi" })
+    return { svg: Buffer.from(String((logoOf(scene) as { href: string }).href.split(",")[1]), "base64").toString(), ink: scene.ink }
+  }
+  for (const theme of ["light", "dark"] as const) {
+    const { svg, ink: color } = drawn(theme)
+    assert.ok(svg.includes(`fill="${color}"`) && !/currentColor/i.test(svg), theme)
+  }
+  assert.notEqual(drawn("light").ink, drawn("dark").ink)
 })
 
 test("a logo in the title's way fails, naming the fix", async () => {

@@ -258,7 +258,11 @@ function draw(input: SurfaceInput, fill = false, recipe: Recipe = STYLES[input.s
   if (input.logo) {
     const { box } = areas.at(-1)!
     const place = input.logo.place
-    const image = theme === "dark" ? input.logo.dark ?? input.logo.image : input.logo.image
+    const given = theme === "dark" ? input.logo.dark ?? input.logo.image : input.logo.image
+    // A logo drawn in currentColor takes the colour of the text around it,
+    // which an image has none of: here it takes the cover's ink, as the title
+    // does, dark on paper and light on black.
+    const image = typeof given === "string" ? given.replace(/currentColor/gi, palette.ink) : given
     const align = place.endsWith("left") ? "start" : place.endsWith("right") ? "end" : "middle"
     // On the title's side, it lines up with the title's edge.
     const title = titled && safe !== box && areas.find((area) => area.box === safe)?.place

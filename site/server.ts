@@ -3,6 +3,7 @@
 // type, /read, which fetches a public site for the page to read in the
 // browser, /suggest, sites whose names start with what is typed, and /icon,
 // each suggested site's favicon.
+import { lookup } from "node:dns/promises"
 import { createReadStream, existsSync, readFileSync, statSync } from "node:fs"
 import { createServer } from "node:http"
 import { extname, join, normalize } from "node:path"
@@ -55,23 +56,43 @@ const page = () =>
   readFileSync(join(ROOT, "site/index.html"), "utf8").replace(`<div class="marks" id="marks" aria-hidden="true"></div>`, `<div class="marks" id="marks" aria-hidden="true">${FIRST_MARKS}</div>`)
 
 // Sites for what is typed, from Clearbit's free company search, kept a while
-// so typing back over a word asks nothing twice. A search that fails or
-// takes too long suggests nothing; the address typed still works.
+// so typing back over a word asks nothing twice. The search knows companies,
+// not every site, so the address typed, or a word under the usual endings,
+// is suggested too when it is a real domain. A search that fails or takes too
+// long suggests nothing; the address typed still works.
 const suggested = new Map<string, { name: string; domain: string }[]>()
 // Adult sites, which the search ranks high for common words and which have
 // no place in a product's suggestions.
 const ADULT = /porn|xxx|nsfw|hentai|escort|xhamster|xvideos|redtube|youporn|brazzers|stripchat|chaturbate|livejasmin|bongacams|camsoda|myfreecams|cam4\b|onlyfans|fansly|manyvids/i
-async function suggest(typed: string) {
-  const query = typed.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").slice(0, 60)
-  if (query.length < 2) return []
-  if (suggested.has(query)) return suggested.get(query)!
+const ENDINGS = ["com", "app", "io", "co", "dev", "ai", "so"]
+// Whether a domain has an address, within a second.
+const resolves = (domain: string) =>
+  Promise.race([lookup(domain).then(() => true), new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 1000))]).catch(() => false)
+
+async function companies(query: string) {
   try {
     const response = await fetch(`https://autocomplete.clearbit.com/v1/companies/suggest?query=${encodeURIComponent(query)}`, { signal: AbortSignal.timeout(2500) })
     const found = response.ok ? ((await response.json()) as { name?: unknown; domain?: unknown }[]) : []
-    const sites = found
+    return found
       .filter((site) => typeof site.name === "string" && typeof site.domain === "string" && !ADULT.test(`${site.name} ${site.domain}`))
-      .slice(0, 6)
       .map((site) => ({ name: String(site.name), domain: String(site.domain) }))
+  } catch {
+    return []
+  }
+}
+
+async function suggest(typed: string) {
+  const query = typed.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "").slice(0, 60)
+  if (query.length < 2) return []
+  if (suggested.has(query)) return suggested.get(query)!
+  try {
+    // An address as typed leads; a single word is tried under each ending.
+    const typedDomain = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(query)
+    const guesses = typedDomain ? [query] : /^[a-z0-9-]{2,40}$/.test(query) ? ENDINGS.map((ending) => `${query}.${ending}`) : []
+    const [found, real] = await Promise.all([companies(query), Promise.all(guesses.map(async (domain) => ((await resolves(domain)) ? domain : null)))])
+    const known = new Set(found.map((site) => site.domain))
+    const domains = real.filter((domain): domain is string => Boolean(domain) && !known.has(domain!) && !ADULT.test(domain!)).map((domain) => ({ name: domain, domain }))
+    const sites = (typedDomain ? [...domains, ...found] : [...found, ...domains]).slice(0, 6)
     if (suggested.size > 500) suggested.clear()
     suggested.set(query, sites)
     // Their icons start now, so they arrive with the list, not after it.
