@@ -25,6 +25,7 @@ const OPTIONS = [
   "image",
   "title",
   "font",
+  "logo",
 ] as const
 const AREA_OPTIONS = ["place", "size", "box", "art"] as const
 
@@ -166,11 +167,11 @@ export function validate(input: unknown): Problems {
   }
 
   const areas = input.areas
+  const boxes: { box: Box; name: string }[] = []
   if (areas !== undefined) {
     if (!Array.isArray(areas)) {
       errors.push(`"areas" must be a list, such as [{ place: "bottom-left", size: "lg" }].`)
     } else {
-      const boxes: { box: Box; name: string }[] = []
       areas.forEach((area, index) => {
         const name = `Area ${index + 1}`
         if (!isObject(area)) {
@@ -224,6 +225,24 @@ export function validate(input: unknown): Problems {
           const meet = a.box.x < b.box.x + b.box.w && b.box.x < a.box.x + a.box.w && a.box.y < b.box.y + b.box.h && b.box.y < a.box.y + a.box.h
           if (meet) errors.push(`${a.name} and ${b.name} overlap; make one smaller ("sm") or move it to another place.`)
         }
+      }
+    }
+  }
+
+  // The logo, in a small area of its own.
+  const logo = input.logo
+  if (logo !== undefined) {
+    const image = (value: unknown) =>
+      typeof value === "string" ? /<svg[\s>]/i.test(value) : isObject(value) && value.data instanceof Uint8Array && typeof value.type === "string"
+    if (!isObject(logo) || !image(logo.image) || (logo.dark !== undefined && !image(logo.dark))) {
+      errors.push(`"logo" must be { image, place }: the image an SVG file's text or { data, type } for a PNG, JPEG or WebP, such as { image: svg, place: "top-left" }. "dark" may give one for dark covers.`)
+    } else if (typeof logo.place !== "string" || !(PLACES as readonly string[]).includes(logo.place)) {
+      errors.push(`The logo has an unknown place ${JSON.stringify(logo.place)}.${typeof logo.place === "string" ? nearest(logo.place, PLACES) : ""} Use ${list(PLACES)}.`)
+    } else {
+      const box = areaShare(logo.place as (typeof PLACES)[number], "sm", aspect)
+      for (const other of boxes) {
+        const meet = box.x < other.box.x + other.box.w && other.box.x < box.x + box.w && box.y < other.box.y + other.box.h && other.box.y < box.y + box.h
+        if (meet) errors.push(`The logo at "${logo.place}" overlaps ${other.name}; put it in a corner the title leaves free.`)
       }
     }
   }

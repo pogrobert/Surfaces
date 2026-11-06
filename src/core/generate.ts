@@ -1,12 +1,12 @@
 import { CANVAS_SIDE, DEFAULT_SIZE, MAX_RATIO, areaShare, scaleBox } from "./intent.ts"
-import type { Area, Detail, Grain, Mood, MotionLevel, Theme } from "./intent.ts"
+import type { Area, Detail, Grain, Mood, MotionLevel, Place, Theme } from "./intent.ts"
 import { contrast, luminance } from "./color.ts"
 import { lerp } from "./math.ts"
 import { makePalette } from "./palette.ts"
 import { createRng, hash } from "./random.ts"
 import type { Recipe } from "./recipe.ts"
 import type { Box, Layer, Motion, Scene } from "./scene.ts"
-import { readImage } from "./image.ts"
+import { readImage, readLogo } from "./image.ts"
 import type { ImageInput } from "./image.ts"
 import { facing, veil } from "../layouts/veil.ts"
 import { micrographics } from "../overlays/micro.ts"
@@ -41,6 +41,10 @@ export type SurfaceInput = {
   title?: string
   // The face it is set in. Default "sans".
   font?: Font
+  // The brand's own logo, drawn as it is in a small area at `place` that the
+  // art keeps clear: an SVG file's text, or a PNG, JPEG or WebP. `dark` is
+  // the one for a dark cover, for a logo whose colours a dark ground loses.
+  logo?: { image: string | ImageInput; dark?: string | ImageInput; place: Place }
 }
 
 const DEFAULT_COLOR = "#5b5bd6"
@@ -118,7 +122,8 @@ function draw(input: SurfaceInput, fill = false, recipe: Recipe = STYLES[input.s
 
   // Each area as a box on the canvas. The art keeps clear of those it goes
   // around, and reads the largest of them as where the title is.
-  const areas = (input.areas ?? []).map((area) => ({
+  const asked: readonly Area[] = [...(input.areas ?? []), ...(input.logo ? [{ place: input.logo.place, size: "sm" as const }] : [])]
+  const areas = asked.map((area) => ({
     place: area.box ? null : area.place ?? null,
     size: area.box ? null : area.size ?? "md",
     art: area.art ?? "around",
@@ -248,6 +253,27 @@ function draw(input: SurfaceInput, fill = false, recipe: Recipe = STYLES[input.s
     if (text) layers.push(text)
   }
 
+  // The logo over everything too, in its own area, the last, kept clear of
+  // the art and given a patch of ground like any area beside the title.
+  if (input.logo) {
+    const { box } = areas.at(-1)!
+    const place = input.logo.place
+    const image = theme === "dark" ? input.logo.dark ?? input.logo.image : input.logo.image
+    const align = place.endsWith("left") ? "start" : place.endsWith("right") ? "end" : "middle"
+    // On the title's side, it lines up with the title's edge.
+    const title = titled && safe !== box && areas.find((area) => area.box === safe)?.place
+    const edge =
+      title && align === "start" && title.endsWith("left") ? safe.x - box.x
+      : title && align === "end" && title.endsWith("right") ? safe.x + safe.w - (box.x + box.w)
+      : 0
+    const lost = typeof image === "string" && !input.logo.dark && fadesInto(image, palette.ground)
+    if (lost && !warned.has(lost)) {
+      warned.add(lost)
+      console.warn(`surfaces: ${lost}`)
+    }
+    layers.push({ kind: "logo", id: "logo", href: readLogo(image), x: box.x + edge, y: box.y + box.h * 0.15, w: box.w, h: box.h * 0.7, align })
+  }
+
   // A layout says how its art arrives and how it then moves; a cover asked
   // only to arrive keeps the first.
   if (motion === "once") layers = layers.map(still)
@@ -277,6 +303,15 @@ function draw(input: SurfaceInput, fill = false, recipe: Recipe = STYLES[input.s
     ...(art.subject ? { subject: art.subject } : null),
     layers,
   }
+}
+
+// Why an SVG logo would vanish on a ground, when every colour it is drawn in
+// falls short of the 3:1 a graphic needs to be seen; nothing when it reads,
+// or when its colours aren't written as hex.
+function fadesInto(svg: string, ground: string) {
+  const colours = [...new Set([...svg.matchAll(/#(?:[0-9a-f]{6}|[0-9a-f]{3})\b/gi)].map((match) => match[0].length === 4 ? `#${[...match[0].slice(1)].map((d) => d + d).join("")}` : match[0]))]
+  if (!colours.length || colours.some((colour) => contrast(colour, ground) >= 3)) return ""
+  return `The logo's colours (${colours.slice(0, 3).join(", ")}) barely show on the ${luminance(ground) < 0.18 ? "dark" : "light"} ground; give logo: { light, dark } with one drawn for it.`
 }
 
 // A soft patch of ground over the art at `box`: solid across the box, fading

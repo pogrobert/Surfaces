@@ -212,8 +212,10 @@ export function colorAt(scene: Scene, x: number, y: number): Rgb {
           : under
       case "grain":
         return under
-      // The title is what is being read, not what it is read against.
+      // The title is what is being read, not what it is read against, and
+      // the logo is the brand's own.
       case "text":
+      case "logo":
         return under
     }
   }

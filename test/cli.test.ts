@@ -167,4 +167,9 @@ test("kit writes the brand's link preview and headers, where the site points at 
   // Again, it leaves what is there, unless forced.
   assert.match((await run("kit")).out, /Left public\/x-header\.jpg: it is there already/)
   assert.match((await run("kit", "--force")).out, /Replaced public\/x-header\.jpg/)
+  // The site's logo goes on them, as it is.
+  write("public/logo.svg", `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="#7c2d12"/></svg>`)
+  assert.match((await run("kit", "--force", "--dry-run")).out, /Setting the logo from public\/logo\.svg/)
+  assert.doesNotMatch((await run("kit", "--force", "--dry-run", "--logo", "none")).out, /Setting the logo/)
+  rmSync(join(site, "public/logo.svg"))
 })

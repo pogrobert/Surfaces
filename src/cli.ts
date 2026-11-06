@@ -45,6 +45,7 @@ Options
   --use <use>         post, card, hero, og, x, linkedin or email (preview, check; default og)
   --brand <file>      The brand module (default: surfaces.ts beside the source)
   --out <path>        Where images go (default .surfaces/)
+  --logo <file>       The logo kit sets on them (default: the site's logo SVG; none for none)
   --force             Let kit replace files that are there already
   --dry-run           Say what init or kit would write, and write nothing
 `
@@ -234,11 +235,13 @@ function agentBlock(module: string) {
   return `<!-- surfaces:start -->
 ## Covers and link previews (@pogrobert/surfaces)
 
+- For pictures the site repeats: covers, link previews, headers, avatars. A picture of one particular thing (a product, a person) is a photo or an image model's job.
 - The brand is \`brand\`, exported from \`${module}\`. Change its look there; \`npx @pogrobert/surfaces directions\` draws others to choose from.
 - A cover is \`brand.cover({ title })\`, \`brand.card\`, \`brand.hero\`; a person's mark \`brand.avatar(user.id)\`. React: \`<Cover brand={brand} title={title} />\` from \`@pogrobert/surfaces/react\`.
 - A link preview is \`toJpeg(brand.og({ title }))\` from \`@pogrobert/surfaces/png\`, the title drawn in; alt \`describe(scene, { title })\`.
 - \`id: post.slug\` keeps a cover's art when its title is edited. There are no seeds to choose.
-- Look before shipping: \`npx @pogrobert/surfaces preview --title "..."\` writes images to .surfaces/; \`check\` says whether they hold.
+- Look before shipping: \`npx @pogrobert/surfaces preview --title "..."\` writes images to .surfaces/; \`check\` says whether they hold. \`kit\` writes the preview and headers, with the site's logo.
+- Everything else: node_modules/@pogrobert/surfaces/docs/api.md.
 <!-- surfaces:end -->`
 }
 
@@ -403,7 +406,13 @@ async function kitCommand(root: string, args: Args, log: (line: string) => void)
   const shapes = (STYLES[brand.look.style].shapes ?? []) as readonly string[]
   const mark = brand.look.shape ?? (shapes.length ? shapes[hash(`${brand.name}/kit`) % shapes.length] : undefined)
   // Pictures have one theme; a brand that follows the reader shows its light side.
-  const flat = createBrand({ name: brand.name, ...brand.look, ...(mark ? { shape: mark } : null), theme: brand.look.theme === "dark" ? "dark" : "light" })
+  // The site's own logo goes on its preview and headers, as it is.
+  const chosen = one(args, "logo")
+  const logoFile = chosen === "none" ? undefined : chosen ?? project.logo
+  if (logoFile && !existsSync(join(root, logoFile))) throw new Error(`No logo at ${logoFile}: pass --logo <file.svg>, or --logo none`)
+  const logo = logoFile ? readFileSync(join(root, logoFile), "utf8") : undefined
+  if (logoFile) log(`Setting the logo from ${logoFile} (--logo <file> for another, --logo none for none)`)
+  const flat = createBrand({ name: brand.name, ...brand.look, ...(mark ? { shape: mark } : null), theme: brand.look.theme === "dark" ? "dark" : "light", ...(logo ? { logo } : null) })
   const png = async (scene: Scene) => (await rasterize(toSvg(scene, { target: "resvg", outlines: outlinePath }), scene.output.w)).asPng()
 
   const og = served(publicDir, pointed, brand.name) ?? join(publicDir, "og.jpg")

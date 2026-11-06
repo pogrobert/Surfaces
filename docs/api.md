@@ -7,6 +7,12 @@ input. Most users reach the library through an AI agent, so there is one way
 to do each thing, every value is a small set of words, and a wrong input fails
 with an error that names the fix.
 
+What it is for: the pictures a site repeats, its covers, link previews,
+headers, email headers and avatars, which should look like one brand, carry
+their titles exactly and come out the same on every build. A picture of one
+particular thing, a product, a person or a place, is a photo's job, or an
+image model's; a photo can still be printed in a style's inks (`image`).
+
 ## Brands
 
 Added 2026-11-06, as the way most covers are made. A design studio makes a
@@ -32,6 +38,14 @@ brand.input("post", { title })          // the input any of those draws, for com
   the banner is art alone. An X header always keeps its bottom left clear,
   where X lays the profile's photo. There is no icon: an icon is a brand's
   identity, and a site keeps its own.
+- `logo` is that identity, set as it is on the pictures a site shows of
+  itself elsewhere: the link preview (top left, on the title's edge) and the
+  headers (at the right, clear of the photo X and LinkedIn lay over the
+  left). A post's cover goes on the site itself, which shows its logo
+  already, so it has none. An SVG file's text, or `{ data, type }` for a PNG,
+  JPEG or WebP; `{ light, dark }` gives one for each ground, and a logo whose
+  colours all fall under 3:1 on its ground says so. It is drawn as an image,
+  never recoloured, and nothing in it runs.
 - A cover is about its `title`. An `id`, such as the slug, keeps its art when
   the title is edited. A `tag`, such as the post's category, makes every
   cover with it the same mark, so a category reads as one family while each
@@ -117,7 +131,7 @@ anywhere, and it changes nothing it didn't write.
 | Command | Does |
 |---|---|
 | `init` | Reads the site (its `DESIGN.md`, stylesheets, Tailwind config, root layout, fonts, metadata in code), writes the brand module (`surfaces.ts` in `src/`, `app/` or the root), a marked block in `AGENTS.md` (and `CLAUDE.md` when it doesn't already point there), Next.js's `app/opengraph-image.tsx`, and a board of directions. `--pick <n>` takes another direction; `--name` names the brand; `--dry-run` writes nothing. Run again, it leaves what is set up. |
-| `kit` | Writes the pictures a site shows of itself that are art, not identity, into its public folder (`static/` for SvelteKit): the link preview, at the path its `og:image` already names or `og.jpg`, and X, LinkedIn and email headers, all on one mark. It never draws an icon: a site's icon is its own. It leaves files that are there unless `--force`, and prints the `og:image` tag when the site has none. |
+| `kit` | Writes the pictures a site shows of itself that are art, not identity, into its public folder (`static/` for SvelteKit): the link preview, at the path its `og:image` already names or `og.jpg`, and X, LinkedIn and email headers, all on one mark, with the site's own logo SVG set on them as it is (`--logo <file>` for another, `--logo none` for none). It never draws an icon: a site's icon is its own. It leaves files that are there unless `--force`, and prints the `og:image` tag when the site has none. |
 | `directions` | Prints the directions with their reasons and draws them as `.surfaces/directions.jpg`. |
 | `preview` | Draws the brand's covers (`--use`, default `og`; `--title`, repeatable) into `.surfaces/`, each with its alt text. |
 | `check` | One line of JSON for each cover in each use and theme: whether it holds, its contrast, coverage, problems and warnings. Exits 1 if any doesn't. |
@@ -144,6 +158,7 @@ type SurfaceInput = {
   motion?: "none" | "once" | "loop"     // default "none"
   shape?: string                        // one of the style's approved shapes
   image?: ImageInput                    // a photo printed in the style's inks
+  logo?: { image, dark?, place }        // the brand's logo, as it is, in a small area the art keeps clear
 }
 
 type Area = {

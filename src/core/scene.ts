@@ -238,6 +238,18 @@ export type Layer =
       fit: string
       treatments: Treatment[]
     }
+  // A brand's own logo, drawn as it is and never recoloured: its file, fitted
+  // inside the box at x, y and set to `align` along it.
+  | {
+      kind: "logo"
+      id: string
+      href: string
+      x: number
+      y: number
+      w: number
+      h: number
+      align: "start" | "middle" | "end"
+    }
   // Marks seen out of focus, softened by `radius`, and by `ry` up and down
   // when that differs: a smear rather than a blur.
   | { kind: "soften"; id: string; radius: number; ry?: number; layers: Mark[]; motion?: Motion }

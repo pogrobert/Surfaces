@@ -52,6 +52,21 @@ function base64(data: Uint8Array) {
   return text
 }
 
+// The most an SVG logo may weigh; a logo past it carries more than a mark.
+export const MOST_LOGO_BYTES = 200 * 1024
+
+// A logo as a data URL: an SVG file's own text, or a PNG, JPEG or WebP's
+// bytes. Either way it is shown as an image, so nothing in it runs.
+export function readLogo(logo: string | ImageInput) {
+  if (typeof logo !== "string") return readImage(logo).href
+  if (!/^\s*(?:<\?xml[^>]*>\s*)?(?:<!--[\s\S]*?-->\s*)*(?:<!DOCTYPE[^>]*>\s*)?<svg[\s>]/i.test(logo)) {
+    throw new Error(`Expected the logo as an SVG file's text, starting <svg, or { data, type } for a PNG, JPEG or WebP`)
+  }
+  const data = new TextEncoder().encode(logo)
+  if (data.length > MOST_LOGO_BYTES) throw new Error(`Expected a logo under ${MOST_LOGO_BYTES / 1024} KB; simplify the SVG first`)
+  return `data:image/svg+xml;base64,${base64(data)}`
+}
+
 export function readImage(image: ImageInput) {
   if (!(image.data instanceof Uint8Array)) {
     throw new Error("Expected the image as a Uint8Array of its file's bytes")

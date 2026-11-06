@@ -160,3 +160,33 @@ test("a brand makes the rest of the kit: banners for X, LinkedIn and email", () 
   assert.ok(!("icon" in brand))
   assert.match(errorOf(() => brand.banner({ for: "tiktok" } as never)), /Unknown banner "tiktok"/)
 })
+
+test("a brand's logo is set as it is on its link previews and headers, clear of the art", () => {
+  const logo = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" fill="#0f766e"/></svg>`
+  const brand = createBrand({ name: "harbour.test", color: "#0f766e", logo })
+  const logoOf = (scene: ReturnType<typeof brand.og>) => scene.layers.find((layer) => layer.kind === "logo")
+  const og = brand.og({ title: "How we cut our build times in half" })
+  assert.match(String((logoOf(og) as { href: string }).href), /^data:image\/svg\+xml;base64,/)
+  assert.ok(judge(og).ok, judge(og).problems.join("; "))
+  assert.ok(toSvg(og).includes(`<image href="data:image/svg+xml;base64,`))
+  for (const where of ["x", "linkedin", "email"] as const) {
+    const banner = brand.banner({ for: where })
+    assert.ok(logoOf(banner), where)
+    assert.ok(judge(banner).ok, `${where}: ${judge(banner).problems.join("; ")}`)
+  }
+  // A post's cover is on the site itself, which shows its logo already.
+  assert.equal(logoOf(brand.cover({ title: "Hi" })), undefined)
+  // A logo for each ground.
+  const dark = createBrand({ name: "harbour.test", theme: "dark", logo: { light: logo, dark: logo.replace("#0f766e", "#5eead4") } })
+  assert.match(Buffer.from(String((logoOf(dark.og({ title: "Hi" })) as { href: string }).href.split(",")[1]), "base64").toString(), /#5eead4/)
+  assert.match(errorOf(() => createBrand({ name: "a", logo: "logo.svg" })), /"logo": Expected the logo as an SVG file's text/)
+})
+
+test("a logo in the title's way fails, naming the fix", async () => {
+  const { validate } = await import("../src/core/validate.ts")
+  const svg = `<svg viewBox="0 0 1 1"></svg>`
+  const base = { style: "riso", seed: "a/b", width: 1200, height: 630, areas: [{ place: "left", size: "lg" }] } as const
+  assert.match(validate({ ...base, logo: { image: svg, place: "left" } }).errors.join("\n"), /logo at "left" overlaps Area 1/)
+  assert.match(validate({ ...base, logo: { image: svg, place: "middle" as never } }).errors.join("\n"), /unknown place "middle"/)
+  assert.deepEqual(validate({ ...base, logo: { image: svg, place: "top-left" } }).errors, [])
+})

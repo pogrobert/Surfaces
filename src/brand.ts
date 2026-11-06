@@ -3,6 +3,9 @@ import type { AvatarStyle } from "./avatar.ts"
 import { generate } from "./core/generate.ts"
 import { hash } from "./core/random.ts"
 import type { SurfaceInput } from "./core/generate.ts"
+import { readLogo } from "./core/image.ts"
+import type { ImageInput } from "./core/image.ts"
+import type { Place } from "./core/intent.ts"
 import { GRAINS, MOODS, THEMES } from "./core/intent.ts"
 import { FONTS } from "./core/type.ts"
 import type { Font } from "./core/type.ts"
@@ -41,7 +44,17 @@ export type BrandChoices = PageFacts & {
   shape?: string
   // The face titles are drawn in, where an image carries its own title.
   font?: Font
+  // The brand's own logo, set as it is on the pictures a site shows of itself
+  // elsewhere: its link previews and its headers. An SVG file's text, or a
+  // PNG, JPEG or WebP; `{ light, dark }` gives one for each ground.
+  logo?: Logo
 }
+
+export type Logo = string | ImageInput | { light: string | ImageInput; dark?: string | ImageInput }
+
+// Where the logo sits on each picture that carries it: clear of the title,
+// and of the photo X and LinkedIn lay over a header's left.
+const LOGO_AT: Partial<Record<Use, Place>> = { og: "top-left", x: "right", linkedin: "right", email: "right" }
 
 // What a cover is about: its title, or an id that names it, such as the
 // post's slug, so its art stays when the title is edited. `tag` is the
@@ -74,7 +87,7 @@ export type Brand = {
   input(use: Use, content?: Content): SurfaceInput
 }
 
-const OPTIONS = ["name", "color", "style", "theme", "mood", "grain", "shape", "font", ...FACTS] as const
+const OPTIONS = ["name", "color", "style", "theme", "mood", "grain", "shape", "font", "logo", ...FACTS] as const
 
 // The avatar style nearest each cover style in look, for a brand whose style
 // is too fine to read at 24 pixels.
@@ -127,6 +140,18 @@ function check(choices: unknown): string[] {
       errors.push(`Unknown ${name} "${String(given[name])}". Use ${values.map((value) => `"${value}"`).join(", ")}.`)
     }
   }
+  if (given.logo !== undefined) {
+    const logo = given.logo as Logo
+    const both = typeof logo === "object" && logo !== null && "light" in logo ? logo : { light: logo }
+    for (const image of [both.light, both.dark]) {
+      if (image === undefined && image !== both.light) continue
+      try {
+        readLogo(image as string | ImageInput)
+      } catch (error) {
+        errors.push(`"logo": ${(error as Error).message}`)
+      }
+    }
+  }
   return [...errors, ...checkFacts(given)]
 }
 
@@ -134,7 +159,7 @@ function check(choices: unknown): string[] {
 function resolve(choices: BrandChoices) {
   const errors = check(choices)
   if (errors.length) throw new Error(errors.join("\n"))
-  const { name, color, style, theme, mood, grain, shape, font, ...facts } = choices
+  const { name, color, style, theme, mood, grain, shape, font, logo, ...facts } = choices
   // What wasn't decided is chosen from the page; a given colour is a fact
   // like any other, and the first one the page uses.
   const page = { ...facts, colors: color ? [color, ...(facts.colors ?? [])] : facts.colors }
@@ -160,15 +185,23 @@ function resolve(choices: BrandChoices) {
   // the name of what it chose.
   const decided: Record<string, unknown> = { style, color, theme, mood, grain, shape, font }
   const why = chosen.why.filter((reason) => decided[reason.split(" ")[0]!] === undefined)
-  return { name, look, why, decided, page, ranked: chosen.ranked }
+  return { name, look, why, decided, page, ranked: chosen.ranked, logo }
 }
 
 export function createBrand(choices: BrandChoices): Brand {
-  const { name, look, why } = resolve(choices)
-  return build(name, look, why)
+  const { name, look, why, logo } = resolve(choices)
+  return build(name, look, why, logo)
 }
 
-function build(name: string, look: Brand["look"], why: string[]): Brand {
+// The logo as an input takes it: one image, and one for dark covers.
+function logoFor(logo: Logo | undefined, use: Use): SurfaceInput["logo"] {
+  const place = LOGO_AT[use]
+  if (!logo || !place) return undefined
+  const both = typeof logo === "object" && "light" in logo ? logo : { light: logo as string | ImageInput }
+  return { image: both.light, ...(both.dark ? { dark: both.dark } : null), place }
+}
+
+function build(name: string, look: Brand["look"], why: string[], logo?: Logo): Brand {
   const input = (use: Use, content: Content = {}): SurfaceInput => {
     const placing = PLACING[use]
     // A banner is one of a kind, so it needs no name of its own.
@@ -191,6 +224,7 @@ function build(name: string, look: Brand["look"], why: string[]): Brand {
       ...(look.shape ? { shape: look.shape } : content.tag?.trim() ? familyShape(look.style, name, content.tag.trim()) : null),
       ...(drawn ? { title: content.title!.trim(), ...(look.font ? { font: look.font } : null) } : null),
       ...(placing.motion && !drawn ? { motion: placing.motion } : null),
+      ...(logoFor(logo, use) ? { logo: logoFor(logo, use) } : null),
     }
   }
   const draw = (use: Use) => (content: Content) => generate(input(use, content))
@@ -282,7 +316,7 @@ function holds(name: string, look: Brand["look"]) {
 //   const options = directions({ name: "acme.dev", ...readPage(html, css) })
 //   createBrand({ name: "acme.dev", ...options[2].look })
 export function directions(choices: BrandChoices, { count = 6 }: { count?: number } = {}): Brand[] {
-  const { name, look, why, decided, page, ranked } = resolve(choices)
+  const { name, look, why, decided, page, ranked, logo } = resolve(choices)
   const leans = leansOf(page)
   const looks: { look: Brand["look"]; why: string[] }[] = [{ look, why }]
   if (decided.style === undefined) {
@@ -322,7 +356,7 @@ export function directions(choices: BrandChoices, { count = 6 }: { count?: numbe
   const chosen: Brand[] = []
   for (const candidate of looks) {
     if (chosen.length >= count) break
-    if (holds(name, candidate.look)) chosen.push(build(name, candidate.look, candidate.why))
+    if (holds(name, candidate.look)) chosen.push(build(name, candidate.look, candidate.why, logo))
   }
   return chosen
 }

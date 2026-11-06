@@ -892,6 +892,11 @@ export function drawLayer(layer: Layer, prefix: string, scene: Scene, out: Outpu
     case "text":
       drawText(layer, scene, out)
       break
+    case "logo": {
+      const align = layer.align === "start" ? "xMin" : layer.align === "end" ? "xMax" : "xMid"
+      out.body.push(`<image href="${layer.href}" x="${num(layer.x)}" y="${num(layer.y)}" width="${num(layer.w)}" height="${num(layer.h)}" preserveAspectRatio="${align}YMid meet"/>`)
+      break
+    }
   }
 }
 

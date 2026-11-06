@@ -4,6 +4,11 @@ Generative covers for posts, pages and OG images. Make a brand once, then
 every cover, link preview, hero and avatar follows from its title. The same
 title always draws the same cover.
 
+It is for the pictures a site repeats, which should look like one brand,
+carry their titles exactly and come out the same on every build: no API
+key, no cost per image, nothing that drifts when a model changes. A picture
+of one particular thing is a photo's job, or an image model's.
+
 Not published yet. The full design is in [docs/api.md](docs/api.md).
 
 ## Set up a site
@@ -12,8 +17,8 @@ Not published yet. The full design is in [docs/api.md](docs/api.md).
 npx @pogrobert/surfaces init
 ```
 
-It reads the site's own files (its stylesheets, Tailwind config, root
-layout, fonts and metadata), chooses a look with a reason for each choice,
+It reads the site's own files (its `DESIGN.md` first, then its stylesheets,
+Tailwind config, root layout, fonts, logo and metadata), chooses a look with a reason for each choice,
 and writes:
 
 - `surfaces.ts` beside the source, the brand everything comes from;
@@ -23,8 +28,8 @@ and writes:
 
 Nothing is sent anywhere and nothing it didn't write is changed.
 `npx @pogrobert/surfaces kit` then writes the link preview and the X,
-LinkedIn and email headers into `public/`, all on one mark. It draws no
-icons: a site's icon is its own.
+LinkedIn and email headers into `public/`, all on one mark, with the site's
+own logo set on them. It draws no icons: a site's icon is its own.
 `npx @pogrobert/surfaces preview --title "A real title"` draws the brand's
 covers into `.surfaces/` to look at, and `check` says whether they hold, so
 an agent can look, fix and look again.
@@ -34,8 +39,8 @@ an agent can look, fix and look again.
 ```ts
 import { createBrand, readPage } from "@pogrobert/surfaces"
 
-const brand = createBrand({ name: "acme.dev", color: "#635bff" })
-// or let the site decide: createBrand({ name: "acme.dev", ...readPage(html, css) })
+const brand = createBrand({ name: "acme.dev", color: "#635bff", logo: logoSvg })
+// or let the site decide: createBrand({ name: "acme.dev", ...readPage(html, css, designMd) })
 
 brand.cover({ title: post.title })   // a post's cover
 brand.cover({ title, tag: post.category })  // a category's posts make one mark

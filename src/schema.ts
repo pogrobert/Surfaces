@@ -68,5 +68,15 @@ export const inputSchema = {
       type: "object",
       description: "A photo printed in the style's inks, for styles whose catalog entry says takesImage.",
     },
+    logo: {
+      type: "object",
+      required: ["image", "place"],
+      properties: {
+        image: { description: "An SVG file's text, or { data, type } for a PNG, JPEG or WebP." },
+        dark: { description: "The one for a dark cover, for a logo a dark ground would lose." },
+        place: { enum: [...PLACES] },
+      },
+      description: "The brand's own logo, drawn as it is in a small area the art keeps clear.",
+    },
   },
 } as const

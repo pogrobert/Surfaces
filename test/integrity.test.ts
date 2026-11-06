@@ -72,7 +72,7 @@ function everyNumber(value: unknown, visit: (number: number) => void) {
 function tonesUsed(layers: Layer[]): string[] {
   return layers.flatMap((layer) => {
     if (layer.kind === "fill" || layer.kind === "pool" || layer.kind === "text") return [layer.tone]
-    if (layer.kind === "grain") return []
+    if (layer.kind === "grain" || layer.kind === "logo") return []
     if (layer.kind === "stipple") return [layer.tone, ...tonesUsed(layer.layers)]
     if (layer.kind === "blur" || layer.kind === "soften" || layer.kind === "clip") {
       return tonesUsed(layer.layers)

@@ -24,6 +24,9 @@ export type Project = {
   css: string
   // The site's DESIGN.md, when it keeps one, which says its brand outright.
   design: string
+  // Its logo's SVG, relative to the root: one named for a logo before a
+  // mark, and either before the icon a browser tab shows.
+  logo?: string
   // Every file read, relative to the root, for saying what was read.
   read: string[]
 }
@@ -144,6 +147,11 @@ export function readProject(root: string): Project {
   // The logo's colour, named for the brand, so readPage() ranks it first.
   const marks = logos(root)
   const logo = logoColour(marks)
+  const best = (file: string) => {
+    const name = file.split("/").pop()!.toLowerCase()
+    return name.startsWith("logo") || name.startsWith("wordmark") ? 0 : name.startsWith("brand") || name.includes("mark") ? 1 : 2
+  }
+  const logoFile = [...marks].sort((a, b) => best(a) - best(b) || a.split("/").length - b.split("/").length)[0]
   read.push(...marks.map((file) => relative(root, file)))
   const homepage = typeof pkg.homepage === "string" ? pkg.homepage.match(/^https?:\/\/([^/]+)/)?.[1] : undefined
   // The domain the site's own shell names most, as its og:url, og:image or
@@ -171,6 +179,7 @@ export function readProject(root: string): Project {
     html: [...meta, ...html].join("\n"),
     css: [logo ? `:root { --brand-logo: ${logo}; }` : "", loaded, ...css].join("\n"),
     design: design ? readFileSync(design, "utf8") : "",
+    ...(logoFile ? { logo: relative(root, logoFile) } : null),
     read,
   }
 }
