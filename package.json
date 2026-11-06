@@ -43,6 +43,7 @@
     "sheet": "pnpm build && node scripts/contact-sheet.ts",
     "sheet:serve": "node scripts/serve-sheet.ts",
     "studio": "pnpm build && node scripts/serve-sheet.ts",
+    "site": "pnpm build && node site/server.ts",
     "bench:motion": "pnpm build && node scripts/bench-motion.ts"
   },
   "engines": {

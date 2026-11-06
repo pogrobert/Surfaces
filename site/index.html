@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Surfaces</title>
+<meta name="description" content="Covers, link previews and headers drawn from your site's own colours, type and logo.">
+<style>
+  @font-face { font-family: Inter; font-weight: 400; font-display: swap; src: url(/fonts/inter-latin-400-normal.woff2) format("woff2"); }
+  @font-face { font-family: Inter; font-weight: 500; font-display: swap; src: url(/fonts/inter-latin-500-normal.woff2) format("woff2"); }
+  @font-face { font-family: Inter; font-weight: 600; font-display: swap; src: url(/fonts/inter-latin-600-normal.woff2) format("woff2"); }
+  @font-face { font-family: Inter; font-weight: 700; font-display: swap; src: url(/fonts/inter-latin-700-normal.woff2) format("woff2"); }
+
+  :root {
+    --paper: #f3f5f7;
+    --sheet: #ffffff;
+    --ink: #17203a;
+    --quiet: #5a6478;
+    --rule: #d5dae1;
+    --action: #0078bf;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0f1320; --sheet: #161b2b; --ink: #e9ecf3; --quiet: #9aa3b8; --rule: #2a3146; --action: #4fb3f0;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 Inter, ui-sans-serif, system-ui, sans-serif; font-feature-settings: "cv11", "ss01"; }
+  button, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* The hero is a Surfaces hero: art drawn at the window's size around the
+     box the words take, which is why the words always sit on clear ground. */
+  .hero { position: relative; overflow: hidden; min-height: 560px; }
+  .hero .art { position: absolute; inset: 0; line-height: 0; }
+  .hero .bar { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; }
+  .wordmark { font-weight: 700; letter-spacing: -0.02em; font-size: 18px; text-decoration: none; color: inherit; }
+  .pitch { position: absolute; z-index: 1; left: 50%; transform: translateX(-50%); width: min(620px, calc(100% - 32px)); text-align: center; padding: 28px 24px; }
+  .pitch h1 { margin: 0 0 12px; font-size: clamp(34px, 5.4vw, 60px); line-height: 1.02; letter-spacing: -0.035em; font-weight: 700; text-wrap: balance; }
+  .pitch p { margin: 0 auto 22px; max-width: 46ch; font-size: 17px; line-height: 1.45; opacity: 0.86; text-wrap: pretty; }
+  .ask { display: flex; gap: 8px; max-width: 460px; margin: 0 auto; }
+  .ask input { flex: 1; min-width: 0; height: 48px; border-radius: 10px; border: 1.5px solid currentColor; background: transparent; padding: 0 14px; font-size: 17px; }
+  .ask input::placeholder { color: inherit; opacity: 0.55; }
+  .ask button { height: 48px; border: 0; border-radius: 10px; padding: 0 20px; font-weight: 600; cursor: pointer; background: var(--hero-ink, var(--ink)); color: var(--hero-ground, var(--paper)); }
+  .ask button:disabled { opacity: 0.6; cursor: progress; }
+  .pitch .or { margin: 14px auto 0; font-size: 15px; }
+  .link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font-weight: 600; }
+  .pitch .status { min-height: 1.5em; margin: 10px auto 0; font-size: 14px; }
+  @media (max-width: 520px) {
+    .ask { flex-direction: column; }
+    .ask input { flex: none; }
+    .hero .bar { padding: 14px 16px; }
+  }
+
+  /* The work: what was read and every choice on the left, the pictures on
+     the right, laid out like a proof sheet. */
+  .work { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 40px; max-width: 1320px; margin: 0 auto; padding: 40px 24px 80px; }
+  .work[hidden] { display: none; }
+  @media (max-width: 900px) { .work { grid-template-columns: 1fr; gap: 28px; padding: 28px 16px 60px; } }
+  .controls { display: flex; flex-direction: column; gap: 26px; }
+  @media (min-width: 901px) { .controls { position: sticky; top: 20px; align-self: start; max-height: calc(100vh - 40px); overflow: auto; padding-right: 6px; } }
+  .group h2 { font-size: 15px; font-weight: 600; margin: 0 0 10px; letter-spacing: -0.01em; }
+  .group p.note { margin: 6px 0 0; font-size: 13px; color: var(--quiet); }
+  .why { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--quiet); }
+  .why b { color: var(--ink); font-weight: 600; }
+  .why .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 4px; box-shadow: inset 0 0 0 1px #0002; }
+  .field { display: flex; gap: 8px; align-items: center; }
+  .field input[type="text"] { flex: 1; min-width: 0; height: 38px; border-radius: 8px; border: 1px solid var(--rule); background: var(--sheet); padding: 0 10px; font-size: 15px; }
+  .field input[type="color"] { width: 38px; height: 38px; padding: 3px; border-radius: 8px; border: 1px solid var(--rule); background: var(--sheet); flex: none; }
+  .styles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  @media (max-width: 900px) { .styles { grid-template-columns: repeat(4, 1fr); } }
+  @media (max-width: 520px) { .styles { grid-template-columns: repeat(3, 1fr); } }
+  .tile { all: unset; cursor: pointer; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--quiet); }
+  .tile .thumb { aspect-ratio: 16 / 9; border-radius: 6px; overflow: hidden; position: relative; line-height: 0; box-shadow: 0 0 0 1px var(--rule); }
+  .tile .thumb > div { position: absolute; inset: 0; }
+  .tile[aria-pressed="true"] { color: var(--ink); font-weight: 600; }
+  .tile[aria-pressed="true"] .thumb { box-shadow: 0 0 0 2px var(--ink); }
+  .tile:focus-visible .thumb { box-shadow: 0 0 0 2px var(--action); }
+  .tile .pick { color: var(--action); font-weight: 600; }
+  .choice { display: flex; flex-wrap: wrap; gap: 6px; }
+  .choice button { border: 1px solid var(--rule); background: var(--sheet); border-radius: 999px; padding: 5px 12px; font-size: 14px; cursor: pointer; }
+  .choice button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .plain { border: 1px solid var(--rule); background: var(--sheet); border-radius: 8px; padding: 6px 12px; font-size: 14px; cursor: pointer; }
+  .logo-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .logo-row img { height: 32px; max-width: 140px; object-fit: contain; background: var(--sheet); border-radius: 6px; padding: 4px; box-shadow: 0 0 0 1px var(--rule); }
+
+  .sheet { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
+  .sheet header h2 { margin: 0; font-size: 26px; letter-spacing: -0.025em; line-height: 1.15; }
+  .sheet header p { margin: 6px 0 0; color: var(--quiet); max-width: 64ch; }
+  .row { display: grid; gap: 20px; grid-template-columns: 1fr 1fr; }
+  @media (max-width: 640px) { .row { grid-template-columns: 1fr; } }
+  figure { margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  figure .pic { position: relative; overflow: hidden; border-radius: 8px; line-height: 0; box-shadow: 0 0 0 1px var(--rule); }
+  figure .pic > div { position: absolute; inset: 0; }
+  figcaption { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 14px; color: var(--quiet); }
+  figcaption b { color: var(--ink); font-weight: 600; }
+  figcaption button { background: none; border: 0; padding: 0; color: var(--action); font-weight: 600; font-size: 14px; cursor: pointer; }
+  .people { display: flex; gap: 10px; flex-wrap: wrap; }
+  .people .face { width: 56px; height: 56px; border-radius: 50%; overflow: hidden; position: relative; line-height: 0; }
+  .people .face > div { position: absolute; inset: 0; }
+  .use { border-top: 1px solid var(--rule); padding-top: 24px; display: grid; gap: 14px; }
+  .use h2 { margin: 0; font-size: 20px; letter-spacing: -0.02em; }
+  .use p { margin: 0; color: var(--quiet); max-width: 64ch; }
+  pre { margin: 0; background: var(--sheet); border-radius: 8px; box-shadow: 0 0 0 1px var(--rule); padding: 14px 16px; overflow: auto; font: 13.5px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .copy { justify-self: start; }
+</style>
+</head>
+<body>
+<section class="hero" id="hero">
+  <div class="art" id="heroArt" aria-hidden="true"></div>
+  <nav class="bar">
+    <a class="wordmark" href="/">Surfaces</a>
+  </nav>
+  <div class="pitch" id="pitch">
+    <h1>Art that looks like your site</h1>
+    <p>Covers, link previews and headers drawn from your site's colours, type and logo. Drawn in code, not by an image model, so every build gives the same picture.</p>
+    <form class="ask" id="ask">
+      <label class="sr" for="url">Your site's address</label>
+      <input id="url" type="text" inputmode="url" autocomplete="url" spellcheck="false" placeholder="yoursite.com">
+      <button id="go" type="submit">Read my site</button>
+    </form>
+    <p class="or">No site yet? <button class="link" type="button" id="browse">Browse the styles</button></p>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+  </div>
+</section>
+
+<main class="work" id="work" hidden>
+  <aside class="controls" aria-label="Choices">
+    <div class="group">
+      <h2 id="readHeading">Your site</h2>
+      <div class="field"><label class="sr" for="name">The brand's name</label><input id="name" type="text" spellcheck="false"></div>
+      <p class="note">The name is in every drawing, so no other site gets yours.</p>
+      <ul class="why" id="why" style="margin-top:12px"></ul>
+    </div>
+    <div class="group">
+      <h2>Style</h2>
+      <div class="styles" id="styles"></div>
+      <p class="note"><button class="link" type="button" id="every">Show every style</button></p>
+    </div>
+    <div class="group">
+      <h2>Colour</h2>
+      <div class="field">
+        <input type="color" id="color" aria-label="Pick the brand's colour">
+        <label class="sr" for="hex">The brand's colour as hex</label>
+        <input type="text" id="hex" spellcheck="false" autocomplete="off">
+      </div>
+    </div>
+    <div class="group">
+      <h2>Ground</h2>
+      <div class="choice" id="theme" role="group" aria-label="Ground"></div>
+    </div>
+    <div class="group">
+      <h2>Feel</h2>
+      <div class="choice" id="mood" role="group" aria-label="Mood"></div>
+      <div class="choice" id="grain" role="group" aria-label="Grain" style="margin-top:8px"></div>
+    </div>
+    <div class="group" id="markGroup">
+      <h2>Mark</h2>
+      <div class="choice" id="shape" role="group" aria-label="Mark"></div>
+      <p class="note">One mark on every cover, or each title its own.</p>
+    </div>
+    <div class="group">
+      <h2>Logo</h2>
+      <div class="logo-row">
+        <img id="logoShown" alt="Your logo" hidden>
+        <label class="plain" for="logoFile">Choose a file</label>
+        <input class="sr" type="file" id="logoFile" accept=".svg,image/svg+xml,image/png">
+        <button class="plain" type="button" id="logoNone" hidden>Remove</button>
+      </div>
+      <p class="note">Set as it is on the link preview and the headers, never on a post's cover. An SVG, or a PNG.</p>
+    </div>
+    <div class="group">
+      <h2>A title to try</h2>
+      <div class="field"><label class="sr" for="title">A title to try</label><input id="title" type="text" spellcheck="false"></div>
+    </div>
+    <p><button class="plain" type="button" id="reset">Back to our pick</button></p>
+  </aside>
+
+  <div class="sheet" id="sheet">
+    <header>
+      <h2 id="sheetHeading">Your set</h2>
+      <p id="sheetNote"></p>
+    </header>
+    <figure id="og"></figure>
+    <figure id="x"></figure>
+    <div class="row"><figure id="linkedin"></figure><figure id="email"></figure></div>
+    <div class="row"><figure id="cover"></figure><figure id="card"></figure></div>
+    <figure>
+      <div class="people" id="people"></div>
+      <figcaption><span><b>Avatars</b>, one for each person, from their id</span></figcaption>
+    </figure>
+    <section class="use" aria-labelledby="useHeading">
+      <h2 id="useHeading">Use it in your project</h2>
+      <p>In the project, this reads the same things from its files, writes this brand in, and sets up the link preview:</p>
+      <pre id="init">npx @pogrobert/surfaces init</pre>
+      <p>Or keep exactly what you see here:</p>
+      <pre id="code"></pre>
+      <button class="plain copy" type="button" id="copy">Copy the code</button>
+    </section>
+  </div>
+</main>
+
+<script type="module">
+import { createBrand, directions, readPage, toHtml, generate, catalog } from "/dist/index.js"
+import { toPngInBrowser } from "/dist/png.js"
+
+const $ = (selector) => document.querySelector(selector)
+const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i
+const STYLES = catalog.map((entry) => entry.style)
+const NAMES = Object.fromEntries(catalog.map((entry) => [entry.style, entry.style[0].toUpperCase() + entry.style.slice(1)]))
+const PEOPLE = ["ada", "grace", "linus", "margaret", "alan", "hedy"]
+const LANDING = { name: "surfaces", style: "screenprint", color: "#0078bf" }
+
+// What the page knows: the site's facts once read, its logo, and what the
+// person has chosen over the brand's own pick.
+const state = { name: "yoursite.com", facts: {}, logo: undefined, logoUrl: "", read: false, chosen: {}, title: "", every: false }
+
+// ---- The hero, drawn around the words at the window's size ----
+
+let heroBrand = LANDING
+function drawHero() {
+  const hero = $("#hero")
+  const pitch = $("#pitch")
+  const width = hero.clientWidth
+  // Not laid out yet, as in a tab opened behind another: drawn once it is.
+  if (!width || !window.innerHeight) return requestAnimationFrame(drawHero)
+  const words = pitch.offsetHeight
+  // The whole window until there is work below it; then most of it, so the
+  // work shows it is there.
+  const height = Math.max(Math.round(window.innerHeight * ($("#work").hidden ? 1 : 0.88)), words + 300, 560)
+  hero.style.height = `${height}px`
+  pitch.style.top = `${Math.round((height - words) / 2 + 20)}px`
+  // The box the words take, in shares of the hero, padded a little: the art
+  // goes round exactly that.
+  const box = pitch.getBoundingClientRect()
+  const top = hero.getBoundingClientRect().top
+  const share = (value, of) => Math.min(Math.max(value / of, 0.02), 0.98)
+  const x = share(box.left - 12, width)
+  const y = share(box.top - top - 12, height)
+  const w = Math.min(share(box.width + 24, width), 0.98 - x)
+  const h = Math.min(share(box.height + 24, height), 0.98 - y)
+  const brand = createBrand(heroBrand)
+  // A wide window takes the hero's own large area in the middle, where the
+  // art runs behind the words with a clearing under them; a narrow one has
+  // no room for that, so the art goes round exactly the box the words take.
+  const wide = width / height >= 1.3
+  const input = { ...brand.input("hero", { id: "landing" }), width, height: Math.min(height, width * 4), ...(wide ? null : { areas: [{ box: { x, y, w, h } }] }) }
+  const scene = generate(input)
+  $("#heroArt").innerHTML = toHtml(scene, { fill: true })
+  const area = scene.areas[0]
+  hero.style.color = area.ink
+  hero.style.setProperty("--hero-ink", area.ink)
+  hero.style.setProperty("--hero-ground", scene.palette.ground)
+}
+let resizing
+window.addEventListener("resize", () => {
+  clearTimeout(resizing)
+  resizing = setTimeout(drawHero, 160)
+})
+
+// ---- Reading a site ----
+
+const say = (text) => ($("#status").textContent = text)
+
+$("#ask").addEventListener("submit", async (event) => {
+  event.preventDefault()
+  const address = $("#url").value.trim()
+  if (!address) {
+    say("Type your site's address, such as acme.com.")
+    $("#url").focus()
+    return
+  }
+  $("#go").disabled = true
+  say(`Reading ${address.replace(/^https?:\/\//, "")}…`)
+  try {
+    const response = await fetch(`/read?url=${encodeURIComponent(address)}`)
+    const site = await response.json()
+    if (!response.ok) throw new Error(site.error ?? "The site couldn't be read")
+    state.name = site.name
+    state.facts = readPage(site.html, site.css)
+    state.read = true
+    state.chosen = {}
+    setLogo(site.logo?.svg ?? (site.logo?.png ? { data: bytes(site.logo.png), type: "image/png" } : undefined))
+    state.title = firstTitle(state.facts.words) ?? "How we cut our build times in half"
+    const found = [state.facts.colors?.length && "its colours", state.facts.fonts && "its type", site.logo && "its logo"].filter(Boolean)
+    say(found.length ? `Read ${list(found)} from ${site.name}.` : `${site.name} shows little before its scripts run, so the choices below are ours.`)
+    open()
+  } catch (error) {
+    say(`${error.message}. Check the address, or browse the styles instead.`)
+  } finally {
+    $("#go").disabled = false
+  }
+})
+
+$("#browse").addEventListener("click", () => {
+  state.name = "yoursite.com"
+  state.facts = {}
+  state.read = false
+  state.chosen = {}
+  setLogo(undefined)
+  state.title = "How we cut our build times in half"
+  say("")
+  open()
+})
+
+function open() {
+  $("#work").hidden = false
+  draw()
+  $("#work").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" })
+}
+
+const bytes = (base64) => Uint8Array.from(atob(base64), (char) => char.charCodeAt(0))
+const list = (parts) => (parts.length < 3 ? parts.join(" and ") : `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`)
+const firstTitle = (words) => words?.split(/[.|·–—:]/).map((part) => part.trim()).find((part) => part.length >= 8 && part.length <= 70)
+
+function setLogo(logo) {
+  state.logo = logo
+  if (state.logoUrl) URL.revokeObjectURL(state.logoUrl)
+  state.logoUrl = logo ? URL.createObjectURL(new Blob([typeof logo === "string" ? logo : logo.data], { type: typeof logo === "string" ? "image/svg+xml" : logo.type })) : ""
+  $("#logoShown").hidden = !logo
+  $("#logoNone").hidden = !logo
+  if (logo) $("#logoShown").src = state.logoUrl
+}
+
+// ---- The brand, and everything drawn from it ----
+
+function choices() {
+  return { name: state.name.trim() || "yoursite.com", ...state.facts, ...(state.logo ? { logo: state.logo } : null), ...state.chosen }
+}
+
+function draw() {
+  let brand
+  try {
+    brand = createBrand(choices())
+  } catch (error) {
+    $("#sheetNote").textContent = error.message
+    return
+  }
+  // The hero repaints in the brand: the page becomes the site's own.
+  heroBrand = { name: brand.name, ...brand.look, theme: brand.look.theme === "auto" ? "light" : brand.look.theme }
+  drawHero()
+  drawControls(brand)
+  drawSheet(brand)
+}
+
+function drawControls(brand) {
+  $("#readHeading").textContent = state.read ? `What we read from ${brand.name}` : "Your site"
+  $("#name").value = state.name
+  const why = $("#why")
+  why.replaceChildren(
+    ...brand.why.map((line) => {
+      const item = document.createElement("li")
+      const [, key, value, reason] = line.match(/^(\w+) ([^:]+): (.*)$/) ?? []
+      if (!key) {
+        item.textContent = line
+        return item
+      }
+      if (key === "color") {
+        const swatch = document.createElement("span")
+        swatch.className = "swatch"
+        swatch.style.background = value
+        item.append(swatch)
+      }
+      const name = document.createElement("b")
+      name.textContent = key === "style" ? NAMES[value] ?? value : key === "theme" ? `${value} ground` : value
+      item.append(name, `: ${reason}`)
+      return item
+    })
+  )
+
+  // The suggested styles, judged with this brand's own colour, our pick first.
+  const { style: _style, shape: _shape, ...rest } = choices()
+  const suggested = directions(rest).map((option) => option.look.style)
+  const shown = state.every ? [...suggested, ...STYLES.filter((style) => !suggested.includes(style))] : suggested
+  if (!shown.includes(brand.look.style)) shown.push(brand.look.style)
+  $("#styles").replaceChildren(
+    ...shown.map((style, index) => {
+      const tile = document.createElement("button")
+      tile.type = "button"
+      tile.className = "tile"
+      tile.setAttribute("aria-pressed", String(style === brand.look.style))
+      const thumb = document.createElement("span")
+      thumb.className = "thumb"
+      const art = document.createElement("div")
+      const look = createBrand({ ...choices(), style, shape: undefined })
+      art.innerHTML = toHtml(look.card({ id: "style" }), { fill: true })
+      thumb.append(art)
+      const label = document.createElement("span")
+      label.textContent = NAMES[style]
+      if (index === 0) {
+        const pick = document.createElement("span")
+        pick.className = "pick"
+        pick.textContent = ", our pick"
+        label.append(pick)
+      }
+      tile.append(thumb, label)
+      tile.addEventListener("click", () => {
+        state.chosen = { ...state.chosen, style }
+        delete state.chosen.shape
+        draw()
+      })
+      return tile
+    })
+  )
+  $("#every").textContent = state.every ? "Show only the suggested" : "Show every style"
+
+  $("#color").value = HEX.test(brand.look.color ?? "") ? brand.look.color : "#0078bf"
+  $("#hex").value = brand.look.color ?? ""
+  segmented("#theme", [["light", "Light"], ["dark", "Dark"], ["auto", "Follow the reader"]], brand.look.theme, (theme) => choose({ theme }))
+  segmented("#mood", [["calm", "Calm"], [undefined, "As drawn"], ["bold", "Bold"]], brand.look.mood, (mood) => choose({ mood }))
+  segmented("#grain", [["smooth", "Smooth"], ["natural", "Natural grain"], ["heavy", "Heavy grain"]], brand.look.grain ?? "natural", (grain) => choose({ grain }))
+  const shapes = catalog.find((entry) => entry.style === brand.look.style)?.shapes ?? []
+  $("#markGroup").hidden = !shapes.length
+  segmented("#shape", [[undefined, "Each title its own"], ...shapes.map((shape) => [shape, shape[0].toUpperCase() + shape.slice(1)])], brand.look.shape, (shape) => choose({ shape }))
+  $("#title").value = state.title
+}
+
+function segmented(selector, options, current, pick) {
+  $(selector).replaceChildren(
+    ...options.map(([value, label]) => {
+      const button = document.createElement("button")
+      button.type = "button"
+      button.textContent = label
+      button.setAttribute("aria-pressed", String(value === current))
+      button.addEventListener("click", () => pick(value))
+      return button
+    })
+  )
+}
+
+function choose(change) {
+  const next = { ...state.chosen, ...change }
+  for (const [key, value] of Object.entries(next)) if (value === undefined) delete next[key]
+  // Natural grain is what a brand has without saying, so it has to be said
+  // to undo a page's choice of smooth.
+  state.chosen = next
+  draw()
+}
+
+// A picture of the brand, at its own shape, with a way to keep it.
+function picture(target, scene, name, caption, file) {
+  const holder = $(target)
+  const pic = document.createElement("div")
+  pic.className = "pic"
+  pic.style.aspectRatio = `${scene.output.w} / ${scene.output.h}`
+  const art = document.createElement("div")
+  art.innerHTML = toHtml(scene, { fill: true })
+  pic.append(art)
+  const label = document.createElement("figcaption")
+  const words = document.createElement("span")
+  const strong = document.createElement("b")
+  strong.textContent = name
+  words.append(strong, `, ${caption}`)
+  const save = document.createElement("button")
+  save.type = "button"
+  save.textContent = "Download"
+  save.setAttribute("aria-label", `Download the ${name.toLowerCase()} as a PNG`)
+  save.addEventListener("click", async () => {
+    const blob = await toPngInBrowser(scene)
+    const link = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `${state.name}-${file}.png` })
+    link.click()
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000)
+  })
+  label.append(words, save)
+  holder.replaceChildren(pic, label)
+}
+
+function drawSheet(brand) {
+  // A picture has one ground; a brand that follows the reader shows its light one.
+  const flat = brand.look.theme === "auto" ? createBrand({ ...choices(), theme: "light" }) : brand
+  const title = state.title.trim() || "How we cut our build times in half"
+  $("#sheetHeading").textContent = `${NAMES[brand.look.style]} for ${brand.name}`
+  $("#sheetNote").textContent = catalog.find((entry) => entry.style === brand.look.style)?.looks ?? ""
+  picture("#og", flat.og({ title }), "Link preview", "what a shared link shows, 1200 × 630, its title drawn in", "og")
+  picture("#x", flat.banner({ for: "x" }), "X header", "1500 × 500, clear where X puts the profile photo", "x-header")
+  picture("#linkedin", flat.banner({ for: "linkedin" }), "LinkedIn banner", "1584 × 396", "linkedin-banner")
+  picture("#email", flat.banner({ for: "email", title }), "Email header", "1200 × 400", "email-header")
+  picture("#cover", flat.cover({ title, drawTitle: true }), "Post cover", "each post's title draws its own", "cover")
+  picture("#card", (brand.look.theme === "auto" ? createBrand({ ...choices(), theme: "dark" }) : flat).card({ title: `${title} 2` }), brand.look.theme === "auto" ? "Card, dark" : "Card", "for a list of posts, art only", "card")
+  $("#people").replaceChildren(
+    ...PEOPLE.map((person) => {
+      const face = document.createElement("div")
+      face.className = "face"
+      const art = document.createElement("div")
+      art.innerHTML = toHtml(flat.avatar(person), { fill: true })
+      face.append(art)
+      return face
+    })
+  )
+  const parts = Object.entries({ name: brand.name, ...brand.look }).map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
+  const logo = state.logo ? `,\n  logo: await readFile("public/logo.${typeof state.logo === "string" ? "svg" : "png"}"${typeof state.logo === "string" ? `, "utf8"` : ""})` : ""
+  $("#code").textContent = `import { createBrand } from "@pogrobert/surfaces"\n\nexport const brand = createBrand({\n  ${parts.join(",\n  ")}${logo},\n})\n\nbrand.og({ title: post.title })\nbrand.cover({ title: post.title })\nbrand.banner({ for: "x" })`
+}
+
+// ---- Wiring ----
+
+$("#every").addEventListener("click", () => {
+  state.every = !state.every
+  draw()
+})
+$("#reset").addEventListener("click", () => {
+  state.chosen = {}
+  draw()
+})
+$("#name").addEventListener("change", () => {
+  state.name = $("#name").value
+  draw()
+})
+$("#color").addEventListener("change", () => choose({ color: $("#color").value }))
+$("#hex").addEventListener("change", () => {
+  const value = $("#hex").value.trim()
+  if (HEX.test(value)) choose({ color: value.toLowerCase() })
+})
+let typing
+$("#title").addEventListener("input", () => {
+  state.title = $("#title").value
+  clearTimeout(typing)
+  typing = setTimeout(() => drawSheet(createBrand(choices())), 200)
+})
+$("#logoFile").addEventListener("change", async () => {
+  const file = $("#logoFile").files[0]
+  if (!file) return
+  setLogo(/svg/.test(file.type) || file.name.endsWith(".svg") ? await file.text() : { data: new Uint8Array(await file.arrayBuffer()), type: "image/png" })
+  draw()
+})
+$("#logoNone").addEventListener("click", () => {
+  setLogo(undefined)
+  draw()
+})
+$("#copy").addEventListener("click", () => navigator.clipboard?.writeText($("#code").textContent))
+
+await document.fonts.ready
+drawHero()
+</script>
+</body>
+</html>

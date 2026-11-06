@@ -4,8 +4,18 @@
     {
       "name": "studio",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["scripts/serve-sheet.ts"],
+      "runtimeArgs": [
+        "scripts/serve-sheet.ts"
+      ],
       "port": 4177
+    },
+    {
+      "name": "site",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "site/server.ts"
+      ],
+      "port": 4178
     }
   ]
 }
