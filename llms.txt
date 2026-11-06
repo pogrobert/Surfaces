@@ -15,7 +15,7 @@ Rules for writing code with it are in AGENTS.md. In short: `const brand = create
 - [dist/schema.json](dist/schema.json): the input as JSON Schema (also `inputSchema`)
 - `catalog`: every style with what it looks like, what it suits, its shapes and whether it takes a photo
 - `directions(choices)`: several varied, checked brands to show a person; keep the chosen one's `look`
-- `npx @pogrobert/surfaces init`: reads the site, writes its brand, an AGENTS.md block and the link preview; `kit` writes favicons, app icons, the link preview and social headers; `preview` and `check` to look and verify
+- `npx @pogrobert/surfaces init`: reads the site, writes its brand, an AGENTS.md block and the link preview; `kit` writes the link preview and social headers (never icons); `preview` and `check` to look and verify
 - `readPage(html, css)`: the facts a brand chooses its look from: colours, background, dark mode, fonts, words
 - `validate(input)`: every problem with an input, each with its fix, without drawing
 - `avatar({ style, seed, color })`: a round mark for a person, in one of `AVATAR_STYLES`; `<Avatar>` in React

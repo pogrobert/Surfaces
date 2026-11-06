@@ -22,10 +22,9 @@ and writes:
 - `.surfaces/directions.jpg`, a board of other looks; `init --pick 3` takes one.
 
 Nothing is sent anywhere and nothing it didn't write is changed.
-`npx @pogrobert/surfaces kit` then writes the rest of the set into `public/`:
-favicons, the home-screen and app icons, the link preview and headers for X,
-LinkedIn and email, all carrying the brand's mark, at the paths the site
-already points at.
+`npx @pogrobert/surfaces kit` then writes the link preview and the X,
+LinkedIn and email headers into `public/`, all on one mark. It draws no
+icons: a site's icon is its own.
 `npx @pogrobert/surfaces preview --title "A real title"` draws the brand's
 covers into `.surfaces/` to look at, and `check` says whether they hold, so
 an agent can look, fix and look again.

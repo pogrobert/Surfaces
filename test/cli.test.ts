@@ -131,26 +131,24 @@ test("a site's logo names its brand colour before its stylesheet does", async ()
   }
 })
 
-test("kit writes the brand's icons, link preview and headers, where the site points at them", async () => {
-  // The site names its preview and its manifest's icons itself.
-  write("app/layout.tsx", `${readFileSync(join(site, "app/layout.tsx"), "utf8")}\nexport const links = [{ rel: "apple-touch-icon", href: "/touch.png" }]\nexport const meta = [{ property: "og:image", content: "https://acmebakery.com/social/card.jpg" }]`)
-  write("public/manifest.webmanifest", JSON.stringify({ icons: [{ src: "/pwa-256.png", sizes: "256x256" }] }))
+test("kit writes the brand's link preview and headers, where the site points at them, and never an icon", async () => {
+  // The site names its preview itself.
+  write("app/layout.tsx", `${readFileSync(join(site, "app/layout.tsx"), "utf8")}\nexport const meta = [{ property: "og:image", content: "https://acmebakery.com/social/card.jpg" }]`)
   const dry = await run("kit", "--dry-run")
   assert.match(dry.out, /Would write public\/social\/card\.jpg {2}link preview/)
-  assert.ok(!existsSync(join(site, "public/favicon.ico")))
+  assert.ok(!existsSync(join(site, "public/social/card.jpg")))
   const { code, out } = await run("kit")
   assert.equal(code, 0, out)
-  for (const file of ["favicon.ico", "favicon.svg", "touch.png", "pwa-256.png", "social/card.jpg", "x-header.jpg", "linkedin-banner.jpg", "email-header.jpg"]) {
+  for (const file of ["social/card.jpg", "x-header.jpg", "linkedin-banner.jpg", "email-header.jpg"]) {
     assert.ok(existsSync(join(site, "public", file)), file)
   }
-  assert.ok(!existsSync(join(site, "public/icon-192.png")))
-  // An .ico of three PNGs: 16, 32 and 48.
-  const ico = readFileSync(join(site, "public/favicon.ico"))
-  assert.deepEqual([...ico.subarray(0, 6)], [0, 0, 1, 0, 3, 0])
-  assert.deepEqual([ico[6], ico[22], ico[38]], [16, 32, 48])
+  // An icon is the brand's own; kit draws none.
+  for (const file of ["favicon.ico", "favicon.svg", "apple-touch-icon.png", "icon-192.png", "icon-512.png"]) {
+    assert.ok(!existsSync(join(site, "public", file)), file)
+  }
   assert.deepEqual([...readFileSync(join(site, "public/social/card.jpg")).subarray(0, 2)], [0xff, 0xd8])
-  assert.doesNotMatch(out, /apple-touch-icon|og:image/)
+  assert.doesNotMatch(out, /og:image/)
   // Again, it leaves what is there, unless forced.
-  assert.match((await run("kit")).out, /Left public\/favicon\.ico: it is there already/)
-  assert.match((await run("kit", "--force")).out, /Replaced public\/favicon\.ico/)
+  assert.match((await run("kit")).out, /Left public\/x-header\.jpg: it is there already/)
+  assert.match((await run("kit", "--force")).out, /Replaced public\/x-header\.jpg/)
 })
