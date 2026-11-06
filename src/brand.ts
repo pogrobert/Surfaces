@@ -3,6 +3,8 @@ import type { AvatarStyle } from "./avatar.ts"
 import { generate } from "./core/generate.ts"
 import type { SurfaceInput } from "./core/generate.ts"
 import { GRAINS, MOODS, THEMES } from "./core/intent.ts"
+import { FONTS } from "./core/type.ts"
+import type { Font } from "./core/type.ts"
 import type { Grain, Mood, Theme } from "./core/intent.ts"
 import { coverage, worstTitleContrast } from "./core/judge.ts"
 import type { Scene } from "./core/scene.ts"
@@ -36,16 +38,20 @@ export type BrandChoices = PageFacts & {
   // One of the style's shapes, for every cover: a mark the brand always
   // makes. Without it each title draws its own.
   shape?: string
+  // The face titles are drawn in, where an image carries its own title.
+  font?: Font
 }
 
 // What a cover is about: its title, or an id that names it, such as the
-// post's slug, so its art stays when the title is edited.
-export type Content = { title?: string; id?: string }
+// post's slug, so its art stays when the title is edited. `drawTitle` sets
+// the title into the image itself, for a cover that goes out as a file; a
+// link preview always does, since nothing else can show it there.
+export type Content = { title?: string; id?: string; drawTitle?: boolean }
 
 export type Brand = {
   name: string
   // The decisions, as plain data: keep them to rebuild the brand exactly.
-  look: { style: StyleName; color?: string; theme: Theme | "auto"; mood?: Mood; grain?: Grain; shape?: string }
+  look: { style: StyleName; color?: string; theme: Theme | "auto"; mood?: Mood; grain?: Grain; shape?: string; font?: Font }
   // Why each decision that wasn't given was made, one sentence each.
   why: string[]
   // A post's cover, with its title at the bottom left.
@@ -62,7 +68,7 @@ export type Brand = {
   input(use: Use, content: Content): SurfaceInput
 }
 
-const OPTIONS = ["name", "color", "style", "theme", "mood", "grain", "shape", ...FACTS] as const
+const OPTIONS = ["name", "color", "style", "theme", "mood", "grain", "shape", "font", ...FACTS] as const
 
 // The avatar style nearest each cover style in look, for a brand whose style
 // is too fine to read at 24 pixels.
@@ -109,7 +115,7 @@ function check(choices: unknown): string[] {
   if (given.color !== undefined && (typeof given.color !== "string" || !/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(given.color))) {
     errors.push(`"color" should be the brand's hex colour, such as #635bff`)
   }
-  for (const [name, values] of [["theme", [...THEMES, "auto"]], ["mood", MOODS], ["grain", GRAINS]] as const) {
+  for (const [name, values] of [["theme", [...THEMES, "auto"]], ["mood", MOODS], ["grain", GRAINS], ["font", FONTS]] as const) {
     if (given[name] !== undefined && !(values as readonly unknown[]).includes(given[name])) {
       errors.push(`Unknown ${name} "${String(given[name])}". Use ${values.map((value) => `"${value}"`).join(", ")}.`)
     }
@@ -121,7 +127,7 @@ function check(choices: unknown): string[] {
 function resolve(choices: BrandChoices) {
   const errors = check(choices)
   if (errors.length) throw new Error(errors.join("\n"))
-  const { name, color, style, theme, mood, grain, shape, ...facts } = choices
+  const { name, color, style, theme, mood, grain, shape, font, ...facts } = choices
   // What wasn't decided is chosen from the page; a given colour is a fact
   // like any other, and the first one the page uses.
   const page = { ...facts, colors: color ? [color, ...(facts.colors ?? [])] : facts.colors }
@@ -133,6 +139,7 @@ function resolve(choices: BrandChoices) {
     ...((mood ?? chosen.mood) ? { mood: mood ?? chosen.mood } : null),
     ...((grain ?? chosen.grain) ? { grain: grain ?? chosen.grain } : null),
     ...(shape !== undefined ? { shape } : null),
+    ...((font ?? chosen.font) !== "sans" ? { font: font ?? chosen.font } : null),
   }
   const shapes = (STYLES[look.style].shapes ?? []) as readonly string[]
   if (shape !== undefined && !shapes.includes(shape)) {
@@ -144,7 +151,7 @@ function resolve(choices: BrandChoices) {
   }
   // Reasons only for what the brand didn't decide itself; each starts with
   // the name of what it chose.
-  const decided: Record<string, unknown> = { style, color, theme, mood, grain, shape }
+  const decided: Record<string, unknown> = { style, color, theme, mood, grain, shape, font }
   const why = chosen.why.filter((reason) => decided[reason.split(" ")[0]!] === undefined)
   return { name, look, why, decided, page, ranked: chosen.ranked }
 }
@@ -161,6 +168,9 @@ function build(name: string, look: Brand["look"], why: string[]): Brand {
       throw new Error(`Give the ${use} a "title", or an "id" that names it, such as the post's slug`)
     }
     const placing = PLACING[use]
+    const drawn = content.drawTitle ?? use === "og"
+    if (drawn && !content.title?.trim()) throw new Error(`A ${use} drawn with its title needs a "title"`)
+    if (drawn && !placing.areas.length) throw new Error(`A ${use} has no area for a title; draw it as a "post" or "og" instead`)
     return {
       style: look.style,
       seed: `${name}/${about.trim()}`,
@@ -171,7 +181,8 @@ function build(name: string, look: Brand["look"], why: string[]): Brand {
       ...(look.mood ? { mood: look.mood } : null),
       ...(look.grain ? { grain: look.grain } : null),
       ...(look.shape ? { shape: look.shape } : null),
-      ...(placing.motion ? { motion: placing.motion } : null),
+      ...(drawn ? { title: content.title!.trim(), ...(look.font ? { font: look.font } : null) } : null),
+      ...(placing.motion && !drawn ? { motion: placing.motion } : null),
     }
   }
   const draw = (use: Use) => (content: Content) => generate(input(use, content))

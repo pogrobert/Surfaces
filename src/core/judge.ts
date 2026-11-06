@@ -212,6 +212,9 @@ export function colorAt(scene: Scene, x: number, y: number): Rgb {
           : under
       case "grain":
         return under
+      // The title is what is being read, not what it is read against.
+      case "text":
+        return under
     }
   }
   return scene.layers.reduce(draw, [0, 0, 0] as Rgb)

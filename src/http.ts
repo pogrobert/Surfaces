@@ -11,6 +11,9 @@ import { toSvg } from "./render/svg.ts"
 //
 //   /cover?style=riso&seed=my-post&color=635bff&width=1200&height=630&area=bottom-left:lg
 //
+// With `title`, the title is set into the image, as a link preview needs:
+// `&title=Notes%20on%20shipping&font=serif`.
+//
 // The parameters are the input's own names. Each `area` is a place, then
 // optionally a size and what the art does there: `area=center:md:behind`.
 // Repeat it for more than one. A colour may leave out its "#".
@@ -22,7 +25,7 @@ import { toSvg } from "./render/svg.ts"
 // A URL can ask for no bigger a drawing than this, either way.
 const MOST_SIDE = 4096
 
-const PARAMETERS = ["style", "seed", "color", "width", "height", "area", "theme", "mood", "grain", "detail", "motion", "shape", "format"]
+const PARAMETERS = ["style", "seed", "color", "width", "height", "area", "theme", "mood", "grain", "detail", "motion", "shape", "title", "font", "format"]
 
 export type HandlerOptions = {
   // Fills in anything the URL leaves out, such as the brand colour.
@@ -54,7 +57,7 @@ function read(url: URL, defaults: Partial<SurfaceInput>): SurfaceInput {
     return number
   }
   const input: Record<string, unknown> = { ...defaults }
-  for (const key of ["style", "seed", "theme", "mood", "grain", "detail", "motion", "shape"] as const) {
+  for (const key of ["style", "seed", "theme", "mood", "grain", "detail", "motion", "shape", "title", "font"] as const) {
     const value = query.get(key)
     if (value !== null) input[key] = value
   }

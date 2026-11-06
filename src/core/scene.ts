@@ -188,9 +188,24 @@ export type Treatment =
 
 export type Mark = Pool | Shapes
 
+// Words set in one of the bundled faces, each line from its baseline at x, y
+// and as wide as the face measures it, so any renderer keeps the layout: a
+// PNG draws the face's own outlines, an SVG names the face and holds every
+// line to its width. `align` is where x is, as SVG's text-anchor has it.
+export type TextLayer = {
+  kind: "text"
+  id: string
+  font: "sans" | "serif"
+  size: number
+  tone: Tone
+  align: "start" | "middle" | "end"
+  lines: { text: string; x: number; y: number; width: number }[]
+}
+
 export type Layer =
   | Fill
   | Mark
+  | TextLayer
   // Film grain over everything drawn so far.
   | { kind: "grain"; id: string; amount: number; scale: number; seed: number }
   // Light drawn as grain: the opacity of `layers` sets how densely `tone` is

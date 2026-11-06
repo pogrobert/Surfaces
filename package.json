@@ -29,6 +29,7 @@
   },
   "files": [
     "dist",
+    "fonts",
     "AGENTS.md",
     "README.md",
     "llms.txt",
@@ -48,7 +49,10 @@
     "node": ">=24"
   },
   "devDependencies": {
+    "@fontsource/fraunces": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
     "@resvg/resvg-js": "2.6.2",
+    "@resvg/resvg-wasm": "^2.6.2",
     "@types/node": "^26.6.6",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
@@ -58,13 +62,17 @@
   },
   "peerDependencies": {
     "@resvg/resvg-js": ">=2.6.2",
-    "react": ">=18"
+    "react": ">=18",
+    "@resvg/resvg-wasm": ">=2.6.2"
   },
   "peerDependenciesMeta": {
     "@resvg/resvg-js": {
       "optional": true
     },
     "react": {
+      "optional": true
+    },
+    "@resvg/resvg-wasm": {
       "optional": true
     }
   },

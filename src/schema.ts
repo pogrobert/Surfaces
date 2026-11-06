@@ -62,6 +62,8 @@ export const inputSchema = {
     detail: { enum: [...DETAILS], description: "micro: a technical drawing's small print (crop marks, ruler, figure label) over the art." },
     motion: { enum: [...MOTIONS], description: "Default none. loop belongs on one hero, not on cards." },
     shape: { type: "string", description: "One of the style's shapes; see catalog." },
+    title: { type: "string", maxLength: 160, description: "Words set into the art in the largest area it goes around, for images nothing else can set them on: link previews, files, email." },
+    font: { type: "string", enum: ["sans", "serif"], description: "The face the title is set in. Default sans." },
     image: {
       type: "object",
       description: "A photo printed in the style's inks, for styles whose catalog entry says takesImage.",

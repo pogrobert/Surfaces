@@ -48,11 +48,11 @@ test("a developer tool gets a technical style in its own colour, dark", () => {
 })
 
 test("a warm community site gets paint through a stencil", () => {
-  assert.deepEqual(lookOf("commonground.org", NONPROFIT).look, { style: "stencil", color: "#f59e0b", theme: "light" })
+  assert.deepEqual(lookOf("commonground.org", NONPROFIT).look, { style: "stencil", color: "#f59e0b", theme: "light", font: "serif" })
 })
 
 test("a magazine gets an engraver's line, calm, following the reader's dark mode", () => {
-  assert.deepEqual(lookOf("thelongread.com", MAGAZINE).look, { style: "engraving", color: "#b91c1c", theme: "auto", mood: "calm" })
+  assert.deepEqual(lookOf("thelongread.com", MAGAZINE).look, { style: "engraving", color: "#b91c1c", theme: "auto", mood: "calm", font: "serif" })
 })
 
 test("a site's own covers outrank what the page looks like", () => {

@@ -79,23 +79,24 @@ An opaque card over the art:
 ## OG image
 
 ```ts
-import { generate, formats } from "@pogrobert/surfaces"
-import { toPng } from "@pogrobert/surfaces/png"
+import { toJpeg } from "@pogrobert/surfaces/png"
 
-const png = await toPng(
-  generate({
-    style: "aquatint",
-    seed: post.slug,
-    color: "#0f766e",
-    ...formats.og,
-    areas: [{ place: "bottom-left", size: "lg" }],
-  })
-)
+const jpeg = await toJpeg(brand.og({ title: post.title }))   // 1200x630, the title set in
 ```
 
-On a server `toPng` needs `@resvg/resvg-js` installed next to this package.
-The cover leaves the area clear; draw the title over the PNG yourself, at
-`scene.areas[0]` (pixels), in `scene.areas[0].ink`.
+A link preview carries its own title, set in the brand's face (a bundled
+sans or serif, drawn from its outlines, so no font is needed anywhere). A
+JPEG keeps a grainy cover to about 50–170 KB, under what chat apps show;
+`toPng` gives the same picture losslessly, at around a megabyte.
+
+On Node, `toJpeg` and `toPng` use `@resvg/resvg-js` or `@resvg/resvg-wasm`,
+whichever is installed. On an edge runtime or a Worker, install the WASM one
+and pass its module:
+
+```ts
+import wasm from "@resvg/resvg-wasm/index_bg.wasm"
+await toJpeg(brand.og({ title }), { wasm })
+```
 
 ## Plain DOM, SVG, HTTP
 

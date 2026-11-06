@@ -174,20 +174,46 @@ for it never moves the art.
 // pixels; ink is a CSS colour that reads there; clear says whether the art keeps out of the box
 ```
 
+### Titles in images
+
+A link preview, an image file or an email has nowhere else to show a title,
+so the input can carry one: `title`, set into the largest area the art goes
+around, and `font`, `"sans"` (Inter Bold, the default) or `"serif"`
+(Fraunces SemiBold). `brand.og({ title })` does this by itself, in the
+brand's face; any other brand cover takes `drawTitle: true`.
+
+- It is set as a designer would: large on one or two lines when short, down
+  to four balanced lines when long, kerned, and against the side its area
+  hangs from. A title that can't fit at the smallest size ends in an ellipsis.
+- It is laid out from the faces' own metrics, so it fits exactly in every
+  renderer. A PNG or JPEG draws the faces' outlines, which only the `/png`
+  entry carries, so no font is installed anywhere and no page's bundle grows
+  by them. An SVG names the face and holds every line to its measured width.
+- Characters the faces can't draw (beyond Latin and Latin-1) are left out
+  with a warning. The faces are under the SIL Open Font License, in
+  `fonts/OFL.txt`.
+
+PNG and JPEG export uses resvg: `@resvg/resvg-js` on Node, or
+`@resvg/resvg-wasm` wherever a native module can't load. On Node either is
+found by itself; on an edge runtime or a Worker, pass the WASM module:
+`toJpeg(scene, { wasm })`.
+
 Renderers, named by where the cover goes:
 
 | Function | For |
 |---|---|
 | `toHtml(scene)` | Inline on a page. The only output that moves; still covers too. |
 | `toSvg(scene)` | Files, `<img>`, email, anything that takes an image. Still. |
-| `toPng(scene)` | OG images and anywhere an SVG won't do. From `@pogrobert/surfaces/png`. |
+| `toJpeg(scene)` | Link previews: a grainy cover in about 50–170 KB. From `@pogrobert/surfaces/png`. |
+| `toPng(scene)` | The same picture losslessly, anywhere an SVG won't do. From `@pogrobert/surfaces/png`. |
 | `describe(scene, { title? })` | Alt text, for a cover seen without its page. |
 
 Also: `mount(element, input, { label })` for plain DOM, the React `<Surface>`,
 and the HTTP handler, `createHandler({ defaults, png })`, a fetch handler whose
 parameters are the input's own names:
 `/cover?style=riso&seed=x&color=635bff&width=1200&height=630&area=bottom-left:lg`
-(`area` repeats, as `place:size:art`; `format=png` when given a `png` function).
+(`area` repeats, as `place:size:art`; `title` and `font` set a title in;
+`format=png` when given a `png` function).
 A wrong URL gets a 400 with the same fix-it message `validate` gives.
 
 ## Alt text

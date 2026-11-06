@@ -94,7 +94,7 @@ export function compose(preset: Preset): Recipe & { layers: Layers } {
         under: ground.under(context, p),
         marks: joined.marks,
         ...(pieces ? { pieces } : null),
-        over: [...(joined.over ?? []), ...(ground.over?.(context, p) ?? [])],
+        over: [...(joined.over ?? []), ...(ground.over?.(context, p, [drawn.subject]) ?? [])],
         subject: drawn.subject,
       }
     },

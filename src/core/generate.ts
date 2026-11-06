@@ -11,6 +11,8 @@ import type { ImageInput } from "./image.ts"
 import { facing, veil } from "../layouts/veil.ts"
 import { micrographics } from "../overlays/micro.ts"
 import { STYLES } from "../styles/index.ts"
+import { setTitle } from "./type.ts"
+import type { Font } from "./type.ts"
 import { validate } from "./validate.ts"
 import type { StyleName } from "../styles/index.ts"
 
@@ -34,6 +36,11 @@ export type SurfaceInput = {
   shape?: string
   // A photo to print in the style's own inks, for the styles that take one.
   image?: ImageInput
+  // Words set into the art in the largest area it goes around, for images
+  // nothing else can set them on: link previews, files, email.
+  title?: string
+  // The face it is set in. Default "sans".
+  font?: Font
 }
 
 const DEFAULT_COLOR = "#5b5bd6"
@@ -231,6 +238,14 @@ function draw(input: SurfaceInput, fill = false, recipe: Recipe = STYLES[input.s
   if (patches.length) {
     const last = layers.length - 1
     layers.splice(layers[last]?.kind === "grain" ? last : last + 1, 0, ...patches)
+  }
+
+  // The title, over everything, the grain included, so its edges stay clean.
+  // It sits in the main area, whose ink was chosen to read there.
+  if (input.title) {
+    const main = areas.find((area) => area.box === safe && area.art === "around")
+    const text = main && setTitle(input.title, main.box, main.place, input.font ?? "sans", Math.min(w, h))
+    if (text) layers.push(text)
   }
 
   // A layout says how its art arrives and how it then moves; a cover asked

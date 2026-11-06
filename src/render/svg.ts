@@ -14,6 +14,7 @@ import type {
   Scene,
   Shape,
   Shapes,
+  TextLayer,
   Stop,
 } from "../core/scene.ts"
 
@@ -204,6 +205,9 @@ export type Output = {
   css: string[]
   classes: Map<string, string>
   moving: { count: number }
+  // Draws a title as the face's outlines, as a path; without it a title is
+  // text in the named face.
+  outlines?: (layer: TextLayer) => string
 }
 
 // Who will draw the SVG. Browsers draw every filter here. resvg, the usual
@@ -214,6 +218,8 @@ export type Target = "browser" | "resvg"
 
 export type RenderOptions = {
   target?: Target
+  // The title's outlines, from the PNG export, which carries them.
+  outlines?: (layer: TextLayer) => string
   // Read out by screen readers instead of hiding the art from them, for an
   // SVG placed inline as content. describe(scene) writes one.
   label?: string
@@ -883,7 +889,35 @@ export function drawLayer(layer: Layer, prefix: string, scene: Scene, out: Outpu
     case "picture":
       drawPicture(layer, prefix, scene, out)
       break
+    case "text":
+      drawText(layer, scene, out)
+      break
   }
+}
+
+// The faces a title names, each with ones like it that a reader is likely to
+// have; whichever draws it is held to the measured width of every line.
+const FACES = {
+  sans: `Inter, "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif`,
+  serif: `Fraunces, "Iowan Old Style", Charter, Georgia, "Times New Roman", serif`,
+}
+
+function drawText(layer: TextLayer, scene: Scene, out: Output) {
+  const fill = colour("fill", scene.palette[layer.tone])
+  if (out.outlines) {
+    out.body.push(`<path d="${out.outlines(layer)}" ${fill}/>`)
+    return
+  }
+  const weight = layer.font === "sans" ? 700 : 600
+  const lines = layer.lines
+    .map(
+      (line) =>
+        `<tspan x="${num(line.x)}" y="${num(line.y)}" textLength="${num(line.width)}" lengthAdjust="spacingAndGlyphs">${escapeText(line.text)}</tspan>`
+    )
+    .join("")
+  out.body.push(
+    `<text font-family='${FACES[layer.font]}' font-weight="${weight}" font-size="${num(layer.size)}" text-anchor="${layer.align}" ${fill}>${lines}</text>`
+  )
 }
 
 const escapeText = (text: string) =>
@@ -939,6 +973,7 @@ export function toSvg(scene: Scene, options: RenderOptions = {}) {
     body: [],
     shared: new Map(),
     target,
+    ...(options.outlines ? { outlines: options.outlines } : null),
     css: [],
     moving: { count: 0 },
     classes: new Map(),

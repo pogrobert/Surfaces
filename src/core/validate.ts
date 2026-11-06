@@ -1,5 +1,7 @@
 import { AREA_ART, AREA_SIZES, DETAILS, GRAINS, MAX_RATIO, MOODS, MOTIONS, PLACES, THEMES, areaShare } from "./intent.ts"
 import type { Box } from "./scene.ts"
+import { FONTS, missing } from "./type.ts"
+import type { Font } from "./type.ts"
 import { STYLES } from "../styles/index.ts"
 
 // Everything wrong with an input, each said with how to put it right, so a
@@ -21,6 +23,8 @@ const OPTIONS = [
   "motion",
   "shape",
   "image",
+  "title",
+  "font",
 ] as const
 const AREA_OPTIONS = ["place", "size", "box", "art"] as const
 
@@ -93,6 +97,26 @@ export function validate(input: unknown): Problems {
   word("grain", GRAINS)
   word("detail", DETAILS)
   word("motion", MOTIONS)
+  word("font", FONTS)
+
+  // A title drawn into the art: for images, where nothing else can set it.
+  const title = input.title
+  if (title !== undefined) {
+    if (typeof title !== "string" || !title.trim()) {
+      errors.push(`"title" must be the words to set, such as the post's title.`)
+    } else {
+      if (title.length > 160) errors.push(`"title" is ${title.length} characters; keep it to 160, as a headline is.`)
+      const asked = Array.isArray(input.areas) ? input.areas : []
+      if (!asked.some((area) => isObject(area) && area.art !== "behind")) {
+        errors.push(`A "title" needs an area to sit in: add areas: [{ place: "bottom-left", size: "lg" }].`)
+      }
+      const font = (typeof input.font === "string" && (FONTS as readonly string[]).includes(input.font) ? input.font : "sans") as Font
+      const lost = missing(title, font)
+      if (lost.length) warnings.push(`The ${font} face can't draw ${lost.map((char) => JSON.stringify(char)).join(", ")}; the title is set without ${lost.length > 1 ? "them" : "it"}.`)
+    }
+  } else if (input.font !== undefined) {
+    warnings.push(`"font" sets the title, and there is no "title"; give one, or leave "font" out.`)
+  }
 
   const seed = input.seed
   if (seed === undefined) {

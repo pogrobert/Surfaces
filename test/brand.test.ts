@@ -49,7 +49,7 @@ test("what a brand doesn't decide is chosen from its page, with why", () => {
     `body { background: #fff7d6; color: #3b2a20; } .button { background: #f59e0b; }`
   )
   const brand = createBrand({ name: "commonground.org", ...facts })
-  assert.deepEqual(brand.look, { style: "stencil", color: "#f59e0b", theme: "light" })
+  assert.deepEqual(brand.look, { style: "stencil", color: "#f59e0b", theme: "light", font: "serif" })
   assert.match(brand.why.join("\n"), /^style stencil/m)
   // A decision given is a decision made: no reason for it.
   const decided = createBrand({ name: "commonground.org", ...facts, style: "riso" })

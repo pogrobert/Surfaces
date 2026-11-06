@@ -77,5 +77,7 @@ export type GroundPart<R extends Ranges = Ranges> = PartBase<R> & {
   // What lies on the sheet before anything is printed on it, and what the
   // sheet does to the print after, such as a fold across it.
   under(frame: Frame, p: P): Art["under"]
-  over?(frame: Frame, p: P): Art["over"]
+  // `avoid` is everything drawn on the sheet that it must leave alone: the
+  // figure, beside the areas the frame already keeps.
+  over?(frame: Frame, p: P, avoid: readonly Box[]): Art["over"]
 }

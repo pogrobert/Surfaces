@@ -1,6 +1,7 @@
 import { contrast, fromOklch, luminance, toOklch } from "./core/color.ts"
 import { formats } from "./core/intent.ts"
 import type { Area, Grain, Mood, MotionLevel, Theme } from "./core/intent.ts"
+import type { Font } from "./core/type.ts"
 import { nearest } from "./core/validate.ts"
 import { STYLES } from "./styles/index.ts"
 import type { StyleName } from "./styles/index.ts"
@@ -36,6 +37,7 @@ export type Look = {
   theme: Theme | "auto"
   mood?: Mood
   grain?: Grain
+  font: Font
   // One plain sentence for each choice, starting with what it chose.
   why: string[]
   // Every style, best suited first.
@@ -199,12 +201,18 @@ export function choose(facts: PageFacts): Look {
   const grain: Grain | undefined = lead === "glossy" ? "smooth" : undefined
   if (grain) why.push(`grain ${grain}: a polished product reads cleaner without film grain`)
 
+  // Titles drawn into images are set in a serif when the page's headings
+  // are, and in a sans otherwise.
+  const font: Font = face(facts.fonts?.heading ?? facts.fonts?.body) === "serif" ? "serif" : "sans"
+  if (font === "serif") why.push("font serif: the page's headings are set in a serif")
+
   return {
     style,
     ...(color ? { color } : null),
     theme,
     ...(mood ? { mood } : null),
     ...(grain ? { grain } : null),
+    font,
     why,
     ranked: ranked.map((entry) => entry.style),
   }
