@@ -125,7 +125,7 @@ type Circle = { cx: number; cy: number; r: number }
 type Unit = { points: number[] }
 
 // Tiles in a unit square, before they are turned and set on the canvas.
-function assemble(shape: string, p: Record<string, number>, pick: () => number): { units: Unit[]; voids: Circle[] } {
+function assemble(shape: string, p: Record<string, number>): { units: Unit[]; voids: Circle[] } {
   const g = p.gap!
   const a = (1 - g) / 2
   const r = p.round! * a
@@ -137,19 +137,19 @@ function assemble(shape: string, p: Record<string, number>, pick: () => number):
     tiles.map((points) => ({ points: disks.reduce((kept, [x, y, rr]) => bite(kept, x, y, rr), points) }))
   switch (shape) {
     case "grid": {
-      // Bitten round a shared void in the middle, or at the four outer
-      // corners. Never with a dot in the void.
-      const middle = pick() < 0.5
-      const disks: [number, number, number][] =
-        middle
-          ? [[0.5, 0.5, b + g / 2]]
-          : [
-              [0, 0, b * 1.3],
-              [1, 0, b * 1.3],
-              [1, 1, b * 1.3],
-              [0, 1, b * 1.3],
-            ]
-      return { units: cut(quarters(), disks), voids: middle ? [{ cx: 0.5, cy: 0.5, r: b + g / 2 }] : [] }
+      // Bitten round a shared void in the middle, never with a dot in it.
+      const void_ = b + g / 2
+      return { units: cut(quarters(), [[0.5, 0.5, void_]]), voids: [{ cx: 0.5, cy: 0.5, r: void_ }] }
+    }
+    case "star": {
+      // Bitten at the four outer corners, so the tiles point outward.
+      const corners: [number, number, number][] = [
+        [0, 0, b * 1.3],
+        [1, 0, b * 1.3],
+        [1, 1, b * 1.3],
+        [0, 1, b * 1.3],
+      ]
+      return { units: cut(quarters(), corners), voids: [] }
     }
     case "pinwheel": {
       // Each tile bitten at the corner a quarter turn on from the last.
@@ -189,7 +189,7 @@ export const tiles: FigurePart = {
     calm: { round: [0.24, 0.32], gap: [0.045, 0.06] },
     bold: { size: [0.9, 0.96], round: [0.14, 0.22] },
   },
-  shapes: ["grid", "pinwheel", "pair", "arch"],
+  shapes: ["grid", "star", "pinwheel", "pair", "arch"],
 
   draw(context: Context, stage: FigureStage, shape: string, p): DrawnFigure {
     const { w, h, keep } = context
@@ -228,9 +228,9 @@ export const tiles: FigurePart = {
     let placed = fit(0, start)
     if (placed.side < Math.min(w, h) * 0.4) placed = fit(0.4, Math.min(w, h) * 0.62)
     const { x, y, side } = placed
-    const { units, voids } = assemble(shape, p, () => rng.next())
+    const { units, voids } = assemble(shape, p)
     // A quarter turn or a mirror, so one assembly faces several ways.
-    const turns = shape === "grid" ? 0 : rng.int(0, 4)
+    const turns = shape === "grid" || shape === "star" ? 0 : rng.int(0, 4)
     const mirror = shape === "pinwheel" && rng.next() < 0.5
     const left = x - side / 2
     const top = y - side / 2

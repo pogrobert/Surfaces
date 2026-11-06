@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Surfaces directions</title>
+<style>
+  :root {
+    --page:#f5f4f1; --panel:#ffffff; --sunk:#efeee9; --line:#e3e1db; --fg:#17171a; --muted:#6b6b72; --accent:#17171a; --on-accent:#fff;
+    --radius:12px; color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page:#0d0d0f; --panel:#151518; --sunk:#1c1c20; --line:#2a2a30; --fg:#f2f1ee; --muted:#9b9ba4; --accent:#f2f1ee; --on-accent:#111;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--page); color:var(--fg); font:14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  button, input, textarea { font:inherit; color:inherit; }
+  .wrap { max-width:1380px; margin:0 auto; padding:0 20px 60px; }
+
+  header.top { display:flex; align-items:baseline; gap:14px; padding:22px 0 6px; flex-wrap:wrap; }
+  header.top h1 { margin:0; font-size:20px; letter-spacing:-.01em; }
+  header.top p { margin:0; color:var(--muted); }
+  header.top a { margin-left:auto; color:var(--muted); font-size:13px; }
+
+  .brief { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)) auto; gap:12px; align-items:end; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin-top:14px; }
+  .field { display:flex; flex-direction:column; gap:6px; min-width:0; }
+  .field label { font-size:12px; color:var(--muted); font-weight:600; }
+  .field input, .field textarea { border:1px solid var(--line); background:var(--page); border-radius:8px; padding:7px 9px; width:100%; }
+  .field textarea { resize:vertical; min-height:36px; font:12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .colour { display:flex; gap:6px; }
+  .colour input[type="color"] { width:38px; padding:2px; flex:none; }
+  .go { border:0; background:var(--accent); color:var(--on-accent); border-radius:8px; padding:8px 16px; font-weight:600; cursor:pointer; height:36px; }
+  .go:disabled { opacity:.5; cursor:progress; }
+
+  .status { display:flex; align-items:baseline; gap:12px; margin:22px 0 12px; flex-wrap:wrap; }
+  .status h2 { font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:0; font-weight:600; }
+  .status h2 b { color:var(--fg); }
+  .status button { border:1px solid var(--line); background:var(--panel); border-radius:8px; padding:4px 10px; cursor:pointer; }
+  .status .read { color:var(--muted); font-size:12px; }
+
+  .board { display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap:16px; }
+  .direction { background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:12px; display:flex; flex-direction:column; gap:10px; }
+  .direction.chosen { outline:2px solid var(--accent); outline-offset:1px; border-color:transparent; }
+  .direction header { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+  .direction h3 { margin:0; font-size:16px; }
+  .direction h3::first-letter { text-transform:uppercase; }
+  .chip { font-size:11px; background:var(--sunk); border-radius:999px; padding:1px 8px; color:var(--muted); }
+  .chip.pick { background:var(--accent); color:var(--on-accent); }
+  .why { color:var(--muted); font-size:12.5px; line-height:1.4; margin:0; }
+  .kit { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .kit .wide { grid-column:1 / -1; }
+  .kit figure { margin:0; display:flex; flex-direction:column; gap:3px; }
+  .kit figcaption { font-size:11px; color:var(--muted); }
+  .people { display:flex; gap:6px; align-items:center; }
+  .people .face { width:34px; aspect-ratio:1; border-radius:50%; overflow:hidden; position:relative; flex:none; }
+  .people .face > div { position:absolute; inset:0; line-height:0; }
+  .actions { display:flex; gap:8px; margin-top:auto; }
+  .actions button { flex:1; border:1px solid var(--line); background:var(--panel); border-radius:8px; padding:7px 10px; cursor:pointer; font-weight:600; }
+  .actions button.primary { background:var(--accent); color:var(--on-accent); border-color:transparent; }
+
+  .cover { position:relative; overflow:hidden; width:100%; container-type:inline-size; border-radius:6px; background:#8883; }
+  .cover > .art { position:absolute; inset:0; line-height:0; }
+  .cover .area { position:absolute; display:flex; flex-direction:column; pointer-events:none; }
+  .cover .title { font-weight:650; letter-spacing:-.02em; line-height:1.08; text-wrap:balance; margin:0; font-size:6.2cqw; }
+
+  .code { background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); margin-top:16px; overflow:hidden; }
+  .code .bar { display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-bottom:1px solid var(--line); }
+  .code pre { margin:0; padding:14px 16px; overflow:auto; font:12.5px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; white-space:pre; }
+  .code button { border:1px solid var(--line); background:var(--panel); border-radius:8px; padding:4px 10px; cursor:pointer; }
+  .empty { color:var(--muted); padding:30px 0; }
+
+  @media (max-width: 900px) { .brief { grid-template-columns:1fr 1fr; } .go { grid-column:1 / -1; } }
+  @media (max-width: 520px) { .wrap { padding:0 16px 40px; } .brief { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Directions</h1>
+    <p>Tell it about the site; pick one of the looks it comes back with, or keep its pick.</p>
+    <a href="/">Studio</a>
+  </header>
+
+  <form class="brief" id="brief">
+    <div class="field">
+      <label for="name">Brand name</label>
+      <input id="name" spellcheck="false" autocomplete="off" placeholder="acme.dev">
+    </div>
+    <div class="field">
+      <label for="hex">Brand colour, or let the site choose</label>
+      <div class="colour">
+        <input type="color" id="color" aria-label="Pick a colour">
+        <input id="hex" spellcheck="false" autocomplete="off" placeholder="from the site">
+      </div>
+    </div>
+    <div class="field">
+      <label for="site">The site's HTML and CSS (optional)</label>
+      <textarea id="site" rows="1" spellcheck="false" placeholder="Paste a page and its stylesheet"></textarea>
+    </div>
+    <div class="field">
+      <label for="titles">Titles to try, one a line</label>
+      <textarea id="titles" rows="1" spellcheck="false"></textarea>
+    </div>
+    <button class="go" id="go" type="submit">Show directions</button>
+  </form>
+
+  <div class="status">
+    <h2 id="heading"><b>Directions</b></h2>
+    <button type="button" id="back" hidden>All directions</button>
+    <span class="read" id="read"></span>
+  </div>
+  <div class="board" id="board"><p class="empty">Give a brand name, then show directions.</p></div>
+
+  <div class="code" id="usePanel" hidden>
+    <div class="bar"><b>Use it</b><button type="button" id="copy">Copy</button></div>
+    <pre id="code"></pre>
+  </div>
+</div>
+
+<script type="module">
+import { createBrand, directions, readPage, toHtml } from "/dist/index.js"
+
+const $ = (selector) => document.querySelector(selector)
+const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i
+const TITLES = ["How the new search works", "Notes on shipping every day", "What we learned from ten thousand bookings"]
+const PEOPLE = ["ada", "grace", "linus", "margaret"]
+
+// The brief, and whether the board shows all directions or more like one.
+const state = { name: "acme.dev", color: "", titles: TITLES.join("\n"), like: "", chosen: "" }
+function readLink() {
+  const query = new URLSearchParams(location.hash.slice(1))
+  for (const key of Object.keys(state)) if (query.has(key)) state[key] = query.get(key)
+}
+function writeLink() {
+  const query = new URLSearchParams()
+  for (const [key, value] of Object.entries(state)) if (value) query.set(key, value)
+  history.replaceState(null, "", `#${query}`)
+}
+
+// A cover drawn into the page, its title laid where the cover keeps room.
+function coverElement(scene, title) {
+  const holder = document.createElement("div")
+  holder.className = "cover"
+  holder.style.aspectRatio = `${scene.output.w} / ${scene.output.h}`
+  const art = document.createElement("div")
+  art.className = "art"
+  // Built by the library from numbers and palette colours alone.
+  art.innerHTML = scene.layers.length ? toHtml(scene, { fill: true }) : ""
+  holder.append(art)
+  const area = scene.areas[0]
+  if (area && title) {
+    const box = document.createElement("div")
+    box.className = "area"
+    const share = (value, of) => `${(value / of) * 100}%`
+    Object.assign(box.style, {
+      left: share(area.x, scene.output.w),
+      top: share(area.y, scene.output.h),
+      width: share(area.width, scene.output.w),
+      height: share(area.height, scene.output.h),
+      justifyContent: area.place.startsWith("top") ? "flex-start" : area.place.startsWith("bottom") ? "flex-end" : "center",
+      alignItems: area.place.endsWith("left") ? "flex-start" : area.place.endsWith("right") ? "flex-end" : "center",
+      textAlign: area.place.endsWith("left") ? "left" : area.place.endsWith("right") ? "right" : "center",
+      color: area.ink,
+    })
+    const text = document.createElement("p")
+    text.className = "title"
+    text.textContent = title
+    box.append(text)
+    holder.append(box)
+  }
+  return holder
+}
+
+function figure(caption, child, wide) {
+  const item = document.createElement("figure")
+  if (wide) item.className = "wide"
+  const label = document.createElement("figcaption")
+  label.textContent = caption
+  item.append(child, label)
+  return item
+}
+
+// The brief as the library's choices.
+function choices() {
+  const html = $("#site").value
+  const facts = html.trim() ? readPage(html) : {}
+  return {
+    name: state.name.trim() || "acme.dev",
+    ...facts,
+    ...(HEX.test(state.color) ? { color: state.color } : null),
+    ...(state.like ? { style: state.like } : null),
+  }
+}
+
+const describeLook = (look) =>
+  [look.mood, look.grain && `${look.grain} grain`, look.theme === "auto" ? "light and dark" : look.theme].filter(Boolean)
+
+function codeFor(brand) {
+  const parts = Object.entries({ name: brand.name, ...brand.look }).map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
+  return `import { createBrand } from "@pogrobert/surfaces"\n\nexport const brand = createBrand({ ${parts.join(", ")} })\n\nbrand.cover({ title: post.title })\nbrand.og({ title: post.title })\nbrand.avatar(user.id)`
+}
+
+function show() {
+  writeLink()
+  const titles = state.titles.split("\n").map((line) => line.trim()).filter(Boolean)
+  const [first = TITLES[0], second = first, third = second] = titles
+  const board = $("#board")
+  $("#go").disabled = true
+  board.replaceChildren(Object.assign(document.createElement("p"), { className: "empty", textContent: "Finding directions…" }))
+  // Let the page paint the message before the work starts.
+  setTimeout(() => {
+    let options
+    try {
+      options = directions(choices())
+    } catch (error) {
+      board.replaceChildren(Object.assign(document.createElement("p"), { className: "empty", textContent: error.message }))
+      $("#go").disabled = false
+      return
+    }
+    $("#heading").innerHTML = state.like ? `<b>More like</b> ${state.like}` : `<b>${options.length} directions</b> for ${state.name || "acme.dev"}`
+    $("#back").hidden = !state.like
+    const facts = choices()
+    $("#read").textContent = $("#site").value.trim()
+      ? `Read from the site: ${[facts.color ?? facts.colors?.[0], facts.fonts?.heading, facts.darkMode && "a dark mode"].filter(Boolean).join(", ")}`
+      : ""
+    board.replaceChildren(...options.map((brand, index) => card(brand, index, { first, second, third })))
+    $("#go").disabled = false
+    const chosen = options.find((brand) => JSON.stringify(brand.look) === state.chosen) ?? null
+    use(chosen)
+  }, 30)
+}
+
+function card(brand, index, { first, second, third }) {
+  const item = document.createElement("article")
+  item.className = "direction"
+  item.dataset.look = JSON.stringify(brand.look)
+  if (item.dataset.look === state.chosen) item.classList.add("chosen")
+  const head = document.createElement("header")
+  const name = document.createElement("h3")
+  // More like one: named by how it differs, the mark it always makes, its
+  // mood and grain.
+  const turns = [brand.look.shape && `always ${brand.look.shape}`, brand.look.mood, brand.look.grain && `${brand.look.grain} grain`].filter(Boolean)
+  name.textContent = state.like ? (index === 0 ? "As it is" : turns.join(", ")) : brand.look.style
+  head.append(name)
+  if (index === 0) head.append(Object.assign(document.createElement("span"), { className: "chip pick", textContent: state.like ? "as chosen" : "our pick" }))
+  for (const word of describeLook(brand.look)) head.append(Object.assign(document.createElement("span"), { className: "chip", textContent: word }))
+  const why = document.createElement("p")
+  why.className = "why"
+  const reason = state.like
+    ? index === 0
+      ? `the ${brand.look.style} direction you picked, each title drawing its own mark`
+      : brand.why.slice(-turns.length).map((line) => line.replace(/^\w+ [\w#]+: /, "")).join("; ")
+    : (brand.why.find((line) => line.startsWith("style")) ?? "").replace(/^\w+ [\w#]+: /, "")
+  why.textContent = reason
+
+  // Light and dark both, when the brand follows the reader.
+  const dark = brand.look.theme === "auto" ? createBrand({ name: brand.name, ...brand.look, theme: "dark" }) : null
+  const light = brand.look.theme === "auto" ? createBrand({ name: brand.name, ...brand.look, theme: "light" }) : brand
+  const kit = document.createElement("div")
+  kit.className = "kit"
+  kit.append(
+    figure("Post cover", coverElement(light.cover({ title: first }), first), true),
+    figure("Link preview", coverElement(light.og({ title: second }), second)),
+    dark ? figure("Dark", coverElement(dark.cover({ title: third }), third)) : figure("Card", coverElement(light.card({ title: third }))),
+  )
+  const people = document.createElement("div")
+  people.className = "people"
+  for (const person of PEOPLE) {
+    const face = document.createElement("div")
+    face.className = "face"
+    const art = document.createElement("div")
+    art.innerHTML = toHtml(light.avatar(person), { fill: true })
+    face.append(art)
+    people.append(face)
+  }
+  kit.append(figure("Avatars", people, true))
+
+  const actions = document.createElement("div")
+  actions.className = "actions"
+  const pick = Object.assign(document.createElement("button"), { type: "button", className: "primary", textContent: "Use this" })
+  pick.addEventListener("click", () => {
+    state.chosen = item.dataset.look
+    document.querySelectorAll(".direction").forEach((other) => other.classList.toggle("chosen", other === item))
+    writeLink()
+    use(brand)
+  })
+  actions.append(pick)
+  if (!state.like) {
+    const more = Object.assign(document.createElement("button"), { type: "button", textContent: "More like this" })
+    more.addEventListener("click", () => {
+      state.like = brand.look.style
+      state.chosen = ""
+      show()
+      window.scrollTo({ top: 0, behavior: "smooth" })
+    })
+    actions.append(more)
+  }
+  item.append(head, why, kit, actions)
+  return item
+}
+
+function use(brand) {
+  $("#usePanel").hidden = !brand
+  if (brand) $("#code").textContent = codeFor(brand)
+}
+
+// Wiring.
+readLink()
+$("#name").value = state.name
+$("#hex").value = state.color
+$("#color").value = HEX.test(state.color) ? state.color : "#635bff"
+$("#titles").value = state.titles
+$("#name").addEventListener("input", () => (state.name = $("#name").value))
+$("#hex").addEventListener("input", () => {
+  state.color = $("#hex").value.trim()
+  if (HEX.test(state.color)) $("#color").value = state.color
+})
+$("#color").addEventListener("input", () => {
+  state.color = $("#color").value
+  $("#hex").value = state.color
+})
+$("#titles").addEventListener("input", () => (state.titles = $("#titles").value))
+$("#brief").addEventListener("submit", (event) => {
+  event.preventDefault()
+  state.like = ""
+  state.chosen = ""
+  show()
+})
+$("#back").addEventListener("click", () => {
+  state.like = ""
+  state.chosen = ""
+  show()
+})
+$("#copy").addEventListener("click", () => navigator.clipboard?.writeText($("#code").textContent))
+
+show()
+</script>
+</body>
+</html>

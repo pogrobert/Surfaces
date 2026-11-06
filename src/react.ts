@@ -1,6 +1,7 @@
 import { createElement, useEffect, useMemo, useRef } from "react"
 import type { CSSProperties, ReactElement, ReactNode } from "react"
 import { avatar } from "./avatar.ts"
+import type { Brand, Content } from "./brand.ts"
 import type { AvatarInput } from "./avatar.ts"
 import { describe } from "./core/describe.ts"
 import { watch } from "./dom.ts"
@@ -9,6 +10,7 @@ import type { SurfaceInput } from "./core/generate.ts"
 import type { Area } from "./core/intent.ts"
 import type { SceneArea } from "./core/scene.ts"
 import { toHtml } from "./render/layers.ts"
+import type { Use } from "./page.ts"
 
 // <Surface style="riso" seed={post.slug} color="#635bff">{post.title}</Surface>
 //
@@ -113,6 +115,30 @@ export function Surface({ className, css, children, label, areas, ...input }: Su
           )
     )
   )
+}
+
+// <Cover brand={brand} title={post.title} />
+//
+// A brand's cover for a page: a post's by default, or the `use` asked for.
+// Its title is shown where the cover keeps room for it, unless `children`
+// stand there instead; a card shows none, its title being beside it.
+export type CoverProps = Content & {
+  brand: Brand
+  use?: Use
+  className?: string
+  css?: CSSProperties
+  children?: ReactNode
+  label?: string | true
+}
+
+export function Cover({ brand, use = "post", title, id, children, ...rest }: CoverProps): ReactElement {
+  const { areas, ...input } = brand.input(use, { ...(title !== undefined ? { title } : null), ...(id !== undefined ? { id } : null) })
+  const content = children ?? title
+  return createElement(Surface, {
+    ...input,
+    ...rest,
+    ...(areas ? { areas: areas.map((area, index) => (index === 0 ? { ...area, content } : area)) } : null),
+  })
 }
 
 // <Avatar style="riso" seed={user.id} color="#635bff" size={40} />

@@ -1,8 +1,8 @@
 # @pogrobert/surfaces
 
-> Generative covers for posts, pages and OG images. One brand colour and a few words in, a finished cover out, the same bytes forever. Every option is a word from a fixed list; a wrong input throws an error that names the fix.
+> Generative covers for posts, pages and OG images. Make a brand once, from a colour or from the site's own HTML and CSS; every cover then follows from its title, the same bytes forever. A wrong input throws an error that names the fix.
 
-Rules for writing code with it are in AGENTS.md. In short: `generate({ style, seed: page.slug, color: "#635bff", areas: [{ place: "bottom-left", size: "lg" }] })`, then `toHtml`, `toSvg` or `toPng` (from `/png`), or `<Surface>` (from `/react`).
+Rules for writing code with it are in AGENTS.md. In short: `const brand = createBrand({ name: "acme.dev", ...readPage(html, css) })`, then `brand.cover({ title })`, `brand.og({ title })`, `brand.hero`, `brand.card`, `brand.avatar(user.id)`, drawn by `toHtml`, `toSvg` or `toPng` (from `/png`), or `<Cover brand={brand} title={title} />` (from `/react`). `generate(input)` is the lower level, for one exact cover.
 
 ## Docs
 
@@ -14,5 +14,7 @@ Rules for writing code with it are in AGENTS.md. In short: `generate({ style, se
 
 - [dist/schema.json](dist/schema.json): the input as JSON Schema (also `inputSchema`)
 - `catalog`: every style with what it looks like, what it suits, its shapes and whether it takes a photo
+- `directions(choices)`: several varied, checked brands to show a person; keep the chosen one's `look`
+- `readPage(html, css)`: the facts a brand chooses its look from: colours, background, dark mode, fonts, words
 - `validate(input)`: every problem with an input, each with its fix, without drawing
 - `avatar({ style, seed, color })`: a round mark for a person, in one of `AVATAR_STYLES`; `<Avatar>` in React

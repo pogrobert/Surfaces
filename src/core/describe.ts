@@ -195,7 +195,7 @@ const ART: Record<string, Phrase> = {
     ),
   stencil: (shape, inks) =>
     `${pick(
-      { grid: "four rounded tiles", pinwheel: "four rounded tiles turning like a pinwheel", pair: "two tall tiles around a round gap", arch: "an arch" },
+      { grid: "four rounded tiles round a round gap", star: "four rounded tiles pointing outward like a star", pinwheel: "four rounded tiles turning like a pinwheel", pair: "two tall tiles around a round gap", arch: "an arch" },
       shape,
       "a stencilled shape"
     )}, filled with loose ${both(inks)} paint, on folded paper`,

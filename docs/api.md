@@ -1,11 +1,101 @@
 # Surfaces API
 
 Agreed and built 2026-11-04; final since the contact sheet review on
-2026-11-05. The test for every name: does
+2026-11-05, and reopened by the owner on 2026-11-06 for brands. The test for every name: does
 the art behave differently because of it? If not, it doesn't belong in the
 input. Most users reach the library through an AI agent, so there is one way
 to do each thing, every value is a small set of words, and a wrong input fails
 with an error that names the fix.
+
+## Brands
+
+Added 2026-11-06, as the way most covers are made. A design studio makes a
+few decisions once, a style, a colour, light or dark, a mood, and every image
+after them follows from the content. A brand does the same:
+
+```ts
+const brand = createBrand({ name: "acme.dev", color: "#635bff" })
+
+brand.cover({ title: post.title })      // a post's cover, title at the bottom left
+brand.card({ title: post.title })       // a card in a list, title beside it: art only
+brand.hero({ title: "Pricing" })        // title in the middle; the one cover that moves
+brand.og({ title: post.title })         // a link preview, 1200x630
+brand.avatar(user.id)                   // a person's mark
+brand.input("post", { title })          // the input any of those draws, for components
+```
+
+- `name`, such as the domain, is the one thing a brand must have. It is in
+  every seed, so the same title in one brand is always the same art and two
+  brands never share a drawing. There is no seed to choose.
+- A cover is about its `title`. An `id`, such as the slug, keeps its art when
+  the title is edited.
+- `color`, `style`, `theme`, `mood`, `grain` and `shape` are decisions a brand
+  may make. `shape` is one of the style's shapes for every cover, a mark the
+  brand always makes; without it each title draws its own. Whatever it
+  leaves out is chosen from the page it lives on, given as facts, most simply
+  by `readPage(html, css)`:
+
+```ts
+const brand = createBrand({ name: "acme.dev", ...readPage(html, css) })
+brand.look   // { style: "stencil", color: "#f59e0b", theme: "light" }: keep it to rebuild the brand
+brand.why    // ["style stencil: the page is set in a rounded, friendly sans and sounds warm", ...]
+```
+
+`readPage` reads source text, without a browser or a fetch: colours (named
+for the brand first, a ramp by its middle shade, then by use, leaving out a
+framework's own palette), the background and text colours, a dark mode, the
+heading and body fonts, and the title, description and first heading. Every
+fact is optional and can be corrected before the brand sees it:
+
+```ts
+type PageFacts = {
+  colors?: string[]                     // hex, most used first
+  background?: string
+  text?: string
+  darkMode?: boolean
+  fonts?: { heading?: string; body?: string }
+  words?: string
+  covers?: { style: StyleName; color?: string }[]  // covers the site already has
+}
+```
+
+The choices are rules, so one page always gives one brand:
+
+- `color`: the first ink that is neither the background nor the text: real
+  chroma at a middle lightness, or vivid; never a pale tint. A page of greys
+  gives its deepest other one.
+- `theme`: `auto` when the site has a dark mode, else `dark` or `light` by its
+  background.
+- `style`: the type (serif, mono, rounded, plain sans) and the words
+  (technical, editorial, playful, warm, polished, calm) each lean toward
+  styles, and the most leaned-toward wins. Covers the site already has win
+  over both.
+- `mood`, `grain`: only when one tone clearly leads.
+
+### Directions
+
+For people who want to choose, `directions(choices)` returns several brands,
+the way a studio comes back with a few directions:
+
+```ts
+const options = directions({ name: "acme.dev", ...readPage(html, css) })   // six, best suited first
+createBrand({ name: "acme.dev", ...options[2].look })                      // keep the one you like
+directions({ name: "acme.dev", ...readPage(html, css), style: "riso" })    // more like it
+```
+
+- The first is what `createBrand` picks on its own, so not choosing is
+  choosing it.
+- They are varied: one of each kind of style (print, line, soft light, an
+  object in light, pattern) before two of any.
+- Each is tried on a short and a long title, as a post's cover and a link
+  preview, in every theme it shows in, before it is offered: content reads
+  at 4.5:1 and the art is neither blank nor a wall.
+- Whatever the choices decide holds in every direction. With a style decided,
+  they vary the mark it always makes first, one `shape` each, then its mood
+  and grain: that is "more like this". `count` asks for fewer than six.
+- `pnpm studio` serves a board of them at `/directions`.
+
+`generate(input)` stays, for one exact cover outside a brand.
 
 ## Input
 
@@ -121,6 +211,12 @@ names the page, which also tells apart two covers that look alike:
 
 ## React
 
+A brand's cover: `<Cover brand={brand} title={post.title} use="post" />`.
+`use` is `"post"` (default), `"card"`, `"hero"` or `"og"`; the title shows
+where the cover keeps room for it, unless `children` stand there instead. The
+rest of this section is the lower level, one exact cover:
+
+
 ```tsx
 // Simplest: children are one area at the bottom left, size "lg".
 <Surface style="halftone" seed={post.slug} color="#e4572e">
@@ -175,13 +271,13 @@ and stays hidden from screen readers; one standing alone takes
 
 ## One exact look
 
-The seed is a stable name, never randomness: the same input draws the same
-bytes forever. To reuse one look, keep it as an object and spread it:
+A brand is how a site keeps one look. For a single cover outside one, keep
+its input and spread it; the seed is then a stable name for that one drawing:
 
 ```ts
-export const brand = { style: "aquatint", seed: "north-star", color: "#0f766e", mood: "calm" } as const
-<Surface {...brand} />
-toPng(generate({ ...brand, ...formats.og, areas: [{ place: "bottom-left", size: "lg" }] }))
+export const launch = { style: "aquatint", seed: "north-star", color: "#0f766e", mood: "calm" } as const
+<Surface {...launch} />
+toPng(generate({ ...launch, ...formats.og, areas: [{ place: "bottom-left", size: "lg" }] }))
 ```
 
 ## Errors

@@ -1,4 +1,5 @@
-// The studio at / and the contact sheet at /sheet load /dist as modules,
+// The studio at /, the directions board at /directions and the contact sheet
+// at /sheet load /dist as modules,
 // which a file:// page can't do.
 import { createReadStream, existsSync, statSync } from "node:fs"
 import { createServer } from "node:http"
@@ -19,11 +20,13 @@ createServer((request, response) => {
     ROOT,
     path === "/"
       ? "scripts/studio.html"
-      : path === "/sheet"
+      : path === "/directions"
+        ? "scripts/directions.html"
+        : path === "/sheet"
         ? "sheet/index.html"
-        : path.startsWith("/dist/")
-          ? path
-          : `sheet${path}`
+          : path.startsWith("/dist/")
+            ? path
+            : `sheet${path}`
   )
   if (!file.startsWith(ROOT) || !existsSync(file) || statSync(file).isDirectory()) {
     response.writeHead(404).end("Not found")
@@ -32,5 +35,5 @@ createServer((request, response) => {
   response.writeHead(200, { "content-type": TYPES[extname(file)] ?? "text/plain" })
   createReadStream(file).pipe(response)
 }).listen(PORT, "127.0.0.1", () => {
-  console.log(`Studio at http://localhost:${PORT}, contact sheet at /sheet`)
+  console.log(`Studio at http://localhost:${PORT}, directions at /directions, contact sheet at /sheet`)
 })

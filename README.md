@@ -1,9 +1,41 @@
 # Surfaces
 
-Generative covers for posts, pages and OG images: one brand colour and a few
-words in, a finished cover out. The same input draws the same cover forever.
+Generative covers for posts, pages and OG images. Make a brand once, then
+every cover, link preview, hero and avatar follows from its title. The same
+title always draws the same cover.
 
 Not published yet. The full design is in [docs/api.md](docs/api.md).
+
+## Brands
+
+```ts
+import { createBrand, readPage } from "@pogrobert/surfaces"
+
+const brand = createBrand({ name: "acme.dev", color: "#635bff" })
+// or let the site decide: createBrand({ name: "acme.dev", ...readPage(html, css) })
+
+brand.cover({ title: post.title })   // a post's cover
+brand.og({ title: post.title })      // its link preview
+brand.hero({ title: "Pricing" })
+brand.avatar(user.id)
+```
+
+```tsx
+import { Cover } from "@pogrobert/surfaces/react"
+
+<Cover brand={brand} title={post.title} />
+```
+
+To choose a look instead of taking the brand's pick, ask for directions,
+varied and each already checked, and keep the one you like:
+
+```ts
+const options = directions({ name: "acme.dev", ...readPage(html, css) })
+const brand = createBrand({ name: "acme.dev", ...options[2].look })
+```
+
+The sections below are the lower level: one exact cover, with every choice
+made by hand.
 
 ## React
 
