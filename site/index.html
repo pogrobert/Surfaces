@@ -5,14 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Surfaces</title>
 <meta name="description" content="Covers, link previews and headers drawn from your site's own colours, type and logo.">
+<link rel="preload" href="/fonts/atkinson-hyperlegible-next-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-  @font-face { font-family: Inter; font-weight: 400; font-display: swap; src: url(/fonts/inter-latin-400-normal.woff2) format("woff2"); }
-  @font-face { font-family: Inter; font-weight: 500; font-display: swap; src: url(/fonts/inter-latin-500-normal.woff2) format("woff2"); }
-  @font-face { font-family: Inter; font-weight: 600; font-display: swap; src: url(/fonts/inter-latin-600-normal.woff2) format("woff2"); }
-  @font-face { font-family: Inter; font-weight: 700; font-display: swap; src: url(/fonts/inter-latin-700-normal.woff2) format("woff2"); }
+  /* The portfolio's face, and Arial sized to its measured width and line
+     while it loads, so nothing moves when it arrives. */
+  @font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 200 800; font-display: swap; src: url(/fonts/atkinson-hyperlegible-next-latin-wght-normal.woff2) format("woff2"); }
+  @font-face { font-family: "Atkinson Fallback"; src: local("Arial"), local("Helvetica"); size-adjust: 98.6%; ascent-override: 99.4%; descent-override: 32.5%; line-gap-override: 0%; }
 
   :root {
-    --paper: #f3f5f7;
+    --paper: #f4f5f2;
     --sheet: #ffffff;
     --ink: #17203a;
     --quiet: #5a6478;
@@ -28,31 +29,34 @@
   }
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
-  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 Inter, ui-sans-serif, system-ui, sans-serif; font-feature-settings: "cv11", "ss01"; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 "Atkinson Hyperlegible Next", "Atkinson Fallback", sans-serif; }
   button, input { font: inherit; color: inherit; }
   :focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-  /* The hero is a Surfaces hero: art drawn at the window's size around the
-     box the words take, which is why the words always sit on clear ground. */
-  .hero { position: relative; overflow: hidden; min-height: 560px; }
-  .hero .art { position: absolute; line-height: 0; }
-  .hero .art.fades { -webkit-mask-image: radial-gradient(ellipse 100% 100% at 100% 100%, #000 52%, transparent 96%); mask-image: radial-gradient(ellipse 100% 100% at 100% 100%, #000 52%, transparent 96%); }
-  .pitch { position: absolute; z-index: 1; left: 50%; transform: translateX(-50%); width: min(520px, calc(100% - 32px)); text-align: center; }
-  .pitch h1 { margin: 0 0 10px; font-size: clamp(52px, 8vw, 96px); line-height: 1; letter-spacing: -0.045em; font-weight: 700; }
-  .pitch p { margin: 0 auto 26px; max-width: 46ch; font-size: 17px; line-height: 1.45; opacity: 0.86; text-wrap: pretty; }
-  .ask { display: flex; gap: 8px; max-width: 460px; margin: 0 auto; }
-  .ask input { flex: 1; min-width: 0; height: 48px; border-radius: 10px; border: 1.5px solid currentColor; background: transparent; padding: 0 14px; font-size: 17px; }
-  .ask input::placeholder { color: inherit; opacity: 0.55; }
-  .ask button { height: 48px; border: 0; border-radius: 10px; padding: 0 20px; font-weight: 600; cursor: pointer; background: var(--hero-ink, var(--ink)); color: var(--hero-ground, var(--paper)); }
+  /* The hero: marks scattered round the words like stickers on a desk, from
+     sites like yours until one is read, then that site's own. */
+  /* The window's height from the first paint, so nothing moves when the
+     marks are drawn. */
+  .hero { position: relative; overflow: hidden; height: max(100svh, 560px); }
+  .marks { position: absolute; inset: 0; }
+  .marks .mark { position: absolute; line-height: 0; overflow: hidden; }
+  .marks .mark > div { position: absolute; inset: 0; }
+  .pitch { position: absolute; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, calc(100% - 32px)); text-align: center; display: grid; justify-items: center; }
+  .pitch h1 { margin: 0; font-size: clamp(56px, 7vw, 104px); line-height: 0.95; letter-spacing: -0.05em; font-weight: 800; }
+  .pitch p { margin: 14px 0 28px; max-width: 34ch; font-size: 21px; line-height: 1.4; color: var(--quiet); text-wrap: balance; }
+  /* The address: one piece, the button inside it. */
+  .ask { display: flex; align-items: center; height: 58px; width: min(480px, 100%); background: var(--sheet); border-radius: 15px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 14%, transparent); padding: 6px 6px 6px 18px; gap: 8px; }
+  .ask:focus-within { box-shadow: 0 0 0 2px var(--ink); }
+  .ask .pre { color: var(--quiet); font-size: 17px; user-select: none; }
+  .ask input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 18px; padding: 0; height: 100%; }
+  .ask input::placeholder { color: color-mix(in srgb, var(--quiet) 70%, transparent); }
+  .ask button { height: 46px; border: 0; border-radius: 11px; padding: 0 18px; background: var(--ink); color: var(--paper); font-weight: 700; cursor: pointer; white-space: nowrap; }
   .ask button:disabled { opacity: 0.6; cursor: progress; }
-  .pitch .or { margin: 14px auto 0; font-size: 15px; }
-  .link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font-weight: 600; }
-  .pitch .status { min-height: 1.5em; margin: 10px auto 0; font-size: 14px; }
-  @media (max-width: 520px) {
-    .ask { flex-direction: column; }
-    .ask input { flex: none; }
-  }
+  .pitch .or { margin: 14px 0 0; font-size: 15px; }
+  .link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font-weight: 700; }
+  .pitch .status { min-height: 1.5em; margin: 8px 0 0; font-size: 15px; }
+  @media (max-width: 420px) { .ask .pre { display: none; } }
 
   /* The work: what was read and every choice on the left, the pictures on
      the right, laid out like a proof sheet. */
@@ -109,14 +113,15 @@
 </head>
 <body>
 <section class="hero" id="hero">
-  <div class="art" id="heroArt" aria-hidden="true"></div>
+  <div class="marks" id="marks" aria-hidden="true"></div>
   <div class="pitch" id="pitch">
     <h1>Surfaces</h1>
-    <p>Covers, link previews and headers in your site's own look.</p>
+    <p>Every site gets its own marks, covers and link previews.</p>
     <form class="ask" id="ask">
+      <span class="pre" aria-hidden="true">https://</span>
       <label class="sr" for="url">Your site's address</label>
       <input id="url" type="text" inputmode="url" autocomplete="url" spellcheck="false" placeholder="yoursite.com">
-      <button id="go" type="submit">Read my site</button>
+      <button id="go" type="submit">Make my set</button>
     </form>
     <p class="or">No site yet? <button class="link" type="button" id="browse">Browse the styles</button></p>
     <p class="status" id="status" role="status" aria-live="polite"></p>
@@ -200,7 +205,7 @@
 </main>
 
 <script type="module">
-import { createBrand, directions, readPage, toHtml, generate, catalog } from "/dist/index.js"
+import { createBrand, directions, readPage, toHtml, catalog } from "/dist/index.js"
 import { toPngInBrowser } from "/dist/png.js"
 
 const $ = (selector) => document.querySelector(selector)
@@ -208,86 +213,57 @@ const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i
 const STYLES = catalog.map((entry) => entry.style)
 const NAMES = Object.fromEntries(catalog.map((entry) => [entry.style, entry.style[0].toUpperCase() + entry.style.slice(1)]))
 const PEOPLE = ["ada", "grace", "linus", "margaret", "alan", "hedy"]
-// The page's own brand, until a site is read. ?style= and ?color= try others.
-const asked = new URLSearchParams(location.search)
-const LANDING = { name: "surfaces", style: asked.get("style") ?? "screenprint", color: `#${asked.get("color") ?? "0078bf"}` }
+// Sites like yours, whose marks the hero shows until yours is read.
+const SAMPLES = [
+  { name: "harbour.dev", style: "screenprint", color: "#0078bf" },
+  { name: "fernhouse.co", style: "stencil", color: "#00838a" },
+  { name: "quietpages.org", style: "engraving", color: "#3d5588" },
+  { name: "ottoloop.fm", style: "riso", color: "#f15060" },
+  { name: "pantry.app", style: "halftone", color: "#ff6c2f" },
+  { name: "longfield.press", style: "marbling", color: "#00a95c" },
+]
 
 // What the page knows: the site's facts once read, its logo, and what the
 // person has chosen over the brand's own pick.
 const state = { name: "yoursite.com", facts: {}, logo: undefined, logoUrl: "", read: false, chosen: {}, title: "", every: false }
 
-// ---- The hero, drawn around the words at the window's size ----
+// ---- The hero: marks round the words ----
 
-let heroBrand = LANDING
-// How the illustration sits in its corner: running off both edges, fading
-// in toward the words, or set inside the corner whole.
-const FIT = new URLSearchParams(location.search).get("fit") ?? "bleed"
+let heroBrands = SAMPLES
+// Where the marks go, in shares of the hero: a loose ring round the middle.
+// Any that would touch the words, as on a narrow screen, is left out.
+const SPOTS = [[8, 12], [24, 6], [44, 9], [66, 5], [86, 10], [93, 34], [88, 62], [90, 86], [70, 90], [50, 88], [30, 92], [10, 84], [5, 58], [9, 34], [76, 28], [20, 30], [80, 74], [18, 66]]
 function drawHero() {
   const hero = $("#hero")
-  const pitch = $("#pitch")
-  const art = $("#heroArt")
   const width = hero.clientWidth
   // Not laid out yet, as in a tab opened behind another: drawn once it is.
   if (!width || !window.innerHeight) return requestAnimationFrame(drawHero)
-  const wide = width >= 760
-  const words = pitch.offsetHeight
   // The whole window until there is work below it; then most of it, so the
-  // work shows it is there. A phone stacks the art under the words.
-  const height = wide
-    ? Math.max(Math.round(window.innerHeight * ($("#work").hidden ? 1 : 0.88)), words + 220, 560)
-    : words + 120 + Math.round(width * 0.95)
-  hero.style.height = `${height}px`
-  const top = wide ? Math.round((height - words) * 0.42) : 64
-  pitch.style.top = `${top}px`
-
-  // The illustration's box, in the bottom right, never under the words.
-  const rect = pitch.getBoundingClientRect()
-  const heroTop = hero.getBoundingClientRect().top
-  const right = rect.right - hero.getBoundingClientRect().left
-  const bottom = rect.bottom - heroTop
-  let box
-  if (!wide) {
-    const w = Math.round(width * (FIT === "inset" ? 0.78 : 1.05))
-    const h = Math.round(w * 0.8)
-    box = { x: width - w + (FIT === "inset" ? -16 : Math.round(w * 0.12)), y: top + words + 24, w, h }
-  } else if (FIT === "inset") {
-    const w = Math.round(Math.min(width * 0.36, 560))
-    const h = Math.round(w * 0.74)
-    box = { x: width - w - Math.round(width * 0.06), y: height - h - Math.round(height * 0.09), w, h }
-  } else {
-    const w = Math.round(width * (FIT === "fade" ? 0.72 : 0.6))
-    const h = Math.round(height * (FIT === "fade" ? 0.95 : 0.8))
-    box = { x: width - Math.round(w * (FIT === "fade" ? 0.9 : 0.8)), y: height - Math.round(h * 0.82), w, h }
-  }
-  // Clear of the words: drawn smaller to fit the corner beside them or the
-  // one below them, whichever is larger, still running off the same edges.
-  if (wide && box.x < right + 32 && box.y < bottom + 32) {
-    const seen = { x: box.x + box.w > width ? (width - box.x) / box.w : 1, y: box.y + box.h > height ? (height - box.y) / box.h : 1 }
-    const fit = (x, y) => {
-      const k = Math.min((width - x) / (box.w * seen.x), (height - y) / (box.h * seen.y), 1)
-      const w = Math.round(box.w * k)
-      const h = Math.round(box.h * k)
-      return { x: width - Math.round(w * seen.x), y: height - Math.round(h * seen.y), w, h }
-    }
-    const beside = fit(right + 32, Math.round(height * 0.12))
-    const below = fit(Math.round(width * 0.4), bottom + 32)
-    box = beside.w * beside.h >= below.w * below.h ? beside : below
-  }
-  Object.assign(art.style, { left: `${box.x}px`, top: `${box.y}px`, width: `${box.w}px`, height: `${box.h}px` })
-  art.classList.toggle("fades", FIT === "fade")
-
-  // Drawn at its box's own shape, filling it, composed to its middle; its
-  // ground is the hero's, so the box itself never shows.
-  const brand = createBrand(heroBrand)
-  const { areas: _areas, ...input } = brand.input("hero", { id: "landing" })
-  // Still: the words are what to look at, and the moving HTML of the
-  // filtered styles doesn't draw in every browser yet.
-  const scene = generate({ ...input, motion: "none", width: box.w, height: Math.min(box.h, box.w * 4) })
-  art.innerHTML = toHtml({ ...scene, layers: scene.layers.filter((layer) => layer.kind !== "fill" && layer.kind !== "grain") }, { fill: true })
-  hero.style.background = scene.palette.ground
-  hero.style.color = scene.ink
-  hero.style.setProperty("--hero-ink", scene.ink)
-  hero.style.setProperty("--hero-ground", scene.palette.ground)
+  // work shows it is there.
+  if (!$("#work").hidden) hero.style.height = `${Math.max(Math.round(window.innerHeight * 0.9), $("#pitch").offsetHeight + 280, 560)}px`
+  const height = hero.clientHeight
+  const base = hero.getBoundingClientRect()
+  const words = $("#pitch").getBoundingClientRect()
+  const clear = { x: words.left - base.left - 28, y: words.top - base.top - 28, w: words.width + 56, h: words.height + 56 }
+  const scale = Math.min(Math.max(width / 1440, 0.62), 1.15)
+  const brands = heroBrands.map((choices) => createBrand(choices))
+  const marks = []
+  SPOTS.forEach(([sx, sy], i) => {
+    const size = Math.round((70 + ((i * 37) % 80)) * scale)
+    const x = (sx / 100) * width - size / 2
+    const y = (sy / 100) * height - size / 2
+    if (x < clear.x + clear.w && clear.x < x + size && y < clear.y + clear.h && clear.y < y + size) return
+    const brand = brands[i % brands.length]
+    const square = i % 3 === 0
+    const mark = document.createElement("div")
+    mark.className = "mark"
+    Object.assign(mark.style, { left: `${x}px`, top: `${y}px`, width: `${size}px`, height: `${size}px`, borderRadius: square ? "22%" : "50%", transform: `rotate(${((i * 53) % 40) - 20}deg)` })
+    const art = document.createElement("div")
+    art.innerHTML = toHtml(brand.avatar(`mark-${i}`, { square }), { fill: true })
+    mark.append(art)
+    marks.push(mark)
+  })
+  $("#marks").replaceChildren(...marks)
 }
 let resizing
 window.addEventListener("resize", () => {
@@ -374,7 +350,7 @@ function draw() {
     return
   }
   // The hero repaints in the brand: the page becomes the site's own.
-  heroBrand = { name: brand.name, ...brand.look, theme: brand.look.theme === "auto" ? "light" : brand.look.theme }
+  heroBrands = [{ name: brand.name, ...brand.look }]
   drawHero()
   drawControls(brand)
   drawSheet(brand)
