@@ -113,3 +113,50 @@ test("every page's brand draws every kind of cover", () => {
     for (const draw of [brand.cover, brand.card, brand.hero, brand.og]) assert.ok(draw({ title: "Some page" }).layers.length > 0)
   }
 })
+
+test("a DESIGN.md says the brand outright, ahead of what the page suggests", () => {
+  const design = `---
+name: Heritage
+description: A journal of slow reading
+colors:
+  primary: "#1A1C1E"
+  secondary: "#6C7278"
+  tertiary: "#B8422E"
+  neutral: "#F7F5F2"
+  on-tertiary: "#ffffff"
+  button: "{colors.tertiary}"
+typography:
+  h1:
+    fontFamily: Public Sans
+    fontSize: 3rem
+  body-md:
+    fontFamily: Source Serif 4
+---
+
+## Overview
+
+Essays and stories, set like a broadsheet.
+
+## Colors
+
+- **Tertiary (#B8422E):** the one accent.
+`
+  const facts = readPage(DEVTOOL.html, DEVTOOL.css, design)
+  // Its colours lead, in the order it names a brand; the page's follow.
+  assert.deepEqual(facts.colors?.slice(0, 4), ["#1a1c1e", "#b8422e", "#6c7278", "#f7f5f2"])
+  assert.equal(facts.background, "#f7f5f2")
+  assert.deepEqual(facts.fonts, { heading: "Public Sans", body: "Source Serif 4" })
+  assert.match(facts.words ?? "", /^Heritage\. A journal of slow reading\. Essays and stories/)
+  const brand = createBrand({ name: "heritage.press", ...facts })
+  // The primary is an ink for text, so the brand is the accent the file names next.
+  assert.equal(brand.look.color, "#b8422e")
+  assert.equal(brand.look.theme, "light")
+})
+
+test("readPage reads shadcn's bare HSL channels and hsl()", () => {
+  const facts = readPage("", `:root { --background: 0 0% 100%; --foreground: 222.2 84% 4.9%; --primary: 262.1 83.3% 57.8%; --primary-foreground: 210 20% 98%; }`)
+  assert.equal(facts.background, "#ffffff")
+  assert.equal(facts.text, "#020817")
+  assert.equal(facts.colors?.[0], "#7c3aed")
+  assert.equal(readPage("", "a { color: hsl(0deg 72.2% 50.6%); }").colors?.[0], "#dc2626")
+})

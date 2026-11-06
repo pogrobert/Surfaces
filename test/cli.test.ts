@@ -131,6 +131,22 @@ test("a site's logo names its brand colour before its stylesheet does", async ()
   }
 })
 
+test("a site's DESIGN.md names its brand before its logo and stylesheet do", async () => {
+  const { readProject } = await import("../src/project.ts")
+  const { readPage } = await import("../src/page.ts")
+  const other = mkdtempSync(join(tmpdir(), "surfaces-design-"))
+  try {
+    writeFileSync(join(other, "package.json"), JSON.stringify({ name: "other" }))
+    writeFileSync(join(other, "styles.css"), ":root { --primary: #f59e0b; }")
+    writeFileSync(join(other, "DESIGN.md"), `---\ncolors:\n  primary: "#0e7490"\n---\n`)
+    const project = readProject(other)
+    assert.ok(project.read.includes("DESIGN.md"))
+    assert.equal(readPage(project.html, project.css, project.design).colors?.[0], "#0e7490")
+  } finally {
+    rmSync(other, { recursive: true, force: true })
+  }
+})
+
 test("kit writes the brand's link preview and headers, where the site points at them, and never an icon", async () => {
   // The site names its preview itself.
   write("app/layout.tsx", `${readFileSync(join(site, "app/layout.tsx"), "utf8")}\nexport const meta = [{ property: "og:image", content: "https://acmebakery.com/social/card.jpg" }]`)

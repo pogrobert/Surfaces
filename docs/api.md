@@ -51,8 +51,12 @@ brand.why    // ["style stencil: the page is set in a rounded, friendly sans and
 `readPage` reads source text, without a browser or a fetch: colours (named
 for the brand first, a ramp by its middle shade, then by use, leaving out a
 framework's own palette), the background and text colours, a dark mode, the
-heading and body fonts, and the title, description and first heading. Every
-fact is optional and can be corrected before the brand sees it:
+heading and body fonts, and the title, description and first heading.
+Variables may be hex, `rgb()`, `hsl()`, `oklch()` or shadcn's bare HSL
+channels. A site's `DESIGN.md`, given third (`readPage(html, css, design)`),
+says its brand outright: its colours, headings' and text's type, name,
+description and overview come first, ahead of anything the page suggests.
+Every fact is optional and can be corrected before the brand sees it:
 
 ```ts
 type PageFacts = {
@@ -112,7 +116,7 @@ anywhere, and it changes nothing it didn't write.
 
 | Command | Does |
 |---|---|
-| `init` | Reads the site (stylesheets, Tailwind config, root layout, fonts, metadata in code), writes the brand module (`surfaces.ts` in `src/`, `app/` or the root), a marked block in `AGENTS.md` (and `CLAUDE.md` when it doesn't already point there), Next.js's `app/opengraph-image.tsx`, and a board of directions. `--pick <n>` takes another direction; `--name` names the brand; `--dry-run` writes nothing. Run again, it leaves what is set up. |
+| `init` | Reads the site (its `DESIGN.md`, stylesheets, Tailwind config, root layout, fonts, metadata in code), writes the brand module (`surfaces.ts` in `src/`, `app/` or the root), a marked block in `AGENTS.md` (and `CLAUDE.md` when it doesn't already point there), Next.js's `app/opengraph-image.tsx`, and a board of directions. `--pick <n>` takes another direction; `--name` names the brand; `--dry-run` writes nothing. Run again, it leaves what is set up. |
 | `kit` | Writes the pictures a site shows of itself that are art, not identity, into its public folder (`static/` for SvelteKit): the link preview, at the path its `og:image` already names or `og.jpg`, and X, LinkedIn and email headers, all on one mark. It never draws an icon: a site's icon is its own. It leaves files that are there unless `--force`, and prints the `og:image` tag when the site has none. |
 | `directions` | Prints the directions with their reasons and draws them as `.surfaces/directions.jpg`. |
 | `preview` | Draws the brand's covers (`--use`, default `og`; `--title`, repeatable) into `.surfaces/`, each with its alt text. |

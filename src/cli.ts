@@ -153,7 +153,7 @@ async function board(options: Brand[], titles: string[]) {
 }
 
 function factsOf(project: Project): PageFacts {
-  return readPage(project.html, project.css)
+  return readPage(project.html, project.css, project.design)
 }
 
 function nameOf(project: Project, args: Args) {

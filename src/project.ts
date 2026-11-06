@@ -22,6 +22,8 @@ export type Project = {
   app?: string
   html: string
   css: string
+  // The site's DESIGN.md, when it keeps one, which says its brand outright.
+  design: string
   // Every file read, relative to the root, for saying what was read.
   read: string[]
 }
@@ -153,6 +155,8 @@ export function readProject(root: string): Project {
     hosts.set(host, (hosts.get(host) ?? 0) + 1)
   }
   const domain = homepage ?? [...hosts].sort((a, b) => b[1] - a[1])[0]?.[0]
+  const design = ["DESIGN.md", "design.md", "docs/DESIGN.md"].map((file) => join(root, file)).find((file) => existsSync(file) && statSync(file).size < 1_000_000)
+  if (design) read.push(relative(root, design))
   const folder = (name: string) => existsSync(join(root, name)) && statSync(join(root, name)).isDirectory()
   const source = folder("src") ? "src" : folder("app") ? "app" : "."
   const app = ["src/app", "app"].find((dir) => existsSync(join(root, dir)) && statSync(join(root, dir)).isDirectory())
@@ -166,6 +170,7 @@ export function readProject(root: string): Project {
     ...(framework === "next" && app ? { app } : null),
     html: [...meta, ...html].join("\n"),
     css: [logo ? `:root { --brand-logo: ${logo}; }` : "", loaded, ...css].join("\n"),
+    design: design ? readFileSync(design, "utf8") : "",
     read,
   }
 }

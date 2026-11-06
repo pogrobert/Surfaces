@@ -291,14 +291,38 @@ const list = (parts: string[]) =>
 // What a page shows, read from its HTML and CSS as text: no browser, nothing
 // fetched. It reads the usual places, CSS variables named for a brand, the
 // rules on html, body and headings, Google Fonts links, the title and meta
-// description, and leaves out what it can't find. Add the slug and the use,
-// then hand it to createBrand(); correct any fact it got wrong first.
-export function readPage(html = "", css = ""): Omit<PageFacts, "covers"> {
+// description, and leaves out what it can't find. A site's DESIGN.md, given
+// third, says its brand outright, so what it gives outranks what the page
+// suggests. Hand the facts to createBrand(); correct any it got wrong first.
+export function readPage(html = "", css = "", design = ""): Omit<PageFacts, "covers"> {
+  const page = readStyles(html, css)
+  const said = design.trim() ? readDesign(design) : {}
+  const colors = [...new Set([...(said.colors ?? []), ...(page.colors ?? [])])]
+  const fonts = said.fonts || page.fonts ? { ...page.fonts, ...said.fonts } : undefined
+  const words = [said.words, page.words].filter(Boolean).join(". ")
+  return {
+    ...page,
+    ...said,
+    ...(colors.length ? { colors } : null),
+    ...(fonts ? { fonts } : null),
+    ...(words ? { words } : null),
+  }
+}
+
+// Bare HSL channels, as shadcn's themes declare their variables for hsl().
+const BARE = String.raw`(\d+(?:\.\d+)?(?:deg)?\s+\d+(?:\.\d+)?%\s+\d+(?:\.\d+)?%)`
+
+function readStyles(html: string, css: string): Omit<PageFacts, "covers"> {
   const source = `${html}\n${css}`
   const facts: Omit<PageFacts, "covers"> = {}
 
-  const COLOR = String.raw`(#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b|rgba?\([^)]*\)|oklch\([^)]*\))`
-  const variable = (names: string) => source.match(new RegExp(String.raw`--(?:color-)?(?:${names})\s*:\s*${COLOR}`, "i"))?.[1]
+  const COLOR = String.raw`(#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b|rgba?\([^)]*\)|hsla?\([^)]*\)|oklch\([^)]*\))`
+  // A variable's value may also be bare channels, which only a variable holds.
+  const VALUE = `(?:${COLOR}|${BARE})`
+  const variable = (names: string) => {
+    const match = source.match(new RegExp(String.raw`--(?:color-)?(?:${names})\s*:\s*${VALUE}`, "i"))
+    return match?.[1] ?? match?.[2]
+  }
   const rule = (selector: string, property: string, value = COLOR) =>
     source.match(new RegExp(String.raw`(?:^|[}\s,;])(?:${selector})\s*(?:,[^{]*)?\{[^}]*?(?<![-\w])${property}\s*:\s*${value}`, "i"))?.[1]
 
@@ -325,8 +349,10 @@ export function readPage(html = "", css = ""): Omit<PageFacts, "covers"> {
   }
   // Named in a CSS variable, an SCSS variable, or a key of a config such as
   // Tailwind's.
-  const named = [...source.matchAll(new RegExp(String.raw`(?:--|\$|\b)([\w-]*(?:brand|primary|accent)[\w-]*)["']?\s*:\s*["']?${COLOR}`, "gi"))]
-    .map((match) => ({ name: match[1]!.toLowerCase(), color: hex(match[2]!) }))
+  const named = [...source.matchAll(new RegExp(String.raw`(?:--|\$|\b)([\w-]*(?:brand|primary|accent)[\w-]*)["']?\s*:\s*["']?(?:${COLOR}|${BARE})`, "gi"))]
+    // Bare channels only from a CSS variable.
+    .filter((match) => match[2] || match[0].startsWith("--"))
+    .map((match) => ({ name: match[1]!.toLowerCase(), color: hex(match[2] ?? match[3]) }))
     .filter((entry): entry is { name: string; color: string } => Boolean(entry.color))
     .sort((a, b) => rank(a.name) - rank(b.name))
     .map((entry) => entry.color)
@@ -368,5 +394,96 @@ function hex(color: string | undefined): string | undefined {
     const l = Number(oklch[1]) / (oklch[2] ? 100 : 1)
     return fromOklch({ l, c: Number(oklch[3]), h: Number(oklch[4]) })
   }
+  const hsl = color.match(/^(?:hsla?\(\s*)?([\d.]+)(?:deg)?[\s,]+([\d.]+)%[\s,]+([\d.]+)%/i)
+  if (hsl) {
+    const [h, s, l] = [Number(hsl[1]) % 360, Number(hsl[2]) / 100, Number(hsl[3]) / 100]
+    const k = (n: number) => (n + h / 30) % 12
+    const channel = (n: number) => l - s * Math.min(l, 1 - l) * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1))
+    return `#${[0, 8, 4].map((n) => Math.round(channel(n) * 255).toString(16).padStart(2, "0")).join("")}`
+  }
   return undefined
+}
+
+// A DESIGN.md, the file a site writes its design system in for agents: YAML
+// tokens up front or in yaml blocks, prose after. Its colours come in the
+// order it names a brand, primary first; its type by the tokens for headings
+// and text; its words from its name, description and overview.
+function readDesign(markdown: string): Omit<PageFacts, "covers"> {
+  const blocks = [markdown.match(/^\s*---\r?\n([\s\S]*?)\r?\n---/)?.[1], ...[...markdown.matchAll(/```ya?ml\r?\n([\s\S]*?)```/g)].map((match) => match[1])]
+  const tokens: Tree = {}
+  for (const block of blocks) if (block) merge(tokens, yaml(block))
+  const branch = (key: string) => (typeof tokens[key] === "object" ? (tokens[key] as Tree) : {})
+  // A value that names another token, as "{colors.primary}" does.
+  const resolve = (value: unknown, depth = 0): string | undefined => {
+    if (typeof value !== "string") return undefined
+    const reference = value.match(/^\{([\w.-]+)\}$/)?.[1]
+    if (!reference || depth > 4) return value
+    return resolve(reference.split(".").reduce<unknown>((node, key) => (node as Tree)?.[key], tokens), depth + 1)
+  }
+  const facts: Omit<PageFacts, "covers"> = {}
+
+  const colors = Object.entries(branch("colors"))
+    .map(([name, value]) => ({ name: name.toLowerCase(), color: hex(resolve(value)) }))
+    .filter((entry): entry is { name: string; color: string } => Boolean(entry.color))
+  const find = (pattern: RegExp) => colors.find((entry) => pattern.test(entry.name))?.color
+  const background = find(/^(background|surface|canvas|paper)$/) ?? find(/^neutral$/)
+  if (background) facts.background = background
+  const text = find(/^(on-background|on-surface|foreground|text|ink)$/)
+  if (text) facts.text = text
+  const order = (name: string) => {
+    const kind = ["brand", "primary", "accent", "tertiary", "secondary"].findIndex((word) => name.startsWith(word))
+    // Containers and the colours set on them are washes and text, not the brand.
+    return (kind < 0 ? 9 : kind) + (/container|^on-|-on$|fixed|dim|variant/.test(name) ? 10 : 0)
+  }
+  const ranked = colors.map((entry, index) => ({ ...entry, index })).sort((a, b) => order(a.name) - order(b.name) || a.index - b.index)
+  if (ranked.length) facts.colors = [...new Set(ranked.map((entry) => entry.color))]
+
+  const type = Object.entries(branch("typography"))
+  const family = (pattern: RegExp) => {
+    const token = type.find(([name, value]) => pattern.test(name.toLowerCase()) && typeof value === "object")?.[1] as Tree | undefined
+    return resolve(token?.fontFamily)
+  }
+  const heading = family(/^(h1|display|headline|heading|title)/)
+  const body = family(/^(body|text|paragraph|base)/)
+  if (heading || body) facts.fonts = { ...(heading ? { heading } : null), ...(body ? { body } : null) }
+
+  const overview = markdown.match(/^##\s+(?:Overview|Brand & Style)\s*$([\s\S]*?)(?=^##\s|(?![\s\S]))/im)?.[1]
+  const words = [resolve(tokens.name), resolve(tokens.description), overview?.replace(/[*_`#>]/g, " ").replace(/\s+/g, " ").trim()].filter(Boolean)
+  if (words.length) facts.words = words.join(". ")
+  return facts
+}
+
+type Tree = { [key: string]: string | Tree }
+
+// The part of YAML a design file's tokens use: maps nested by indent, with
+// plain or quoted values. Lists and anything else are passed over.
+function yaml(text: string): Tree {
+  const root: Tree = {}
+  const stack: { indent: number; node: Tree }[] = [{ indent: -1, node: root }]
+  for (const line of text.split(/\r?\n/)) {
+    const match = line.match(/^(\s*)([\w$.-]+|"[^"]*"|'[^']*')\s*:\s*(.*)$/)
+    if (!match || /^\s*#/.test(line)) continue
+    const indent = match[1]!.length
+    const key = match[2]!.replace(/^["']|["']$/g, "")
+    while (stack.length > 1 && stack.at(-1)!.indent >= indent) stack.pop()
+    const parent = stack.at(-1)!.node
+    const raw = match[3]!
+    const quoted = raw.match(/^"([^"]*)"|^'([^']*)'/)
+    // A colour written without quotes reads as a colour, not as a comment.
+    const value = quoted ? (quoted[1] ?? quoted[2]!) : raw.replace(/\s+#.*$/, "").trim()
+    if (value) parent[key] = value
+    else {
+      const node: Tree = {}
+      parent[key] = node
+      stack.push({ indent, node })
+    }
+  }
+  return root
+}
+
+function merge(into: Tree, from: Tree) {
+  for (const [key, value] of Object.entries(from)) {
+    if (typeof value === "object" && typeof into[key] === "object") merge(into[key] as Tree, value)
+    else into[key] = value
+  }
 }
