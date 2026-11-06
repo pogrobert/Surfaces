@@ -113,3 +113,20 @@ test("with a secret, only signed URLs are drawn", async () => {
   const sig = new URL(url).searchParams.get("sig")
   assert.equal((await handle(new Request(`https://acme.dev/og?use=og&title=Hi&sig=${sig}`))).status, 200)
 })
+
+test("a site's logo names its brand colour before its stylesheet does", async () => {
+  const { readProject } = await import("../src/project.ts")
+  const { readPage } = await import("../src/page.ts")
+  const other = mkdtempSync(join(tmpdir(), "surfaces-logo-"))
+  try {
+    mkdirSync(join(other, "public"))
+    writeFileSync(join(other, "package.json"), JSON.stringify({ name: "other" }))
+    writeFileSync(join(other, "public/logo.svg"), `<svg><path fill="#7c3aed" d="M0 0h10v10z"/><path fill="#111111" d="M0 0h5v5z"/><circle fill="#7c3aed" r="3"/></svg>`)
+    writeFileSync(join(other, "styles.css"), ":root { --primary: #f59e0b; }")
+    const project = readProject(other)
+    assert.ok(project.read.includes("public/logo.svg"))
+    assert.equal(readPage(project.html, project.css).colors?.[0], "#7c3aed")
+  } finally {
+    rmSync(other, { recursive: true, force: true })
+  }
+})

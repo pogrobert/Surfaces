@@ -20,6 +20,8 @@ brand.cover({ title: post.title })      // a post's cover, title at the bottom l
 brand.card({ title: post.title })       // a card in a list, title beside it: art only
 brand.hero({ title: "Pricing" })        // title in the middle; the one cover that moves
 brand.og({ title: post.title })         // a link preview, 1200x630
+brand.banner({ for: "x", title })       // a header: "x" 1500x500, "linkedin" 1584x396, "email" 1200x400
+brand.icon()                            // a 512 square mark: an app icon, a favicon
 brand.avatar(user.id)                   // a person's mark
 brand.input("post", { title })          // the input any of those draws, for components
 ```
@@ -27,6 +29,10 @@ brand.input("post", { title })          // the input any of those draws, for com
 - `name`, such as the domain, is the one thing a brand must have. It is in
   every seed, so the same title in one brand is always the same art and two
   brands never share a drawing. There is no seed to choose.
+- A banner's title is its own choice: with one it is set in, without one
+  the banner is art alone. An X header always keeps its bottom left clear,
+  where X lays the profile's photo. The icon is the brand's mark filling a
+  square, the same every time.
 - A cover is about its `title`. An `id`, such as the slug, keeps its art when
   the title is edited. A `tag`, such as the post's category, makes every
   cover with it the same mark, so a category reads as one family while each

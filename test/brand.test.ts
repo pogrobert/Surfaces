@@ -144,3 +144,21 @@ test("covers with one tag make one mark, and a tag never overrides a brand's own
   assert.equal(createBrand({ name: "acme.dev", style: "riso", shape: "bars" }).cover({ title: "A", tag: "design" }).shape, "bars")
   assert.equal(createBrand({ name: "acme.dev", style: "underpaint" }).cover({ title: "A", tag: "design" }).shape, undefined)
 })
+
+test("a brand makes the rest of the kit: banners and an icon", () => {
+  const brand = createBrand({ name: "acme.dev", color: "#f59e0b", style: "stencil", theme: "light" })
+  const x = brand.banner({ for: "x", title: "Bots for every business" })
+  assert.deepEqual(x.output, { w: 1500, h: 500 })
+  assert.ok(x.layers.some((layer) => layer.kind === "text"))
+  // X lays the profile's photo over the bottom left: the art keeps clear of it.
+  assert.ok(x.areas.some((area) => area.place === "bottom-left" && area.clear))
+  assert.ok(brand.banner({ for: "x" }).areas.every((area) => area.place === "bottom-left"))
+  assert.deepEqual(brand.banner({ for: "linkedin" }).output, { w: 1584, h: 396 })
+  assert.equal(brand.banner({ for: "linkedin" }).areas.length, 0)
+  assert.deepEqual(brand.banner({ for: "email", title: "The letter" }).output, { w: 1200, h: 400 })
+  const icon = brand.icon()
+  assert.deepEqual(icon.output, { w: 512, h: 512 })
+  assert.equal(toSvg(icon), toSvg(brand.icon()))
+  assert.ok(judge(icon).ok)
+  assert.match(errorOf(() => brand.banner({ for: "tiktok" } as never)), /Unknown banner "tiktok"/)
+})

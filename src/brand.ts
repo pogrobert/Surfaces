@@ -7,7 +7,7 @@ import { GRAINS, MOODS, THEMES } from "./core/intent.ts"
 import { FONTS } from "./core/type.ts"
 import type { Font } from "./core/type.ts"
 import type { Grain, Mood, Theme } from "./core/intent.ts"
-import { coverage, worstTitleContrast } from "./core/judge.ts"
+import { coverage, HAIRLINE, worstTitleContrast } from "./core/judge.ts"
 import type { Scene } from "./core/scene.ts"
 import { nearest } from "./core/validate.ts"
 import { STYLES } from "./styles/index.ts"
@@ -65,10 +65,15 @@ export type Brand = {
   hero(content: Content): Scene
   // A link preview, 1200x630.
   og(content: Content): Scene
+  // A profile's or a newsletter's header: X (1500x500), LinkedIn (1584x396)
+  // or email (1200x400). With a title it is set in; without, art alone.
+  banner(content: Content & { for: "x" | "linkedin" | "email" }): Scene
+  // A square mark for an app icon or a favicon, 512 pixels across.
+  icon(): Scene
   // A person's mark, from their id or handle.
   avatar(person: string | number, options?: { size?: number; square?: boolean }): Scene
   // The input any of those draws, for the components and the HTTP handler.
-  input(use: Use, content: Content): SurfaceInput
+  input(use: Use, content?: Content): SurfaceInput
 }
 
 const OPTIONS = ["name", "color", "style", "theme", "mood", "grain", "shape", "font", ...FACTS] as const
@@ -166,13 +171,15 @@ export function createBrand(choices: BrandChoices): Brand {
 }
 
 function build(name: string, look: Brand["look"], why: string[]): Brand {
-  const input = (use: Use, content: Content): SurfaceInput => {
-    const about = content?.id ?? content?.title
+  const input = (use: Use, content: Content = {}): SurfaceInput => {
+    const placing = PLACING[use]
+    // A banner or an icon is one of a kind, so it needs no name of its own.
+    const about = content?.id ?? content?.title ?? (placing.optional ? use : undefined)
     if (typeof about !== "string" || !about.trim()) {
       throw new Error(`Give the ${use} a "title", or an "id" that names it, such as the post's slug`)
     }
-    const placing = PLACING[use]
-    const drawn = content.drawTitle ?? use === "og"
+    if (use === "icon" && content.drawTitle) throw new Error(`An icon has no room for a title`)
+    const drawn = content.drawTitle ?? (use === "og" || (placing.optional === true && Boolean(content.title?.trim())))
     if (drawn && !content.title?.trim()) throw new Error(`A ${use} drawn with its title needs a "title"`)
     if (drawn && !placing.areas.length) throw new Error(`A ${use} has no area for a title; draw it as a "post" or "og" instead`)
     return {
@@ -180,7 +187,7 @@ function build(name: string, look: Brand["look"], why: string[]): Brand {
       seed: `${name}/${about.trim()}`,
       ...(look.color ? { color: look.color } : null),
       ...placing.size,
-      ...(placing.areas.length ? { areas: placing.areas } : null),
+      ...areasOf(placing, drawn),
       theme: look.theme,
       ...(look.mood ? { mood: look.mood } : null),
       ...(look.grain ? { grain: look.grain } : null),
@@ -199,6 +206,11 @@ function build(name: string, look: Brand["look"], why: string[]): Brand {
     card: draw("card"),
     hero: draw("hero"),
     og: draw("og"),
+    banner: ({ for: where, ...content }) => {
+      if (!["x", "linkedin", "email"].includes(where)) throw new Error(`Unknown banner "${String(where)}". Use "x", "linkedin" or "email".`)
+      return generate(input(where, content))
+    },
+    icon: () => generate(input("icon")),
     avatar: (person, options = {}) =>
       drawAvatar({
         style: (AVATAR_STYLES as readonly string[]).includes(look.style) ? (look.style as AvatarStyle) : AVATAR_OF[look.style],
@@ -211,6 +223,13 @@ function build(name: string, look: Brand["look"], why: string[]): Brand {
       }),
     input,
   }
+}
+
+// A use's areas: its title's when it has one or always does, and any it
+// always keeps clear, such as the photo over an X header.
+function areasOf(placing: (typeof PLACING)[Use], drawn: boolean) {
+  const areas = [...(placing.areas.length && (!placing.optional || drawn) ? placing.areas : []), ...(placing.keep ?? [])]
+  return areas.length ? { areas } : null
 }
 
 // The mark every cover with a tag makes, picked by the tag so it stays when
@@ -249,7 +268,7 @@ function holds(name: string, look: Brand["look"]) {
         if (worstTitleContrast(scene, 6) < 4.5) return false
         if (index === 0 && draw === brand.cover) {
           const covered = coverage(scene, 15)
-          if (covered <= 0.04 || covered >= 0.98) return false
+          if ((covered <= 0.04 && !HAIRLINE.has(look.style)) || covered >= 0.98) return false
         }
       }
     }

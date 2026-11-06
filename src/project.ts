@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
 import { join, relative } from "node:path"
+import { toOklch } from "./core/color.ts"
 
 // A site as its files show it, for the CLI: its name, its framework, and the
 // text readPage() reads a look from, gathered from where sites keep it. All
@@ -67,6 +68,38 @@ function frameworkOf(deps: Record<string, string>, root: string): Framework {
   return existsSync(join(root, "index.html")) ? "static" : "vite"
 }
 
+// The site's logo, wherever sites keep one: SVGs named for a logo, an icon or
+// a mark, in the public folder and the usual asset folders.
+const LOGO = /^(logo|favicon|icon|brand|mark|logomark|wordmark)[\w.-]*\.svg$/i
+function logos(root: string) {
+  const found: string[] = []
+  const look = (dir: string, depth: number) => {
+    if (depth > 3 || !existsSync(dir) || !statSync(dir).isDirectory()) return
+    for (const name of readdirSync(dir)) {
+      if (name === "node_modules" || name.startsWith(".")) continue
+      const path = join(dir, name)
+      if (statSync(path).isDirectory()) look(path, depth + 1)
+      else if (LOGO.test(name) && statSync(path).size < 200_000) found.push(path)
+    }
+  }
+  for (const dir of ["public", "static", "assets", "src/assets", "app", "src/app", "src/lib", "."]) look(join(root, dir), dir === "." ? 3 : 0)
+  return [...new Set(found)]
+}
+
+// A logo's own colour: the one its SVG fills most with, leaving out black,
+// white and greys, which a logo uses for type and outlines.
+function logoColour(files: string[]) {
+  const counts = new Map<string, number>()
+  for (const file of files) {
+    for (const match of readFileSync(file, "utf8").matchAll(/#([0-9a-f]{6}|[0-9a-f]{3})\b/gi)) {
+      const hex = match[1]!.length === 3 ? `#${[...match[1]!].map((d) => d + d).join("")}`.toLowerCase() : `#${match[1]!}`.toLowerCase()
+      if (toOklch(hex).c < 0.06) continue
+      counts.set(hex, (counts.get(hex) ?? 0) + 1)
+    }
+  }
+  return [...counts].sort((a, b) => b[1] - a[1])[0]?.[0]
+}
+
 export function readProject(root: string): Project {
   const pkg = existsSync(join(root, "package.json")) ? (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as Record<string, any>) : {}
   const deps = { ...pkg.dependencies, ...pkg.devDependencies }
@@ -106,6 +139,10 @@ export function readProject(root: string): Project {
     pkg.description && !descriptions[0] && `<meta name="description" content="${String(pkg.description).replace(/"/g, "&quot;")}">`,
   ].filter(Boolean)
   const loaded = faces.length ? [`h1 { font-family: "${faces[0]}"; }`, faces[1] ? `body { font-family: "${faces[1]}"; }` : ""].join("\n") : ""
+  // The logo's colour, named for the brand, so readPage() ranks it first.
+  const marks = logos(root)
+  const logo = logoColour(marks)
+  read.push(...marks.map((file) => relative(root, file)))
   const homepage = typeof pkg.homepage === "string" ? pkg.homepage.match(/^https?:\/\/([^/]+)/)?.[1] : undefined
   // The domain the site's own shell names most, as its og:url, og:image or
   // canonical link do, leaving out the hosts every site links to.
@@ -128,7 +165,7 @@ export function readProject(root: string): Project {
     source,
     ...(framework === "next" && app ? { app } : null),
     html: [...meta, ...html].join("\n"),
-    css: [loaded, ...css].join("\n"),
+    css: [logo ? `:root { --brand-logo: ${logo}; }` : "", loaded, ...css].join("\n"),
     read,
   }
 }

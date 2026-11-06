@@ -291,15 +291,21 @@ export type Verdict = {
   problems: string[]
 }
 
+// Styles drawn in hairlines, which cover little of a canvas by nature: they
+// are never held to how much of it they cover.
+export const HAIRLINE = new Set(["linework", "dither"])
+
 // Whether a cover is fit to show: every area's content reads at 4.5:1, the art
-// is neither blank nor a wall, and its subject stays out of every area.
+// is neither blank nor, where content sits on it, a wall, and its subject
+// stays out of every area. Art with no content on it, an icon or a bare
+// banner, may fill its canvas.
 export function judge(scene: Scene, steps = 8): Verdict {
   const problems: string[] = []
   const worst = worstTitleContrast(scene, steps)
   if (worst < 4.5) problems.push(`content reads at ${worst.toFixed(2)}:1 in an area, under 4.5:1`)
   const covered = coverage(scene, 23)
-  if (covered <= 0.04) problems.push(`the art covers ${(covered * 100).toFixed(1)}% of the canvas: almost blank`)
-  if (covered >= 0.98) problems.push("the art covers the whole canvas, leaving no ground")
+  if (covered <= 0.04 && !HAIRLINE.has(scene.style)) problems.push(`the art covers ${(covered * 100).toFixed(1)}% of the canvas: almost blank`)
+  if (covered >= 0.98 && scene.areas.length) problems.push("the art covers the whole canvas, leaving no ground")
   const kept = keptBoxes(scene)
   if (scene.subject && kept.length && boxesTouch(scene.subject, kept)) problems.push("the subject runs into an area")
   return { ok: problems.length === 0, contrast: worst, coverage: covered, problems }

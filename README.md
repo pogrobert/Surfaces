@@ -38,6 +38,8 @@ brand.cover({ title: post.title })   // a post's cover
 brand.cover({ title, tag: post.category })  // a category's posts make one mark
 brand.og({ title: post.title })      // its link preview
 brand.hero({ title: "Pricing" })
+brand.banner({ for: "x" })           // and "linkedin", "email"
+brand.icon()                         // an app icon or favicon
 brand.avatar(user.id)
 ```
 

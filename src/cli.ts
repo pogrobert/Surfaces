@@ -4,6 +4,7 @@ import { dirname, join, relative } from "node:path"
 import { createBrand, directions } from "./brand.ts"
 import type { Brand, BrandChoices } from "./brand.ts"
 import { describe } from "./core/describe.ts"
+import { generate } from "./core/generate.ts"
 import { judge } from "./core/judge.ts"
 import type { Scene, TextLayer } from "./core/scene.ts"
 import { measure } from "./core/type.ts"
@@ -38,7 +39,7 @@ Options
   --name <domain>     The brand's name (init and directions; default: the site's domain)
   --pick <n>          Take the nth direction (init; default 1, our pick)
   --title <text>      A title to draw (preview, check; repeatable)
-  --use <use>         post, card, hero or og (preview, check; default og)
+  --use <use>         post, card, hero, og, x, linkedin, email or icon (preview, check; default og)
   --brand <file>      The brand module (default: surfaces.ts beside the source)
   --out <path>        Where images go (default .surfaces/)
   --dry-run           Say what init would write, and write nothing
@@ -92,9 +93,13 @@ async function jpeg(scene: Scene, width = scene.output.w) {
   return encodeJpeg(image.pixels, image.width, image.height)
 }
 
+// Whether a use sets its title into the image: everywhere but a card, which
+// has it beside, and an icon, which has no room.
+const titled = (use: Use) => use !== "card" && use !== "icon"
+
 const drawn = (brand: Brand, use: Use, title: string) => {
   const light = brand.look.theme === "auto" ? createBrand({ name: brand.name, ...brand.look, theme: "light" }) : brand
-  return light[use === "post" ? "cover" : use]({ title, drawTitle: use !== "card" })
+  return generate(light.input(use, titled(use) ? { title, drawTitle: true } : { title }))
 }
 
 // One line of type as a path, for labels on a board.
@@ -204,8 +209,8 @@ function checkCommand(root: string, args: Args, log: (line: string) => void) {
     const themed = createBrand({ name: brand.name, ...brand.look, theme })
     for (const use of uses) {
       for (const title of titles) {
-        const input = themed.input(use, { title, drawTitle: use !== "card" })
-        const scene = themed[use === "post" ? "cover" : use]({ title, drawTitle: use !== "card" })
+        const input = themed.input(use, titled(use) ? { title, drawTitle: true } : { title })
+        const scene = generate(input)
         const verdict = judge(scene)
         // A title set without some of its letters doesn't hold either.
         const warnings = validate(input).warnings
