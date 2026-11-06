@@ -74,10 +74,16 @@ export function generate(input: SurfaceInput): Scene {
 // what an avatar is cut from. The input is checked by the caller.
 export const drawFilled = (input: SurfaceInput) => draw(input, true)
 
-function draw(input: SurfaceInput, fill = false): Scene {
+// A cover from a recipe that isn't a style, such as a combination of the
+// grammar's parts being judged before it is offered. Unchecked, and only for
+// the library's own tests and tools.
+export const drawRecipe = (recipe: Recipe, input: Omit<SurfaceInput, "style">) =>
+  draw({ ...input, style: recipe.style as StyleName }, false, recipe)
+
+function draw(input: SurfaceInput, fill = false, recipe: Recipe = STYLES[input.style]): Scene {
   if (input.theme === "auto") {
-    const light = draw({ ...input, theme: "light" }, fill)
-    const dark = draw({ ...input, theme: "dark" }, fill)
+    const light = draw({ ...input, theme: "light" }, fill, recipe)
+    const dark = draw({ ...input, theme: "dark" }, fill, recipe)
     // Named for the drawing, so two covers on one page never share it.
     const inkVar = `--surface-ink-${hash(`${input.style}:${input.seed}:${input.color ?? DEFAULT_COLOR}`).toString(36)}`
     return {
@@ -86,8 +92,6 @@ function draw(input: SurfaceInput, fill = false): Scene {
       dark: { palette: dark.palette, ink: dark.ink, layers: dark.layers, inkVar },
     }
   }
-  const recipe: Recipe = STYLES[input.style]
-
   const {
     style,
     seed,

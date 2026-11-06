@@ -193,6 +193,12 @@ const ART: Record<string, Phrase> = {
       shape,
       `two overlapping grainy ${both(inks)} circles`
     ),
+  stencil: (shape, inks) =>
+    `${pick(
+      { grid: "four rounded tiles", pinwheel: "four rounded tiles turning like a pinwheel", pair: "two tall tiles around a round gap", arch: "an arch" },
+      shape,
+      "a stencilled shape"
+    )}, filled with loose ${both(inks)} paint, on folded paper`,
   chrome: (shape, inks) =>
     `a shiny chrome ${pick({ ring: "ring", capsule: "capsule", arch: "arch" }, shape, "sphere")} reflecting ${both(inks)}`,
   glass: (shape, inks) =>

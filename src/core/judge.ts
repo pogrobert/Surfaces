@@ -1,6 +1,6 @@
-import { contrast, parseHex } from "../../src/core/color.ts"
-import { clamp, cos, radians, sin } from "../../src/core/math.ts"
-import { poolAlpha } from "../../src/core/scene.ts"
+import { contrast, parseHex } from "./color.ts"
+import { clamp, cos, radians, sin } from "./math.ts"
+import { poolAlpha } from "./scene.ts"
 import type {
   Layer,
   Paint,
@@ -9,10 +9,16 @@ import type {
   Shape,
   Stop,
   Tone,
-} from "../../src/core/scene.ts"
+} from "./scene.ts"
+import { boxesTouch } from "../layouts/geometry.ts"
 
-// Works out what a scene shows at a point from the data alone, without a
-// rasteriser, so the tests can hold titles to a contrast in plain Node. Grain
+// The judge: what makes a cover good enough to show, checked from the scene
+// alone. Hand-built styles are held to it by the tests; the grammar's
+// combinations are held to it before any of them is offered (see
+// test/grammar.test.ts), so a combination is only as open as it is judged.
+//
+// It works out what a scene shows at a point from the data alone, without a
+// rasteriser, so it runs in plain Node, as fast as a test needs. Grain
 // is left out: film grain averages to no change, and a stipple is taken at its
 // mean coverage, and a blur at its colours before they smear; whatever sits
 // over a blur still counts. The contact sheet measures real pixels on top of
@@ -269,4 +275,29 @@ export function coverage(scene: Scene, steps = 37, clear: string[] = []) {
     }
   }
   return moved / (steps * steps)
+}
+
+export type Verdict = {
+  ok: boolean
+  // The worst contrast content gets in an area the art goes around; Infinity
+  // with none.
+  contrast: number
+  // The share of the canvas the art covers.
+  coverage: number
+  // What is wrong, said as a fix would be looked for.
+  problems: string[]
+}
+
+// Whether a cover is fit to show: every area's content reads at 4.5:1, the art
+// is neither blank nor a wall, and its subject stays out of every area.
+export function judge(scene: Scene, steps = 8): Verdict {
+  const problems: string[] = []
+  const worst = worstTitleContrast(scene, steps)
+  if (worst < 4.5) problems.push(`content reads at ${worst.toFixed(2)}:1 in an area, under 4.5:1`)
+  const covered = coverage(scene, 23)
+  if (covered <= 0.04) problems.push(`the art covers ${(covered * 100).toFixed(1)}% of the canvas: almost blank`)
+  if (covered >= 0.98) problems.push("the art covers the whole canvas, leaving no ground")
+  const kept = keptBoxes(scene)
+  if (scene.subject && kept.length && boxesTouch(scene.subject, kept)) problems.push("the subject runs into an area")
+  return { ok: problems.length === 0, contrast: worst, coverage: covered, problems }
 }

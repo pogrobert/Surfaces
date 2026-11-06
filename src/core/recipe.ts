@@ -69,7 +69,8 @@ export type Art = {
   echo?: { dx: number; dy: number; motion: Motion }
 }
 
-export type Piece = { id: string; clip: Shape; marks: Mark[] }
+// Its motion moves what is inside the shape; the shape stays put.
+export type Piece = { id: string; clip: Shape; marks: Mark[]; motion?: Motion }
 
 // A style is three separate decisions: a layout places things, a shape says
 // what they are, a finish says what they are made of. A recipe is one approved

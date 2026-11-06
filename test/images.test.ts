@@ -7,7 +7,7 @@ import { STYLES } from "../src/styles/index.ts"
 import type { StyleName } from "../src/styles/index.ts"
 import { BRAND_COLORS, SIZES, TITLE_PLACES, titleAt } from "./support/inputs.ts"
 import { rampPng } from "./support/png.ts"
-import { worstTitleContrast } from "./support/sample.ts"
+import { worstTitleContrast } from "../src/core/judge.ts"
 
 const PHOTO = { data: rampPng(32, 18), type: "image/png" } as const
 const TAKERS = (Object.keys(STYLES) as StyleName[]).filter(

@@ -146,4 +146,5 @@ a photo.
 ## Styles
 
 underpaint, halftone, endpaper, aquatint, mezzotint, sfumato, engraving, riso,
-moire, strata, marbling, linework, dither, fluted, photocopy, chrome, glass.
+moire, strata, marbling, linework, dither, fluted, photocopy, chrome, glass,
+stencil.

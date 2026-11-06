@@ -12,6 +12,7 @@ import { moire } from "./moire.ts"
 import { photocopyStyle as photocopy } from "./photocopy.ts"
 import { riso } from "./riso.ts"
 import { sfumato } from "./sfumato.ts"
+import { stencil } from "./stencil.ts"
 import { strataStyle as strata } from "./strata.ts"
 import { underpaint } from "./underpaint.ts"
 
@@ -33,6 +34,7 @@ export const STYLES = {
   photocopy,
   chrome,
   glass,
+  stencil,
 }
 
 export type StyleName = keyof typeof STYLES

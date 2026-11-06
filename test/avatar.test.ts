@@ -8,7 +8,7 @@ import { generate } from "../src/core/generate.ts"
 import { createAvatarHandler } from "../src/http.ts"
 import { Avatar } from "../src/react.ts"
 import { toSvg } from "../src/render/svg.ts"
-import { coverage } from "./support/sample.ts"
+import { coverage } from "../src/core/judge.ts"
 
 const PEOPLE = ["ada", "grace", "linus", "margaret", "alan", "barbara", 42, "katherine"]
 

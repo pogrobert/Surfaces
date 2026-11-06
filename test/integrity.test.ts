@@ -15,7 +15,7 @@ import {
   TITLE_PLACES,
   titleAt,
 } from "./support/inputs.ts"
-import { coverage, keptBoxes, worstTitleContrast } from "./support/sample.ts"
+import { coverage, keptBoxes, worstTitleContrast } from "../src/core/judge.ts"
 
 // 1,000 seeds, each through every style with a random colour, use or size,
 // mood and theme.
