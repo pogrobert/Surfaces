@@ -342,6 +342,147 @@ const DESIGNS = {
     const middle = el("div", { className: "middle" }, el("h1", { textContent: "Surfaces" }), el("p", { className: "line", textContent: "Covers and link previews in your site's own look." }), field(), aside())
     page.append(el("section", { className: "v16" }, ...cells.slice(0, 4), middle, ...cells.slice(4)))
   },
+  // Marks from many sites scattered round the ask, like stickers on a desk.
+  17() {
+    css(`.v17 { position: relative; height: 100vh; overflow: hidden; }
+      .v17 .mark { position: absolute; }
+      .v17 .middle { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; width: min(560px, calc(100% - 32px)); display: grid; justify-items: center; }
+      .v17 h1 { margin: 0; font-size: clamp(56px, 7vw, 104px); letter-spacing: -0.05em; line-height: 0.95; }
+      .v17 .line { margin: 14px 0 28px; font-size: 21px; color: var(--quiet); }`)
+    const section = el("section", { className: "v17" })
+    // Placed on a loose ring round the middle, so none lands on the words.
+    const spots = [[8, 12], [24, 6], [44, 9], [66, 5], [86, 10], [93, 34], [88, 62], [90, 86], [70, 90], [50, 88], [30, 92], [10, 84], [5, 58], [9, 34], [76, 28], [20, 30], [80, 74], [18, 66]]
+    spots.forEach(([x, y], i) => {
+      const brand = BRANDS[i % BRANDS.length]
+      const size = 70 + ((i * 37) % 80)
+      const square = i % 3 === 0
+      const mark = art(brand.avatar(`sticker-${i}`, { square }), { width: `${size}px`, borderRadius: square ? "22%" : "50%" })
+      mark.className += " mark"
+      Object.assign(mark.style, { left: `calc(${x}% - ${size / 2}px)`, top: `calc(${y}% - ${size / 2}px)`, transform: `rotate(${((i * 53) % 40) - 20}deg)` })
+      section.append(mark)
+    })
+    section.append(el("div", { className: "middle" }, el("h1", { textContent: "Surfaces" }), el("p", { className: "line", textContent: "Every site gets its own marks, covers and link previews." }), field(), aside()))
+    page.append(section)
+  },
+
+  // A magazine cover: the masthead over the art, cover lines at the foot.
+  18() {
+    css(`.v18 { position: relative; height: 100vh; overflow: hidden; }
+      .v18 > .art { position: absolute; inset: 0; aspect-ratio: auto !important; }
+      .v18 .mast { position: absolute; top: 2vh; left: 0; right: 0; text-align: center; font-size: 22.5vw; line-height: 0.85; letter-spacing: -0.07em; font-weight: 800; margin: 0; }
+      .v18 .issue { position: absolute; top: calc(2vh + 19.5vw); left: 4vw; right: 4vw; display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; }
+      .v18 .lines { position: absolute; left: 4vw; bottom: 6vh; width: min(500px, 44vw); }
+      .v18 .lines p { margin: 0 0 16px; font-size: 26px; line-height: 1.15; font-weight: 750; letter-spacing: -0.02em; }`)
+    const brand = createBrand({ name: "surfaces", style: "marbling", color: "#ff6c2f" })
+    const { areas, ...input } = brand.input("hero", { id: "cover" })
+    const scene = generate({ ...input, motion: "none", width: innerWidth, height: innerHeight, areas: [{ box: { x: 0.02, y: 0.02, w: 0.96, h: 0.34 } }, { box: { x: 0.03, y: 0.66, w: 0.4, h: 0.3 } }] })
+    const section = el("section", { className: "v18" }, art(scene), el("h1", { className: "mast", textContent: "Surfaces" }), el("div", { className: "issue" }, el("span", { textContent: "No. 1" }), el("span", { textContent: "November 2026" }), el("span", { textContent: "Free, and the same every build" })),
+      el("div", { className: "lines" }, el("p", { textContent: "Your covers and link previews, printed in your site's own look." }), field()))
+    section.style.color = scene.ink
+    page.append(section)
+  },
+
+  // The name stacked down the page, each line printed in another site's look.
+  19() {
+    css(`.v19 { position: relative; height: 100vh; overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
+      .v19 .stack { margin: 0; font-size: 17.5vw; line-height: 0.8; letter-spacing: -0.065em; font-weight: 800; text-align: center; white-space: nowrap; }
+      .v19 .stack span { display: block; color: transparent; -webkit-background-clip: text; background-clip: text; background-size: 120% auto; background-position: center; }
+      .v19 .band { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: var(--paper); padding: 22px 26px; border-radius: 18px; text-align: center; box-shadow: 0 0 0 1px var(--rule); }
+      .v19 .band p { margin: 0 0 14px; font-size: 19px; }`)
+    const stack = el("h1", { className: "stack" })
+    BRANDS.forEach((brand, i) => {
+      const line = el("span", { textContent: "Surfaces", ...(i ? { ariaHidden: "true" } : null) })
+      line.style.backgroundImage = svgUrl(generate({ ...brand.input("card", { id: `line-${i}` }), width: 1200, height: 320 }))
+      stack.append(line)
+    })
+    page.append(el("section", { className: "v19" }, stack, el("div", { className: "band" }, el("p", { textContent: "Every site, its own look. Yours next:" }), field())))
+  },
+
+  // Halftone dots radiating out from the ask.
+  20() {
+    css(`.v20 { position: relative; height: 100vh; overflow: hidden; }
+      .v20 > .art { position: absolute; inset: 0; aspect-ratio: auto !important; }
+      .v20 .middle { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; width: min(560px, calc(100% - 32px)); display: grid; justify-items: center; }
+      .v20 h1 { margin: 0; font-size: 72px; letter-spacing: -0.05em; line-height: 1; }
+      .v20 .line { margin: 10px 0 26px; font-size: 20px; }`)
+    const brand = createBrand({ name: "surfaces", style: "halftone", color: "#0078bf" })
+    const scene = generate({ ...brand.input("hero", { id: "dots" }), motion: "none", width: innerWidth, height: innerHeight })
+    const section = el("section", { className: "v20" }, art(scene), el("div", { className: "middle" }, el("h1", { textContent: "Surfaces" }), el("p", { className: "line", textContent: "Covers and link previews in your site's own look." }), field(), aside()))
+    section.style.color = scene.ink
+    page.append(section)
+  },
+
+  // The name set huge and cut off by the foot of the page.
+  21() {
+    css(`body { background: #f2efe9; }
+      .v21 { position: relative; height: 100vh; overflow: hidden; padding: 6vh 5vw 0; }
+      .v21 .top { display: grid; grid-template-columns: 1fr 1fr; gap: 5vw; align-items: start; }
+      .v21 .top p { margin: 0; font-size: clamp(22px, 2.2vw, 32px); line-height: 1.18; letter-spacing: -0.02em; color: #e0401f; font-weight: 600; max-width: 24ch; }
+      .v21 .top .field { justify-self: end; }
+      .v21 .giant { position: absolute; left: 3.5vw; bottom: -6.4vw; margin: 0; font-size: 26vw; line-height: 0.8; letter-spacing: -0.075em; font-weight: 800; color: #e0401f; }
+      .v21 .print { position: absolute; right: 5vw; top: 26vh; width: 34vw; border-radius: 6px; }`)
+    const brand = createBrand({ name: "surfaces", style: "riso", color: "#e0401f" })
+    page.append(el("section", { className: "v21" }, el("div", { className: "top" }, el("p", { textContent: "Covers, link previews and headers, printed in your site's own colours. Drawn in code, the same on every build." }), field()),
+      Object.assign(art(brand.card({ id: "giant" })), { className: "art print" }), el("h1", { className: "giant", textContent: "Surfaces" })))
+  },
+
+  // A grid of solid inks and prints, the name and the ask in its cells.
+  22() {
+    css(`.v22 { height: 100vh; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr); }
+      .v22 > * { min-width: 0; min-height: 0; }
+      .v22 .art { aspect-ratio: auto !important; }
+      .v22 .ink { padding: 28px; display: flex; flex-direction: column; justify-content: space-between; }
+      .v22 .name { grid-column: span 2; background: #fff; padding: 36px 40px; display: flex; flex-direction: column; justify-content: space-between; }
+      .v22 .name h1 { margin: 0; font-size: 7vw; letter-spacing: -0.06em; line-height: 0.85; }
+      .v22 .name p { margin: 0 0 18px; font-size: 20px; color: var(--quiet); max-width: 30ch; }
+      .v22 .ink b { font-size: 15px; } .v22 .ink span { font-size: 30px; font-weight: 750; letter-spacing: -0.03em; line-height: 1.05; }`)
+    const block = (color, label, words, dark) => {
+      const cell = el("div", { className: "ink" }, el("b", { textContent: label }), el("span", { textContent: words }))
+      Object.assign(cell.style, { background: color, color: dark ? "#fff" : "var(--ink)" })
+      return cell
+    }
+    const print = (i) => art(generate({ ...BRANDS[i].input("card", { id: `block-${i}` }), width: 700, height: 600 }))
+    page.append(el("section", { className: "v22" },
+      el("div", { className: "name" }, el("h1", { textContent: "Surfaces" }), el("div", {}, el("p", { textContent: "Covers, link previews and headers in your site's own look." }), field())),
+      print(0), block("#ffe800", "Reads", "your colours, type and logo"),
+      print(3), block("#0078bf", "Draws", "in code, never an image model", true), print(5), print(1),
+      block("#f15060", "Keeps", "the same picture every build", true), print(4), print(2), block("#18203a", "Free", "no key, no cost per image", true)))
+  },
+
+  // Proofs left loose on a table round the ask.
+  23() {
+    css(`.v23 { position: relative; height: 100vh; overflow: hidden; background: #e8e6e0; }
+      .v23 .proof { position: absolute; background: #fff; padding: 8px; box-shadow: 0 14px 30px -18px rgb(0 0 0 / 0.5); }
+      .v23 .middle { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; width: min(560px, calc(100% - 32px)); display: grid; justify-items: center; }
+      .v23 h1 { margin: 0; font-size: 72px; letter-spacing: -0.05em; line-height: 1; }
+      .v23 .line { margin: 10px 0 26px; font-size: 20px; color: var(--quiet); }`)
+    const section = el("section", { className: "v23" })
+    const spots = [[3, 6, 22, -6, "og"], [30, -4, 18, 4, "x"], [70, 4, 24, 7, "og"], [76, 40, 20, -5, "cover"], [64, 70, 26, 3, "og"], [34, 74, 20, -4, "linkedin"], [2, 60, 24, 5, "cover"], [5, 34, 14, -8, "avatar"], [86, 24, 10, 12, "avatar"]]
+    spots.forEach(([x, y, w, turn, use], i) => {
+      const brand = BRANDS[i % BRANDS.length]
+      const scene = use === "og" ? brand.og({ title: ["How we cut our build times in half", "On keeping a notebook", "Notes on shipping every day"][i % 3] }) : use === "x" ? brand.banner({ for: "x" }) : use === "linkedin" ? brand.banner({ for: "linkedin" }) : use === "avatar" ? brand.avatar(`p${i}`, { square: true }) : brand.cover({ title: "Hello", drawTitle: true })
+      const proof = el("div", { className: "proof" }, art(scene))
+      Object.assign(proof.style, { left: `${x}%`, top: `${y}%`, width: `${w}vw`, transform: `rotate(${turn}deg)` })
+      section.append(proof)
+    })
+    section.append(el("div", { className: "middle" }, el("h1", { textContent: "Surfaces" }), el("p", { className: "line", textContent: "Every picture your site shows, in one look." }), field(), aside()))
+    page.append(section)
+  },
+
+  // A Swiss stack: what it makes, line by line, each with its own print.
+  24() {
+    css(`.v24 { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 4vw; padding: 7vh 5vw; align-items: end; }
+      .v24 ol { list-style: none; margin: 0; padding: 0; }
+      .v24 li { display: flex; align-items: center; gap: 2vw; white-space: nowrap; font-size: 6vw; line-height: 1; letter-spacing: -0.055em; font-weight: 800; border-top: 2px solid var(--ink); padding: 0.6vw 0 0.9vw; }
+      .v24 li .art { height: 4.6vw; border-radius: 4px; flex: none; }
+      .v24 li:first-child { border-top: 0; }
+      .v24 .right h1 { margin: 0 0 12px; font-size: 26px; font-weight: 800; }
+      .v24 .right p { margin: 0 0 26px; font-size: 21px; color: var(--quiet); max-width: 28ch; }`)
+    const brand = BRANDS[3]
+    const rows = [["Covers", brand.card({ id: "row-1" })], ["Link previews", brand.og({ title: "Hello" })], ["Headers", brand.banner({ for: "x" })], ["Avatars", brand.avatar("row")]]
+    const list = el("ol", {}, ...rows.map(([words, scene]) => el("li", {}, words, art(scene))))
+    page.append(el("section", { className: "v24" }, list, el("div", { className: "right" }, el("h1", { textContent: "Surfaces" }), el("p", { textContent: "All of them, from your site, in its own look." }), field(), aside())))
+  },
 }
 
 await document.fonts.ready
