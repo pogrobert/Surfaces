@@ -67,7 +67,12 @@ test("a site's own covers outrank what the page looks like", () => {
 })
 
 test("a page with nothing to go on still gets a good look", () => {
-  assert.deepEqual(createBrand({ name: "about.me" }).look, { style: "underpaint", theme: "light" })
+  // A print, in a risograph ink picked by the name, never the pale violet
+  // wash a page nobody designed gets.
+  const plain = createBrand({ name: "about.me" })
+  assert.deepEqual(plain.look, { style: "riso", color: "#f15060", theme: "light" })
+  assert.match(plain.why.join("\n"), /color #f15060: the page gave no colour of its own, so a risograph ink/)
+  assert.notEqual(createBrand({ name: "hello.dev" }).look.color, createBrand({ name: "notes.page" }).look.color)
   // Greys only: the deepest of them, not the background.
   assert.equal(createBrand({ name: "a", colors: ["#ffffff", "#9ca3af", "#374151"], background: "#ffffff" }).look.color, "#374151")
 })
@@ -98,7 +103,7 @@ test("readPage reads a brand the way real stylesheets give it", () => {
   assert.deepEqual(framework.colors, ["#38bdf8"])
   // A font the lists don't know is read by its fallback, or not at all.
   assert.equal(createBrand({ name: "a", fonts: { heading: `"Kazimir Text", serif` } }).look.style, "engraving")
-  assert.equal(createBrand({ name: "a", fonts: { heading: "Kazimir Text" } }).look.style, "underpaint")
+  assert.equal(createBrand({ name: "a", fonts: { heading: "Kazimir Text" } }).look.style, "riso")
 })
 
 test("the brand colour is an ink, never a pale wash", () => {

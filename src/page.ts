@@ -197,7 +197,9 @@ export function choose(facts: PageFacts): Look {
 
   const { signals, tones } = signalsOf(facts, color, dark)
   const ranked = rank(signals)
-  const best = ranked[0]!.score > 0 ? ranked[0]!.style : "underpaint"
+  // Nothing to go on gets a print, not a soft gradient: a pale wash of
+  // colour behind a title is what a page made without a designer looks like.
+  const best = ranked[0]!.score > 0 ? ranked[0]!.style : "riso"
   const style = kept ?? best
   if (kept) why.push(`style ${style}: the site's covers already use it, and a new one joins the set`)
   else why.push(styleReason(style, signals))

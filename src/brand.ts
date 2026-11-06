@@ -113,6 +113,10 @@ const AVATAR_OF: Record<StyleName, AvatarStyle> = {
   screenprint: "riso",
 }
 
+// Risograph inks, for a brand with no colour: strong, and none of them the
+// violet that marks a page nobody chose a colour for.
+const INKS = ["#0078bf", "#00838a", "#00a95c", "#f15060", "#ff6c2f", "#3d5588"]
+
 // Every problem with the choices, each with its fix.
 function check(choices: unknown): string[] {
   if (typeof choices !== "object" || choices === null || Array.isArray(choices)) {
@@ -164,9 +168,15 @@ function resolve(choices: BrandChoices) {
   // like any other, and the first one the page uses.
   const page = { ...facts, colors: color ? [color, ...(facts.colors ?? [])] : facts.colors }
   const chosen = choose(page)
+  // A page with no colour of its own gets a printer's ink, picked by the
+  // brand's name, so two such sites still look like two brands.
+  const ink = color ?? chosen.color ?? INKS[hash(`${name}/ink`) % INKS.length]!
+  if (!color && !chosen.color) {
+    chosen.why = chosen.why.map((reason) => (reason.startsWith("color ") ? `color ${ink}: the page gave no colour of its own, so a risograph ink, picked by the brand's name` : reason))
+  }
   const look: Brand["look"] = {
     style: style ?? chosen.style,
-    ...((color ?? chosen.color) ? { color: color ?? chosen.color } : null),
+    color: ink,
     theme: theme ?? chosen.theme,
     ...((mood ?? chosen.mood) ? { mood: mood ?? chosen.mood } : null),
     ...((grain ?? chosen.grain) ? { grain: grain ?? chosen.grain } : null),
