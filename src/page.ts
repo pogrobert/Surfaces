@@ -374,7 +374,9 @@ function readStyles(html: string, css: string): Omit<PageFacts, "covers"> {
   // palette, declared whole whether the site uses it or not, isn't counted.
   const used = source.replace(/--color-(?:red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|slate|gray|zinc|neutral|stone)-\d{2,3}\s*:[^;}]*/gi, "")
   const counts = new Map<string, number>()
-  for (const match of used.matchAll(new RegExp(String.raw`(?<![&\w])${COLOR}`, "g"))) {
+  // A colour in a class's own name, as Tailwind writes .border-\[\#95BF47\],
+  // is the same use as the value that follows it, so only the value counts.
+  for (const match of used.matchAll(new RegExp(String.raw`(?<![&\w\\])${COLOR}`, "g"))) {
     const color = hex(match[1]!)
     if (color) counts.set(color, (counts.get(color) ?? 0) + 1)
   }
@@ -407,9 +409,10 @@ function readStyles(html: string, css: string): Omit<PageFacts, "covers"> {
   const named = sorted.filter((entry) => /brand|primary/.test(entry.name)).map((entry) => entry.color)
   const accents = sorted.filter((entry) => !/brand|primary/.test(entry.name)).map((entry) => entry.color)
   const byUse = [...counts].sort((a, b) => b[1] - a[1]).map(([color]) => color)
+  // Used often enough to be the page's own, not a badge's.
   const mostUsed = byUse.find((color) => {
     const { l, c } = toOklch(color)
-    return c >= 0.06 && l >= 0.3 && (l <= 0.86 || c >= 0.12)
+    return (counts.get(color) ?? 0) >= 6 && c >= 0.06 && l >= 0.3 && (l <= 0.86 || c >= 0.12)
   })
   // Colours the page declares for itself in its head: the one Safari draws
   // its pinned tab in, chosen as the brand's mark colour, first of all; and
