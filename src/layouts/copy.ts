@@ -27,7 +27,9 @@ export type CopyMotif = (typeof COPY_MOTIFS)[number]
 
 export function photocopy(frame: Frame, motif: CopyMotif, p: CopyParams): Art {
   const { w, h, keep, titled, rng } = frame
-  const art = motif === "page" ? page(frame) : overprint(frame, motif, p)
+  // Toner prints its shapes solid, so a framed one reaches less far than a
+  // riso print's, or its mass fills the frame.
+  const art = motif === "page" ? page(frame) : overprint(frame, motif, p, undefined, 1.05)
   const { away } = clearing(frame)
   const keepOff = titled ? inflate(keep, Math.min(w, h) * 0.04) : null
 

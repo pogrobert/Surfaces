@@ -43,7 +43,10 @@ export function overprint(
   motif: Motif,
   p: OverprintParams,
   // Given only by a print in two inks, whose plates move apart from each other.
-  register?: Register
+  register?: Register,
+  // How far a framed motif may reach (see framing.ts): less for one that
+  // prints solid, whose mass would otherwise fill the frame.
+  most?: number
 ): Art {
   const { w, h, safe, keep, rng } = frame
   const { area, away } = clearing(frame)
@@ -56,7 +59,7 @@ export function overprint(
   // And drawn at least as large as the title is wide, so it reaches past it.
   // With nothing to keep clear, most covers frame it large and on a third
   // (see framing.ts); a motif spans about 0.9 of its unit.
-  const framed = motif === "rise" ? undefined : framing(frame, rng.fork("overprint"))
+  const framed = motif === "rise" ? undefined : framing(frame, rng.fork("overprint"), most ? { most } : {})
   const unit = framed ? (Math.min(w, h) * framed.reach) / 0.9 : Math.max(Math.min(area.w, area.h), calm ? calm.w : 0)
   const seatIn = (radius: number) =>
     calm ? center(calm) : framed ? { x: framed.x, y: framed.y } : seat({ area, safe: keep, w, h, away }, radius)

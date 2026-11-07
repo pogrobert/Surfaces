@@ -2,6 +2,7 @@ import type { Art, Frame } from "../core/recipe.ts"
 import type { Box, Enter, Layer, Mark, Motion, Paint, Shape } from "../core/scene.ts"
 import { bottle, bowl, cherries, egg, glass, jar, jug, lemon, pear } from "../shapes/stilllife.ts"
 import type { Thing } from "../shapes/stilllife.ts"
+import { framing } from "./framing.ts"
 import { boxesTouch, center, inflate, stops } from "./geometry.ts"
 import { clearing } from "./stage.ts"
 
@@ -144,7 +145,10 @@ export function mezzotint(frame: Frame, kind: StillLife, p: MezzotintParams): Ar
   const fits = (box: Box) =>
     box.x >= margin * 0.5 && box.x + box.w <= w - margin * 0.5 && box.y >= margin * 0.5 && !(titled && boxesTouch(box, inflate(keep, margin * 0.6)))
   let height = tallest
-  let cx = calm ? center(calm).x : titled ? center(area).x : w * 0.64
+  // With nothing to keep clear, the still life stands on a third the cover
+  // chooses (see framing.ts), whole on its ledge.
+  const framed = framing(frame, rng.fork("still"))
+  let cx = calm ? center(calm).x : titled ? center(area).x : framed?.x ?? w * 0.64
   search: for (let tall = tallest; tall > unit * 0.04; tall *= 0.93) {
     // From the preferred spot outward, both ways, in small steps.
     for (let k = 0; k <= 40; k++) {

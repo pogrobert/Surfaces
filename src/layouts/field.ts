@@ -3,6 +3,7 @@ import type { Art, Frame } from "../core/recipe.ts"
 import type { Layer, Mark, Motion, Shape, Tone } from "../core/scene.ts"
 import { cellRadii } from "../shapes/cells.ts"
 import type { Cell } from "../shapes/cells.ts"
+import { framing } from "./framing.ts"
 import { center, clearArea, distanceFrom } from "./geometry.ts"
 
 // A seeded field of cells laid out like a print screen, every other row half a
@@ -79,12 +80,15 @@ export function field(
   // A centred title leaves the corners close to it, and the field still needs
   // room to fall off.
   const radius = Math.max(furthest, Math.min(w, h) * 0.8) * p.reach
-  const middle = center(area)
+  // With nothing to keep clear, most tone discs are framed large and on a
+  // third, running off the edges (see framing.ts).
+  const framed = kind === "disc" ? framing(frame, rng.fork("field")) : undefined
+  const middle = framed ?? center(area)
   // Round where the open area is square, and stretched along it, up to about
   // twice as long as it is tall, where the area is a band.
-  const discR = Math.min(area.w, area.h) * 0.62
-  const discX = Math.min(Math.max(area.w * 0.4, discR), discR * 1.9)
-  const discY = Math.min(Math.max(area.h * 0.4, discR), discR * 1.9)
+  const discR = framed ? (framed.reach * Math.min(w, h)) / 2 : Math.min(area.w, area.h) * 0.62
+  const discX = framed ? discR : Math.min(Math.max(area.w * 0.4, discR), discR * 1.9)
+  const discY = framed ? discR : Math.min(Math.max(area.h * 0.4, discR), discR * 1.9)
   // Where the field is fullest: its glow and its accent sit here.
   const heart = kind === "disc" ? middle : focus
   const tall = area.h >= h && area.w < w
