@@ -102,7 +102,9 @@ const LEANS: Record<Face | Tone | "dark" | "bright", Partial<Record<StyleName, n
   playful: { riso: 3, screenprint: 3, photocopy: 2, stencil: 2, endpaper: 1 },
   warm: { stencil: 3, screenprint: 1, underpaint: 1, marbling: 1, strata: 1 },
   glossy: { chrome: 3, glass: 3, fluted: 2, sfumato: 1 },
-  calm: { underpaint: 3, sfumato: 2, aquatint: 2 },
+  // A soft gradient is the look a page made without a designer gets, so a
+  // calm page leans to quiet prints first, and to the soft styles after.
+  calm: { aquatint: 3, linework: 2, engraving: 1, underpaint: 1, sfumato: 1 },
   dark: { mezzotint: 1, moire: 1, sfumato: 1, chrome: 1 },
   bright: { stencil: 2, riso: 2, screenprint: 2, underpaint: 1, strata: 1, halftone: 1, dither: 1, marbling: 1, engraving: -2, mezzotint: -2, aquatint: -1, moire: -1 },
 }
