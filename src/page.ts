@@ -91,21 +91,20 @@ const TONES: Record<Tone, RegExp> = {
 // mezzotinter's plates print the brand as its darkest shade, so a light
 // amber comes out brown. It leans toward styles that show the colour as it is.
 const LEANS: Record<Face | Tone | "dark" | "bright", Partial<Record<StyleName, number>>> = {
-  serif: { engraving: 3, mezzotint: 2, aquatint: 2, marbling: 2, halftone: 1 },
-  mono: { dither: 3, halftone: 2, linework: 2, photocopy: 1 },
-  rounded: { stencil: 3, riso: 3, screenprint: 2, underpaint: 1, strata: 1 },
+  serif: { engraving: 3, mezzotint: 2, aquatint: 2, marbling: 2, halftone: 1, strata: 1, linework: 1 },
+  mono: { dither: 3, halftone: 2, linework: 2, photocopy: 2, strata: 1 },
+  rounded: { stencil: 3, riso: 3, screenprint: 2, underpaint: 2, endpaper: 2, strata: 1 },
   // Most sites are set in a plain sans, so it leans a little to many styles,
   // and the page's words decide.
-  grotesk: { halftone: 1, dither: 1, screenprint: 1, riso: 1, underpaint: 1, fluted: 1 },
-  technical: { halftone: 3, dither: 3, screenprint: 1, linework: 1, engraving: 1 },
-  editorial: { engraving: 3, mezzotint: 2, halftone: 1, aquatint: 1, marbling: 1, photocopy: 1 },
-  playful: { riso: 3, screenprint: 3, photocopy: 2, stencil: 2, endpaper: 1 },
-  warm: { stencil: 3, screenprint: 1, underpaint: 1, marbling: 1, strata: 1 },
-  glossy: { chrome: 3, glass: 3, fluted: 2, sfumato: 1 },
-  // A soft gradient is the look a page made without a designer gets, so a
-  // calm page leans to quiet prints first, and to the soft styles after.
-  calm: { aquatint: 3, linework: 2, engraving: 1, underpaint: 1, sfumato: 1 },
-  dark: { mezzotint: 1, moire: 1, sfumato: 1, chrome: 1 },
+  grotesk: { halftone: 1, dither: 1, screenprint: 1, riso: 1, underpaint: 1, fluted: 2, strata: 1, stencil: 1, endpaper: 1 },
+  technical: { halftone: 3, dither: 3, fluted: 2, strata: 2, linework: 2, screenprint: 1, engraving: 1, underpaint: 2 },
+  editorial: { engraving: 3, mezzotint: 3, aquatint: 2, photocopy: 2, halftone: 1, marbling: 1, linework: 1 },
+  playful: { riso: 3, screenprint: 3, photocopy: 2, stencil: 2, endpaper: 2, marbling: 1 },
+  warm: { stencil: 3, underpaint: 2, riso: 1, screenprint: 1, marbling: 1, strata: 1, aquatint: 1 },
+  glossy: { chrome: 3, glass: 3, fluted: 3, underpaint: 2, sfumato: 1 },
+  // A calm page leans to quiet prints first, and to the soft styles after.
+  calm: { aquatint: 3, linework: 2, strata: 2, engraving: 1, underpaint: 1, sfumato: 1 },
+  dark: { mezzotint: 1, moire: 1, underpaint: 1, sfumato: 1, chrome: 1 },
   bright: { stencil: 2, riso: 2, screenprint: 2, underpaint: 1, strata: 1, halftone: 1, dither: 1, marbling: 1, engraving: -2, mezzotint: -2, aquatint: -1, moire: -1 },
 }
 
@@ -265,12 +264,23 @@ function signalsOf(facts: PageFacts, color: string | undefined, dark: boolean) {
 }
 
 // Every style, most leaned toward first; ties go by the brand's name, or
-// keep the catalog's order without one.
+// keep the catalog's order without one. A named brand's first is drawn from
+// all that come near the best, more often the nearer, by its name: a page
+// suits several styles about as well, and always handing it the very best
+// would give every plain sans site the same one.
+const NEAR = 0.6
 function rank(signals: Map<Signal, number>, name = "") {
   const score = (style: StyleName) => [...signals].reduce((sum, [signal, weight]) => sum + (LEANS[signal][style] ?? 0) * weight, 0)
-  return (Object.keys(STYLES) as StyleName[])
+  const ranked = (Object.keys(STYLES) as StyleName[])
     .map((style, index) => ({ style, score: score(style), tie: name ? hash(`${name}/${style}`) : index }))
     .sort((a, b) => b.score - a.score || a.tie - b.tie)
+  const best = ranked[0]!.score
+  if (!name || best <= 0) return ranked
+  const near = ranked.filter((entry) => entry.score >= best * NEAR)
+  const total = near.reduce((sum, entry) => sum + entry.score ** 2, 0)
+  let draw = (hash(`${name}/near`) / 2 ** 32) * total
+  const chosen = near.find((entry) => (draw -= entry.score ** 2) < 0) ?? near[0]!
+  return [chosen, ...ranked.filter((entry) => entry !== chosen)]
 }
 
 // Why a style suits the page, in the page's own terms where it leans that way.

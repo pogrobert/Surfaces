@@ -11,9 +11,9 @@
     },
     {
       "name": "site",
-      "runtimeExecutable": "node",
+      "runtimeExecutable": "pnpm",
       "runtimeArgs": [
-        "site/server.ts"
+        "site"
       ],
       "port": 4178
     }

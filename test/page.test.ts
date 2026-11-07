@@ -52,8 +52,11 @@ test("a developer tool gets a technical style in its own colour, dark", () => {
   assert.ok(new Set(looks).size > 1, looks.join())
 })
 
-test("a warm community site gets paint through a stencil", () => {
-  assert.deepEqual(lookOf("commonground.org", NONPROFIT).look, { style: "stencil", color: "#f59e0b", theme: "light", font: "serif" })
+test("a warm community site gets paint through a stencil, or an aura", () => {
+  const looks = ["commonground.org", "a.org", "b.org", "c.org"].map((name) => lookOf(name, NONPROFIT).look)
+  for (const look of looks) assert.deepEqual({ ...look, style: ["stencil", "underpaint"].includes(look.style) ? "-" : look.style }, { style: "-", color: "#f59e0b", theme: "light", font: "serif" })
+  // Sites that read alike don't all get the same one.
+  assert.ok(new Set(looks.map((look) => look.style)).size > 1)
 })
 
 test("a magazine gets an engraver's line, calm, following the reader's dark mode", () => {
@@ -107,7 +110,7 @@ test("readPage reads a brand the way real stylesheets give it", () => {
   const framework = readPage("", ":root { --color-red-500: #fb2c36; --color-blue-500: #2b7fff; } .logo { color: #38bdf8; }")
   assert.deepEqual(framework.colors, ["#38bdf8"])
   // A font the lists don't know is read by its fallback, or not at all.
-  assert.equal(createBrand({ name: "a", fonts: { heading: `"Brightwood Text", serif` } }).look.style, "engraving")
+  assert.ok(["engraving", "mezzotint"].includes(createBrand({ name: "a", fonts: { heading: `"Brightwood Text", serif` } }).look.style))
   assert.equal(createBrand({ name: "a", fonts: { heading: "Brightwood Text" } }).look.style, "riso")
 })
 
