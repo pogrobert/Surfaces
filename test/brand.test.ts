@@ -220,3 +220,12 @@ test("a logo its ground would lose is drawn in one colour, the cover's ink", () 
   const light = createBrand({ name: "acme.dev", style: "halftone", color: "#10bcec", theme: "light", logo: navy }).og({ title: "Hi" })
   assert.match(Buffer.from(String((light.layers.find((layer) => layer.kind === "logo") as { href: string }).href.split(",")[1]), "base64").toString(), /#0a2540/)
 })
+
+test("the judge holds a logo to showing on what is under it", () => {
+  const navy = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 25"><path fill="#0a2540" d="M0 4h18v18H0z"/></svg>`
+  // A dark version given for dark covers, and itself dark: shown as given, and failed.
+  const scene = createBrand({ name: "acme.dev", style: "halftone", color: "#10bcec", theme: "dark", logo: { light: navy, dark: navy } }).og({ title: "Hi" })
+  assert.match(judge(scene).problems.join(";"), /the logo shows at [\d.]+:1/)
+  // Drawn for itself, it reads.
+  assert.ok(judge(createBrand({ name: "acme.dev", style: "halftone", color: "#10bcec", theme: "dark", logo: navy }).og({ title: "Hi" })).ok)
+})

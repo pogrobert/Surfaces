@@ -310,5 +310,25 @@ export function judge(scene: Scene, steps = 8): Verdict {
   if (covered >= 0.98 && scene.areas.length) problems.push("the art covers the whole canvas, leaving no ground")
   const kept = keptBoxes(scene)
   if (scene.subject && kept.length && boxesTouch(scene.subject, kept)) problems.push("the subject runs into an area")
+  const logo = logoContrast(scene)
+  if (logo < 3) problems.push(`the logo shows at ${logo.toFixed(2)}:1 on what is under it, under 3:1`)
   return { ok: problems.length === 0, contrast: worst, coverage: covered, problems }
+}
+
+// How well an SVG logo shows: the best contrast any colour it is drawn in
+// gets against the art beneath its middle, as a graphic needs 3:1 to be
+// seen. Infinity with no logo, or one whose colours can't be read, such as a
+// PNG's.
+export function logoContrast(scene: Scene) {
+  const layer = scene.layers.find((item) => item.kind === "logo")
+  if (!layer || layer.kind !== "logo") return Infinity
+  const data = layer.href.match(/^data:image\/svg\+xml;base64,(.*)$/)?.[1]
+  if (!data) return Infinity
+  const svg = atob(data)
+  const colours = [...new Set([...svg.matchAll(/#(?:[0-9a-f]{6}|[0-9a-f]{3})\b/gi)].map((match) => (match[0].length === 4 ? `#${[...match[0].slice(1)].map((d) => d + d).join("")}` : match[0])))]
+  // One that paints with no colour of its own is drawn black.
+  const drawn = colours.length || /\b(fill|stroke)\s*[=:]/i.test(svg) ? colours : ["#000000"]
+  if (!drawn.length) return Infinity
+  const under = toHex(colorAt(scene, layer.x + layer.w / 2, layer.y + layer.h / 2))
+  return Math.max(...drawn.map((colour) => contrast(colour, under)))
 }
