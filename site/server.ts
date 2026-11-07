@@ -52,6 +52,25 @@ function icon(domain: string) {
   return icons.get(key)!
 }
 
+// Each wall asked for, kept: a shuffle or a site's look always draws the same.
+const walls = new Map<string, { html: string; gzip: Uint8Array }>()
+function wallFor(query: URLSearchParams) {
+  const shuffle = Number(query.get("shuffle") ?? 0)
+  const count = Number(query.get("count") ?? 60)
+  const name = query.get("name")
+  const color = query.get("color")
+  if (!Number.isInteger(shuffle) || shuffle < 0 || shuffle > 9999 || !Number.isInteger(count) || count < 1 || count > 240) return null
+  if ((name !== null && !/^[a-z0-9.-]{1,100}$/i.test(name)) || (color !== null && color !== "" && !/^#[0-9a-f]{6}$/i.test(color))) return null
+  const key = JSON.stringify([shuffle, count, name, color])
+  if (!walls.has(key)) {
+    if (walls.size > 200) walls.clear()
+    const brand = name ? { name, ...(color ? { color } : null) } : undefined
+    const html = wall(tiles(shuffle, count), generate, toHtml, { drawn: count, ...(brand ? { brand } : null) })
+    walls.set(key, { html, gzip: gzipSync(html) })
+  }
+  return walls.get(key)!
+}
+
 const page = () =>
   readFileSync(join(ROOT, "site/index.html"), "utf8").replace(`<div class="wall" id="wall" aria-hidden="true"></div>`, `<div class="wall" id="wall" aria-hidden="true">${FIRST_WALL}</div>`)
 
@@ -109,6 +128,18 @@ createServer(async (request, response) => {
     // The wall's grain is most of the page, and compresses to a fifth.
     const gzip = /\bgzip\b/.test(String(request.headers["accept-encoding"] ?? ""))
     response.writeHead(200, { "content-type": TYPES[".html"]!, ...(gzip ? { "content-encoding": "gzip" } : null) }).end(gzip ? gzipSync(page()) : page())
+    return
+  }
+  if (url.pathname === "/wall") {
+    // A shuffle of the wall, or the wall in a site's own look, drawn here so
+    // the page only swaps it in.
+    const read = wallFor(url.searchParams)
+    if (!read) {
+      response.writeHead(400).end("Ask for /wall?shuffle=1&count=60, with name and color for a site's own")
+      return
+    }
+    const gzip = /\bgzip\b/.test(String(request.headers["accept-encoding"] ?? ""))
+    response.writeHead(200, { "content-type": TYPES[".html"]!, "cache-control": "public, max-age=86400", ...(gzip ? { "content-encoding": "gzip" } : null) }).end(gzip ? read.gzip : read.html)
     return
   }
   if (url.pathname === "/suggest") {

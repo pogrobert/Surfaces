@@ -385,13 +385,40 @@ function needed() {
   const step = first ? first.getBoundingClientRect().height + parseFloat(getComputedStyle(grid).rowGap) : 140
   return columns * Math.ceil($("#hero").clientHeight / step)
 }
-function drawWall() {
+// A wall other than the first is drawn by the server, which the page only
+// swaps in, and the next shuffle is fetched while this one shows, so a
+// shuffle shows the moment it is asked for. Without the server it is drawn
+// here, as it comes into view.
+const fetched = new Map()
+function wallUrl(n) {
+  const brand = wallBrand()
+  const query = new URLSearchParams({ shuffle: String(n), count: String(Math.max(TILES, needed())) })
+  if (brand) {
+    query.set("name", brand.name)
+    query.set("color", brand.color ?? "")
+  }
+  return `/wall?${query}`
+}
+function prefetch(n) {
+  const url = wallUrl(n)
+  if (!fetched.has(url)) {
+    if (fetched.size > 6) fetched.clear()
+    fetched.set(url, fetch(url).then((response) => (response.ok ? response.text() : null)).catch(() => null))
+  }
+  return fetched.get(url)
+}
+async function drawWall() {
   const brand = wallBrand()
   const key = JSON.stringify({ shuffle, brand })
   if (key === walled) return fillWall()
   walled = key
-  $("#wall").innerHTML = wall(tiles(shuffle, Math.max(TILES, needed())), generate, toHtml, { drawn: 0, ...(brand ? { brand } : null) })
+  const html = await prefetch(shuffle)
+  // Something else was asked for while this one came.
+  if (key !== walled) return
+  $("#wall").innerHTML = html ?? wall(tiles(shuffle, Math.max(TILES, needed())), generate, toHtml, { drawn: 0, ...(brand ? { brand } : null) })
   watchWall()
+  fillWall()
+  prefetch(shuffle + 1)
 }
 // A window larger than the drawn wall gets the tiles it is missing, drawn as
 // the rest are.
@@ -406,6 +433,7 @@ function fillWall() {
 }
 watchWall()
 fillWall()
+prefetch(1)
 let refilling
 addEventListener("resize", () => {
   clearTimeout(refilling)
