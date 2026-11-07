@@ -38,13 +38,11 @@
      brands and shapes, with the words on a card over it. Typing a site turns
      the wall into that site's own. */
   .hero { position: relative; overflow: hidden; height: max(100svh, 640px); }
-  .wall { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); grid-auto-rows: 10px; grid-auto-flow: dense; gap: 10px; padding: 10px; align-content: start; transition: opacity 0.35s ease; }
-  @media (max-width: 560px) { .wall { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 8px; gap: 8px; padding: 8px; } .wall .tile[data-kind="hero"] { grid-column: span 2; } }
+  .wall { position: absolute; inset: 0 0 auto 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; padding: 10px; align-content: start; transition: opacity 0.35s ease; }
+  @media (max-width: 560px) { .wall { grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 8px; } }
   .reading .wall { opacity: 0.45; }
   @media (prefers-reduced-motion: reduce) { .wall { transition: none; } }
-  .wall .tile { margin: 0; position: relative; border-radius: 12px; overflow: hidden; background: color-mix(in srgb, var(--ink) 6%, transparent); }
-  .wall .tile[data-kind="hero"] { grid-column: span 3; }
-  .wall .tile[data-kind="card"], .wall .tile[data-kind="large"] { grid-column: span 2; }
+  .wall .tile { margin: 0; position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: color-mix(in srgb, var(--ink) 6%, transparent); }
   .wall .art { position: absolute; inset: 0; line-height: 0; }
   .wall .art > div { position: absolute; inset: 0; }
   .wall figcaption { position: absolute; left: 8px; bottom: 8px; font-size: 12px; line-height: 1.2; padding: 4px 9px; border-radius: 999px; background: rgb(255 255 255 / 0.92); color: #111; opacity: 0; transition: opacity 0.15s ease; pointer-events: none; }

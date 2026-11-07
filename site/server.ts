@@ -1,4 +1,4 @@
-// The Surfaces page: the page itself at /, with its wall's first rows drawn in,
+// The Surfaces page: the page itself at /, with its wall drawn in,
 // the library from /dist, Atkinson Hyperlegible Next for the page's own
 // type, /read, which fetches a public site for the page to read in the
 // browser, /suggest, sites whose names start with what is typed, and /icon,
@@ -24,9 +24,9 @@ const TYPES: Record<string, string> = {
 }
 const FONTS = join(ROOT, "node_modules/@fontsource-variable/atkinson-hyperlegible-next/files")
 
-// The page with its wall's first rows in it, so they show on the first paint
-// instead of after the library loads in the browser. Drawn once: they are
-// the same every time.
+// The page with its wall in it, so it shows on the first paint
+// instead of after the library loads in the browser. Drawn once: it is the
+// same every time.
 const FIRST_WALL = wall(tiles(0), generate, toHtml)
 // Each site's favicon, from DuckDuckGo's icon service, fetched here so the
 // reader's browser tells no one else what was typed. Kept a while; a site
