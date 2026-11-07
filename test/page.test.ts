@@ -214,3 +214,8 @@ test("a focus ring or a mere accent doesn't outrank the colour a page is built i
   // A strong theme colour is the brand's, ahead of names.
   assert.equal(readPage(`<meta name="theme-color" content="#3139FB">`, `:root { --accent: #fb3a4d; }`).colors?.[0], "#3139fb")
 })
+
+test("a description is read whole, whichever quote holds it and wherever it sits", () => {
+  const facts = readPage(`<title>Duolingo</title><meta content="Duolingo is the world's most popular way to learn a language." name="description">`)
+  assert.equal(facts.words, "Duolingo. Duolingo is the world's most popular way to learn a language.")
+})

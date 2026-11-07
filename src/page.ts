@@ -440,10 +440,16 @@ function readStyles(html: string, css: string): Omit<PageFacts, "covers"> {
   if (heading || body) facts.fonts = { ...(heading ? { heading } : null), ...(body ? { body } : null) }
 
   const plain = (text: string) => decode(text.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim()
+  // A meta tag's content, whichever order its attributes come in, and whole
+  // when it holds the other quote, "the world's".
+  const content = (test: RegExp) => {
+    const found = tags.find((tag) => /^<meta\b/i.test(tag) && test.test(tag))?.match(/\scontent\s*=\s*(?:"([^"]*)"|'([^']*)')/i)
+    return found?.[1] ?? found?.[2]
+  }
   const words = [
     html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1],
-    html.match(/<meta[^>]+name=["']description["'][^>]*content=["']([^"']*)/i)?.[1],
-    html.match(/<meta[^>]+property=["']og:description["'][^>]*content=["']([^"']*)/i)?.[1],
+    content(/\sname\s*=\s*["']description["']/i),
+    content(/\sproperty\s*=\s*["']og:description["']/i),
     html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1],
   ]
     .filter((part): part is string => Boolean(part))

@@ -400,12 +400,16 @@ async function kitCommand(root: string, args: Args, log: (line: string) => void)
   const publicDir = one(args, "out") ?? (project.framework === "sveltekit" ? "static" : "public")
   const facts = factsOf(project)
   // The site's own first line of a fair length, not its name alone, as
-  // "Meerlume" is beside "Describe your business".
+  // "Meerlume" is beside "Describe your business", nor its name as a home,
+  // "BBC Homepage", nor a note that the page needs scripts to run.
   const own = brand.name.replace(/^www\./, "").split(".")[0]!.toLowerCase()
   const phrase = facts.words
-    ?.split(/\s+[-–—|·:]\s+|:\s|[.|·–—]/)
+    ?.split(/\s+[-–—|·:\\•/]\s+|:\s|[.!?]\s|[|·•–—]/)
     .map((part) => part.trim())
-    .find((part) => part.length >= 8 && part.length <= 70 && part.toLowerCase().replace(/\s+/g, "") !== own)
+    .find((part) => {
+      const bare = part.toLowerCase().replace(/\b(?:home\s*page|home|official\s+(?:web)?site|welcome)\b/g, "").replace(/[^\p{L}\p{N}]/gu, "")
+      return part.length >= 8 && part.length <= 70 && bare !== own && bare !== "" && !/\b(?:javascript|cookies|browser)\b/i.test(part)
+    })
   const title = one(args, "title") ?? phrase ?? brand.name
   const pointed = previewOf(project)
   // The site's own pictures all carry one mark, as a studio's would; a

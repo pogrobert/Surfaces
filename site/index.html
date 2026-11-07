@@ -437,10 +437,17 @@ function open() {
 const bytes = (base64) => Uint8Array.from(atob(base64), (char) => char.charCodeAt(0))
 const list = (parts) => (parts.length < 3 ? parts.join(" and ") : `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`)
 // A line of the site's own to try titles with: its first phrase of a fair
-// length, with a " - Brand" or " | Brand" ending left off.
+// length, with a " - Brand" or " | Brand" ending left off, and not its name
+// as a home, "BBC Homepage", nor a note that the page needs scripts to run.
 const firstTitle = (words, name = "") => {
   const own = name.replace(/^www\./, "").split(".")[0].toLowerCase()
-  return words?.split(/\s+[-–—|·:]\s+|:\s|[.|·–—]/).map((part) => part.trim()).find((part) => part.length >= 8 && part.length <= 70 && part.toLowerCase().replace(/\s+/g, "") !== own)
+  return words
+    ?.split(/\s+[-–—|·:\\•/]\s+|:\s|[.!?]\s|[|·•–—]/)
+    .map((part) => part.trim())
+    .find((part) => {
+      const bare = part.toLowerCase().replace(/\b(?:home\s*page|home|official\s+(?:web)?site|welcome)\b/g, "").replace(/[^\p{L}\p{N}]/gu, "")
+      return part.length >= 8 && part.length <= 70 && bare !== own && bare !== "" && !/\b(?:javascript|cookies|browser)\b/i.test(part)
+    })
 }
 
 function setLogo(logo) {
