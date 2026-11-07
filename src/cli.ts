@@ -399,7 +399,14 @@ async function kitCommand(root: string, args: Args, log: (line: string) => void)
   const brand = createBrand(readLook(brandFile(project, args)))
   const publicDir = one(args, "out") ?? (project.framework === "sveltekit" ? "static" : "public")
   const facts = factsOf(project)
-  const title = one(args, "title") ?? facts.words?.split(/[.·|–—]/)[0]?.trim() ?? brand.name
+  // The site's own first line of a fair length, not its name alone, as
+  // "Meerlume" is beside "Describe your business".
+  const own = brand.name.replace(/^www\./, "").split(".")[0]!.toLowerCase()
+  const phrase = facts.words
+    ?.split(/\s+[-–—|·:]\s+|:\s|[.|·–—]/)
+    .map((part) => part.trim())
+    .find((part) => part.length >= 8 && part.length <= 70 && part.toLowerCase().replace(/\s+/g, "") !== own)
+  const title = one(args, "title") ?? phrase ?? brand.name
   const pointed = previewOf(project)
   // The site's own pictures all carry one mark, as a studio's would; a
   // post's covers each draw their own.
