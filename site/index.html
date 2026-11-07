@@ -42,6 +42,10 @@
   @media (max-width: 560px) { .wall { grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 8px; } }
   .reading .wall { opacity: 0.45; }
   @media (prefers-reduced-motion: reduce) { .wall { transition: none; } }
+  /* A screen arriving, from the landing to the explorer or back. */
+  @keyframes arrive { from { opacity: 0; transform: translateY(8px); } }
+  .arriving { animation: arrive 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  @media (prefers-reduced-motion: reduce) { .arriving { animation: none; } }
   .wall .tile { all: unset; display: block; cursor: pointer; position: relative; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; background: color-mix(in srgb, var(--ink) 6%, transparent); }
   .wall .art { position: absolute; inset: 0; line-height: 0; }
   .wall .art > span { position: absolute; inset: 0; }
@@ -69,6 +73,7 @@
   /* What was read, each part a click from being put right. */
   .read { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 26px; padding: 14px 18px; background: var(--sheet); border-radius: 16px; box-shadow: 0 0 0 1px var(--rule); font-size: 15px; }
   .read .site { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; }
+  .read .home { font-weight: 800; font-size: 18px; letter-spacing: -0.04em; color: var(--ink); text-decoration: none; padding-right: 16px; border-right: 1px solid var(--rule); }
   .read .site img { height: 24px; max-width: 120px; object-fit: contain; }
   .read .site input { font-weight: 700; font-size: 17px; border: 0; background: transparent; padding: 4px 6px; margin-left: -6px; border-radius: 8px; width: 15ch; }
   .read .site input:hover, .read .site input:focus { background: color-mix(in srgb, var(--ink) 6%, transparent); outline: 0; }
@@ -208,6 +213,7 @@
 
 <main class="work" id="work" hidden>
   <section class="read" aria-label="Your brand">
+    <a class="home" id="home" href="/">Surfaces</a>
     <span class="site"><img id="readLogo" alt="" hidden><label class="sr" for="name">Your brand's name</label><input id="name" type="text" spellcheck="false" autocomplete="off" placeholder="Your brand's name"></span>
     <span class="part">Colour <span class="colours" id="swatches" role="group" aria-label="The brand's colour"></span></span>
     <span class="grow"></span>
@@ -250,11 +256,11 @@
           <div class="post">
             <div class="face" id="postFace" style="width:44px;height:44px"></div>
             <div>
-              <div class="who"><b id="postName">Your brand</b><span id="postHandle">@yourbrand · 2h</span></div>
+              <div class="who"><b id="postName">Acme</b><span id="postHandle">@acme · 2h</span></div>
               <p id="postText">Something new on the blog.</p>
               <div class="unfurl">
                 <div class="frame" id="og"></div>
-                <div class="from" id="ogFrom">From your site</div>
+                <div class="from" id="ogFrom">From example.com</div>
               </div>
             </div>
           </div>
@@ -264,7 +270,7 @@
             <p class="label"><span><b>X profile</b>, 1500 × 500 header; the art runs on under the photo</span></p>
             <div class="profile">
               <div class="frame" id="x"></div>
-              <div class="me"><div class="face" id="xFace"></div><b id="xName">Your brand</b><span id="xHandle">@yourbrand</span></div>
+              <div class="me"><div class="face" id="xFace"></div><b id="xName">Acme</b><span id="xHandle">@acme</span></div>
             </div>
           </div>
           <div>
@@ -276,7 +282,7 @@
               <p class="label"><span><b>LinkedIn</b>, 1584 × 396</span></p>
               <div class="boxed linkedin">
                 <div class="frame" id="linkedin"></div>
-                <div class="me"><div class="face" id="inFace"></div><div class="below" style="padding:0"><b id="inName">Your brand</b>Company page</div></div>
+                <div class="me"><div class="face" id="inFace"></div><div class="below" style="padding:0"><b id="inName">Acme</b>Company page</div></div>
               </div>
             </div>
             <div>
@@ -460,20 +466,39 @@ $("#wall").addEventListener("click", (event) => {
   if (!tile) return
   state.chosen = { ...state.chosen, style: tile.dataset.style }
   delete state.chosen.shape
-  history.length = 0
+  undos.length = 0
   open()
 })
 
 $("#browse").addEventListener("click", () => {
-  history.length = 0
+  undos.length = 0
   open()
 })
 
-function open() {
-  $("#work").hidden = false
-  draw()
-  $("#work").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" })
+// The landing and the explorer are two screens: exploring swaps one for the
+// other, the one arriving fading in, and the address says which shows, so
+// Back returns to the wall.
+function show(screen) {
+  $("#hero").hidden = screen !== "landing"
+  $("#work").hidden = screen !== "explore"
+  if (screen === "explore") draw()
+  else drawWall()
+  scrollTo({ top: 0 })
+  const arriving = screen === "explore" ? $("#work") : $("#hero")
+  arriving.classList.remove("arriving")
+  void arriving.offsetWidth
+  arriving.classList.add("arriving")
 }
+function open() {
+  if (location.hash !== "#explore") history.pushState(null, "", "#explore")
+  show("explore")
+}
+addEventListener("popstate", () => show(location.hash === "#explore" ? "explore" : "landing"))
+$("#home").addEventListener("click", (event) => {
+  event.preventDefault()
+  history.pushState(null, "", location.pathname)
+  show("landing")
+})
 
 function setLogo(logo) {
   state.logo = logo
@@ -488,18 +513,18 @@ function setLogo(logo) {
 
 // What the person has done, so any of it can be taken back: each step is
 // the choices and the drawing they had before it.
-const history = []
+const undos = []
 const remembered = () => ({ chosen: { ...state.chosen }, variant: state.variant })
 function step(change) {
-  history.push(remembered())
+  undos.push(remembered())
   change()
   draw()
 }
 
 function choices() {
-  // Every drawing needs a name to be its own; until one is typed, one that
-  // stands for any brand.
-  return { name: state.name.trim() || "your-brand", ...(state.logo ? { logo: state.logo } : null), ...state.chosen }
+  // Every drawing needs a name to be its own; until one is typed, the one
+  // that stands for any brand.
+  return { name: state.name.trim() || "acme", ...(state.logo ? { logo: state.logo } : null), ...state.chosen }
 }
 
 // The face titles are set in here: a sans or a serif, as the brand's type is.
@@ -531,7 +556,7 @@ function draw() {
     drawSet(brand)
   }
   drawSide(brand)
-  $("#undo").disabled = history.length === 0
+  $("#undo").disabled = undos.length === 0
   fitAll()
   // Once more when the page's own faces arrive, which changes every measure.
   document.fonts.ready.then(fitAll)
@@ -551,7 +576,7 @@ const handle = (name) => name.replace(/^www\./, "").split(".")[0].toLowerCase()
 // How the mocks name the brand: as typed, or as any brand until it is.
 const shown = () => {
   const typed = state.name.trim()
-  return typed ? { name: handle(typed).replace(/^./, (first) => first.toUpperCase()), at: handle(typed), site: typed } : { name: "Your brand", at: "yourbrand", site: "your site" }
+  return typed ? { name: handle(typed).replace(/^./, (first) => first.toUpperCase()), at: handle(typed), site: typed } : { name: "Acme", at: "acme", site: "example.com" }
 }
 const titleOf = () => state.title.trim() || "How we cut our build times in half"
 const idOf = (title) => (state.variant ? `${title}#${state.variant}` : title)
@@ -807,7 +832,7 @@ function choose(change) {
 // same, outside a field; cmd+z takes a step back.
 const more = () => step(() => (state.variant += 1))
 function undo() {
-  const last = history.pop()
+  const last = undos.pop()
   if (!last) return
   state.chosen = last.chosen
   state.variant = last.variant
@@ -866,6 +891,8 @@ $("#copyAgent").addEventListener("click", () => {
 
 // The landing's colours, once everything they draw with is defined.
 drawLanding()
+// A link straight to the explorer opens it.
+if (location.hash === "#explore") show("explore")
 </script>
 </body>
 </html>
