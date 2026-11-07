@@ -277,9 +277,9 @@ function rank(signals: Map<Signal, number>, name = "") {
   const best = ranked[0]!.score
   if (!name || best <= 0) return ranked
   const near = ranked.filter((entry) => entry.score >= best * NEAR)
-  const total = near.reduce((sum, entry) => sum + entry.score ** 2, 0)
-  let draw = (hash(`${name}/near`) / 2 ** 32) * total
-  const chosen = near.find((entry) => (draw -= entry.score ** 2) < 0) ?? near[0]!
+  const total = near.reduce((sum, entry) => sum + entry.score * entry.score, 0)
+  let draw = (hash(`${name}/near`) / 4294967296) * total
+  const chosen = near.find((entry) => (draw -= entry.score * entry.score) < 0) ?? near[0]!
   return [chosen, ...ranked.filter((entry) => entry !== chosen)]
 }
 
