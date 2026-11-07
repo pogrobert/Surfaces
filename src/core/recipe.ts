@@ -22,8 +22,8 @@ export type Frame = {
   calm: readonly Box[]
   // False when no title was asked for, and the art may use the whole canvas.
   titled: boolean
-  // The art fills the whole canvas and is composed to its middle, as an
-  // avatar's is, cut to a circle after. A layout that places a subject beside
+  // The art fills the whole canvas and is composed to its middle, for a mark
+  // cut from it, such as a circle. A layout that places a subject beside
   // a title centres it instead; one that cuts a disc fills the canvas.
   fill: boolean
   theme: Theme

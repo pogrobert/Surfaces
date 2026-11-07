@@ -1,4 +1,3 @@
-import { AVATAR_STYLES } from "./avatar.ts"
 import { STYLES } from "./styles/index.ts"
 import type { StyleName } from "./styles/index.ts"
 
@@ -33,14 +32,10 @@ export type CatalogEntry = {
   suits: string
   // The shapes it can be asked for by `shape`; empty when it has none.
   shapes: readonly string[]
-  // Whether it also makes avatars, by avatar(): only styles bold enough to
-  // read at 24 pixels do.
-  avatar: boolean
 }
 
 export const catalog: readonly CatalogEntry[] = (Object.keys(STYLES) as StyleName[]).map((style) => ({
   style,
   ...ABOUT[style],
   shapes: (STYLES[style].shapes ?? []) as readonly string[],
-  avatar: (AVATAR_STYLES as readonly string[]).includes(style),
 }))

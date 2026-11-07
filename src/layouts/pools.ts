@@ -23,7 +23,7 @@ export type PoolParams = VeilParams & {
   strength: number
 }
 
-// Filling the canvas, as an avatar does: three large pools round the middle,
+// Filling the canvas: three large pools round the middle,
 // a third of a turn apart, so the colour reaches every edge and each seed
 // turns them differently.
 function filling(rng: Frame["rng"]): PoolPlan[] {

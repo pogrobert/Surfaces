@@ -54,9 +54,6 @@
   .kit .wide { grid-column:1 / -1; }
   .kit figure { margin:0; display:flex; flex-direction:column; gap:3px; }
   .kit figcaption { font-size:11px; color:var(--muted); }
-  .people { display:flex; gap:6px; align-items:center; }
-  .people .face { width:34px; aspect-ratio:1; border-radius:50%; overflow:hidden; position:relative; flex:none; }
-  .people .face > div { position:absolute; inset:0; line-height:0; }
   .actions { display:flex; gap:8px; margin-top:auto; }
   .actions button { flex:1; border:1px solid var(--line); background:var(--panel); border-radius:8px; padding:7px 10px; cursor:pointer; font-weight:600; }
   .actions button.primary { background:var(--accent); color:var(--on-accent); border-color:transparent; }
@@ -126,7 +123,6 @@ import { createBrand, directions, readPage, toHtml } from "/dist/index.js"
 const $ = (selector) => document.querySelector(selector)
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i
 const TITLES = ["How the new search works", "Notes on shipping every day", "What we learned from ten thousand bookings"]
-const PEOPLE = ["ada", "grace", "linus", "margaret"]
 
 // The brief, and whether the board shows all directions or more like one.
 const state = { name: "acme.dev", color: "", titles: TITLES.join("\n"), like: "", chosen: "" }
@@ -200,7 +196,7 @@ const describeLook = (look) =>
 
 function codeFor(brand) {
   const parts = Object.entries({ name: brand.name, ...brand.look }).map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
-  return `import { createBrand } from "@pogrobert/surfaces"\n\nexport const brand = createBrand({ ${parts.join(", ")} })\n\nbrand.cover({ title: post.title })\nbrand.og({ title: post.title })\nbrand.avatar(user.id)`
+  return `import { createBrand } from "@pogrobert/surfaces"\n\nexport const brand = createBrand({ ${parts.join(", ")} })\n\nbrand.cover({ title: post.title })\nbrand.og({ title: post.title })`
 }
 
 function show() {
@@ -266,17 +262,6 @@ function card(brand, index, { first, second, third }) {
     figure("Link preview", coverElement(light.og({ title: second }), second)),
     dark ? figure("Dark", coverElement(dark.cover({ title: third }), third)) : figure("Card", coverElement(light.card({ title: third }))),
   )
-  const people = document.createElement("div")
-  people.className = "people"
-  for (const person of PEOPLE) {
-    const face = document.createElement("div")
-    face.className = "face"
-    const art = document.createElement("div")
-    art.innerHTML = toHtml(light.avatar(person), { fill: true })
-    face.append(art)
-    people.append(face)
-  }
-  kit.append(figure("Avatars", people, true))
 
   const actions = document.createElement("div")
   actions.className = "actions"

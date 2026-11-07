@@ -7,9 +7,10 @@ input. Most users reach the library through an AI agent, so there is one way
 to do each thing, every value is a small set of words, and a wrong input fails
 with an error that names the fix.
 
-What it is for: the pictures a site repeats, its covers, link previews,
-headers, email headers and avatars, which should look like one brand, carry
-their titles exactly and come out the same on every build. A picture of one
+What it is for: the pictures a site repeats, which should look like one
+brand and come out the same on every build: post covers and link previews,
+docs, changelog and email headers, empty states, episode art, slides, the
+backgrounds of tickets and wallpapers, and a profile's X or LinkedIn header. A picture of one
 particular thing, a product, a person or a place, is a photo's job, or an
 image model's.
 
@@ -27,7 +28,6 @@ brand.card({ title: post.title })       // a card in a list, title beside it
 brand.hero({ title: "Pricing" })        // room for the title in the middle; the one cover that moves
 brand.og({ title: post.title })         // a link preview, 1200x630, room for the title at the brand's edge
 brand.banner({ for: "x" })              // a header: "x" 1500x500, "linkedin" 1584x396, "email" 1200x400
-brand.avatar(user.id)                   // a person's mark
 brand.input("post", { title })          // the input any of those draws, for components
 ```
 
@@ -338,37 +338,6 @@ rest of this section is the lower level, one exact cover:
 `children` and `areas` together is an error: use one or the other. Content is
 aligned to the side of its area it hangs from (a `top-left` area's content
 sits top left) and, in an `around` area, coloured with the area's `ink`.
-
-## Avatars
-
-A small mark for a person, a team or a project, from their id. Only the
-styles that still read at 24 pixels make avatars: `AVATAR_STYLES` is Riso,
-Marbling, Strata, Aquatint, Sfumato and Underpaint (`catalog` marks them with
-`avatar: true`). Each fills its square, composed to the middle, and is cut to
-a circle. People in a list are told apart: the seed turns the brand's hue a
-little for each one, staying in the brand's family.
-
-```ts
-type AvatarInput = {
-  style: AvatarStyle                     // one of AVATAR_STYLES
-  seed: string | number                  // the person's id or handle
-  color?: string                         // the brand's hex
-  size?: number                          // pixels across, 16 to 2048; default 256 (40 in React)
-  theme?: "light" | "dark" | "auto"
-  mood?: "calm" | "bold"
-  grain?: "smooth" | "natural" | "heavy"
-  square?: boolean                       // keep the square instead of a circle
-}
-
-avatar({ style: "riso", seed: user.id, color: "#635bff" })   // a Scene, for toSvg, toHtml, toPng
-<Avatar style="riso" seed={user.id} color="#635bff" size={40} />
-createAvatarHandler()                    // /avatar?style=riso&seed=user-42&color=635bff&size=96
-```
-
-`validateAvatar(input)` gives the fix-it messages; a cover-only style says
-which styles make avatars. An avatar beside a person's name is decoration
-and stays hidden from screen readers; one standing alone takes
-`label={user.name}`.
 
 ## One exact look
 

@@ -1,5 +1,3 @@
-import { avatar as drawAvatar, AVATAR_STYLES } from "./avatar.ts"
-import type { AvatarStyle } from "./avatar.ts"
 import { generate } from "./core/generate.ts"
 import { hash } from "./core/random.ts"
 import type { SurfaceInput } from "./core/generate.ts"
@@ -90,37 +88,11 @@ export type Brand = {
   // A profile's or a newsletter's header: X (1500x500), LinkedIn (1584x396)
   // or email (1200x400), the art alone.
   banner(content: Content & { for: "x" | "linkedin" | "email" }): Scene
-  // A person's mark, from their id or handle.
-  avatar(person: string | number, options?: { size?: number; square?: boolean }): Scene
   // The input any of those draws, for the components and the HTTP handler.
   input(use: Use, content?: Content): SurfaceInput
 }
 
 const OPTIONS = ["name", "color", "style", "theme", "mood", "grain", "shape", "font", "logo", ...FACTS] as const
-
-// The avatar style nearest each cover style in look, for a brand whose style
-// is too fine to read at 24 pixels.
-const AVATAR_OF: Record<StyleName, AvatarStyle> = {
-  underpaint: "underpaint",
-  halftone: "riso",
-  endpaper: "riso",
-  aquatint: "aquatint",
-  mezzotint: "aquatint",
-  sfumato: "sfumato",
-  engraving: "aquatint",
-  riso: "riso",
-  moire: "sfumato",
-  strata: "strata",
-  marbling: "marbling",
-  linework: "riso",
-  dither: "riso",
-  fluted: "sfumato",
-  photocopy: "riso",
-  chrome: "sfumato",
-  glass: "sfumato",
-  stencil: "riso",
-  screenprint: "riso",
-}
 
 // Risograph inks, for a brand with no colour: strong, and none of them the
 // violet that marks a page nobody chose a colour for.
@@ -302,16 +274,6 @@ function build(name: string, look: Brand["look"], why: string[], logo?: Logo): B
       if (!["x", "linkedin", "email"].includes(where)) throw new Error(`Unknown banner "${String(where)}". Use "x", "linkedin" or "email".`)
       return generate(input(where, content))
     },
-    avatar: (person, options = {}) =>
-      drawAvatar({
-        style: (AVATAR_STYLES as readonly string[]).includes(look.style) ? (look.style as AvatarStyle) : AVATAR_OF[look.style],
-        seed: `${name}/${person}`,
-        ...(look.color ? { color: look.color } : null),
-        theme: look.theme,
-        ...(look.mood ? { mood: look.mood } : null),
-        ...(look.grain ? { grain: look.grain } : null),
-        ...options,
-      }),
     input,
   }
 }

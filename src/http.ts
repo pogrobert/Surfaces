@@ -1,7 +1,5 @@
-import { avatar } from "./avatar.ts"
 import { createBrand } from "./brand.ts"
 import type { Brand } from "./brand.ts"
-import type { AvatarInput } from "./avatar.ts"
 import { generate } from "./core/generate.ts"
 import type { SurfaceInput } from "./core/generate.ts"
 import { hash } from "./core/random.ts"
@@ -10,8 +8,7 @@ import { USES } from "./page.ts"
 import type { Use } from "./page.ts"
 import { toSvg } from "./render/svg.ts"
 
-// A cover from a URL, for <meta property="og:image"> and <img src>, and an
-// avatar from one (createAvatarHandler, below):
+// A cover from a URL, for <meta property="og:image"> and <img src>:
 //
 //   /cover?style=riso&seed=my-post&color=635bff&width=1200&height=630&area=bottom-left:lg
 //
@@ -227,43 +224,5 @@ export function createHandler({ defaults = {}, png, jpeg, brand, secret }: Handl
       theme: (input) => input.theme,
       ...(png ? { png } : null),
       ...(jpeg ? { jpeg } : null),
-    })
-}
-
-export type AvatarHandlerOptions = {
-  defaults?: Partial<AvatarInput>
-  png?: (input: AvatarInput) => Promise<Uint8Array>
-}
-
-const AVATAR_PARAMETERS = ["style", "seed", "color", "size", "theme", "mood", "grain", "square", "format"]
-
-// An avatar from a URL, for <img src>: /avatar?style=riso&seed=user-42&color=635bff&size=96
-export function createAvatarHandler({ defaults = {}, png }: AvatarHandlerOptions = {}) {
-  const readAvatar = (url: URL): AvatarInput => {
-    const query = url.searchParams
-    for (const key of query.keys()) {
-      if (!AVATAR_PARAMETERS.includes(key)) {
-        throw new BadRequest(`Unknown parameter "${key}".${nearest(key, AVATAR_PARAMETERS) || ` Parameters are ${AVATAR_PARAMETERS.join(", ")}.`}`)
-      }
-    }
-    const input: Record<string, unknown> = { ...defaults }
-    for (const key of ["style", "seed", "theme", "mood", "grain"] as const) {
-      const value = query.get(key)
-      if (value !== null) input[key] = value
-    }
-    const color = query.get("color")
-    if (color !== null) input.color = /^[0-9a-f]+$/i.test(color) ? `#${color}` : color
-    const size = query.get("size")
-    if (size !== null) input.size = Number(size)
-    const square = query.get("square")
-    if (square !== null) input.square = square === "" || square === "1" || square === "true"
-    return input as AvatarInput
-  }
-  return (request: Request) =>
-    respond(request, {
-      read: readAvatar,
-      draw: (input) => toSvg(avatar(input)),
-      theme: (input) => input.theme,
-      ...(png ? { png } : null),
     })
 }

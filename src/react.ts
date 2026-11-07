@@ -1,9 +1,7 @@
 import { createElement, useEffect, useMemo, useRef } from "react"
 import type { CSSProperties, ReactElement, ReactNode } from "react"
-import { avatar } from "./avatar.ts"
 import { titleAt } from "./brand.ts"
 import type { Brand, Content } from "./brand.ts"
-import type { AvatarInput } from "./avatar.ts"
 import { describe } from "./core/describe.ts"
 import { watch } from "./dom.ts"
 import { generate } from "./core/generate.ts"
@@ -142,40 +140,5 @@ export function Cover({ brand, use = "post", title, id, tag, text, children, ...
     ...input,
     ...rest,
     ...(areas ? { areas: areas.map((area, index) => (index === 0 && at !== "none" ? { ...area, content } : area)) } : null),
-  })
-}
-
-// <Avatar style="riso" seed={user.id} color="#635bff" size={40} />
-//
-// A person's mark, `size` pixels across, round unless `square`. Hidden from
-// screen readers unless `label` names who it is: an avatar beside a name is
-// decoration, and one standing alone is named for the person.
-export type AvatarProps = AvatarInput & {
-  className?: string
-  css?: CSSProperties
-  label?: string
-}
-
-export function Avatar({ className, css, label, ...input }: AvatarProps): ReactElement {
-  const size = input.size ?? 40
-  const key = JSON.stringify(input)
-  const scene = useMemo(() => avatar({ ...input, size }), [key])
-  const art = useMemo(() => toHtml(scene, { fill: true }), [scene])
-  return createElement("div", {
-    className,
-    role: label ? "img" : undefined,
-    "aria-label": label,
-    "aria-hidden": label ? undefined : true,
-    style: {
-      position: "relative",
-      width: size,
-      height: size,
-      flex: "none",
-      overflow: "hidden",
-      borderRadius: input.square ? undefined : "50%",
-      lineHeight: 0,
-      ...css,
-    },
-    dangerouslySetInnerHTML: { __html: art },
   })
 }

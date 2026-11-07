@@ -33,7 +33,6 @@ test("a brand draws every kind of cover from a title alone", () => {
   assert.match(errorOf(() => brand.cover({ title: "Notes", text: "middle" as never })), /Unknown text place "middle"/)
   assert.equal(brand.card({ title: "Notes" }).areas.length, 0)
   assert.equal(brand.hero({ title: "Notes" }).areas[0]?.place, "center")
-  assert.ok(brand.avatar("user-42").layers.length > 0)
 })
 
 test("one title in one brand is one drawing, and two brands never share one", () => {
@@ -73,11 +72,6 @@ test("a brand's look rebuilds it exactly", () => {
   const brand = createBrand({ name: "acme.dev", ...readPage("", "a { color: #e11d48; } body { font-family: Georgia, serif; }") })
   const again = createBrand({ name: brand.name, ...brand.look })
   assert.equal(toSvg(brand.cover({ title: "Hello" })), toSvg(again.cover({ title: "Hello" })))
-})
-
-test("a brand too fine for avatars draws them in the nearest bold style", () => {
-  assert.equal(createBrand({ name: "acme.dev", style: "linework" }).avatar("ada").style, "riso")
-  assert.equal(createBrand({ name: "acme.dev", style: "marbling" }).avatar("ada").style, "marbling")
 })
 
 test("wrong choices fail, naming the fix", () => {

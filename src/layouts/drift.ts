@@ -48,7 +48,7 @@ export function drift(
   const { w, h, rng } = frame
   // On square and tall covers the scene is drawn into the upper part, where
   // the art has room, instead of being stretched down the whole height.
-  // Filling the canvas, as an avatar does, it uses the whole height.
+  // Filling the canvas, it uses the whole height.
   const tall = w < h * 1.3 && !frame.fill
   const squeeze = tall ? 0.6 : 1
   const pick = rng.fork("scene")

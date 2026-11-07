@@ -94,9 +94,6 @@
   .b-ticket .t b { color: var(--ink); font-size: 18px; }
   .b-phones { padding: 18px; display: flex; gap: 14px; justify-content: center; }
   .b-phones .art { width: 110px; aspect-ratio: 9 / 19.5; border-radius: 18px; box-shadow: 0 0 0 4px var(--ink); }
-  .b-team { padding: 18px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-  .b-team div { display: grid; justify-items: center; gap: 6px; font-size: 13px; color: var(--quiet); }
-  .b-team .art { width: 64px; aspect-ratio: 1; border-radius: 50%; }
   .b-link { padding: 18px; } .b-link .card { border-radius: 14px; overflow: hidden; box-shadow: 0 0 0 1px var(--rule); }
   .b-link .art { aspect-ratio: 1200 / 630; } .b-link .from { padding: 10px 14px; font-size: 13px; color: var(--quiet); }
   .b-blog { padding: 18px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
@@ -172,7 +169,7 @@
   <div class="wrap">
     <header class="b-top">
       <h1>Every place your site needs a picture</h1>
-      <p>One brand, one look, drawn for each page from its own title: posts, docs, changelogs, empty states, episodes, slides, tickets, wallpapers and the people on your team.</p>
+      <p>One brand, one look, drawn for each page from its own title: posts, docs, changelogs, empty states, episodes, slides, tickets and wallpapers.</p>
       <div class="chips" id="b-brands" role="group" aria-label="Sample brands"></div>
       <form class="ask" data-ask><span class="pre">https://</span><label class="sr" for="b-url">Your site</label><input id="b-url" placeholder="or type yours" autocomplete="off" spellcheck="false"><button>Use mine</button></form>
       <p class="said" data-said></p>
@@ -219,7 +216,7 @@
 
 <script type="module">
 import { createBrand, generate, readPage, toHtml, catalog } from "/dist/index.js"
-import { SAMPLES } from "/marks.js"
+import { SAMPLES } from "/wall.js"
 
 const $ = (selector, from = document) => from.querySelector(selector)
 const make = (tag, props = {}, ...children) => {
@@ -371,16 +368,11 @@ function drawB() {
   const slide = make("div", { className: "b-slide" }, art({ w: 16, h: 9, draw: paint(brand, "slides-q3", 1600, 900, { theme: "dark" }) }))
   const ticket = make("div", { className: "b-ticket" }, make("div", { className: "t" }, art({ w: 1600, h: 900, draw: paint(brand, "ticket-summit", 1600, 900) }), make("div", { className: "say" }, make("b", { textContent: `${name} summit` }), "Oct 14, 2026", "Hall B · Seat 42")))
   const phones = make("div", { className: "b-phones" }, ...["wall-1", "wall-2", "wall-3"].map((id, i) => art({ w: 9, h: 19.5, draw: paint(brand, id, 900, 1950, i === 1 ? { theme: "dark" } : {}) })))
-  const team = make("div", { className: "b-team" }, ...["Ada", "Grace", "Linus", "Hedy", "Alan", "Margaret", "Ken", "Radia"].map((person) => {
-    const holder = make("div", {}, art({ w: 1, h: 1, draw: () => brand.avatar(person.toLowerCase()) }), person)
-    return holder
-  }))
   $("#b-grid").replaceChildren(
     cell(7, link, "Link previews", "1200 × 630"),
     cell(5, empty, "Empty states", "any size"),
     cell(12, blog, "Blog covers, each from its title", "1600 × 900"),
-    cell(8, docs, "Docs headers", "1600 × 400"),
-    cell(4, team, "Team and people", "from each id"),
+    cell(12, docs, "Docs headers", "1600 × 400"),
     cell(6, log, "Changelog", "1600 × 900"),
     cell(6, pod, "Podcast and episode art", "1000 × 1000"),
     cell(7, slide, "Slides", "1600 × 900, dark"),

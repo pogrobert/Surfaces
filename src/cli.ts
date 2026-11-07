@@ -124,7 +124,7 @@ function placed(scene: Scene, x: number, y: number, w: number) {
 }
 
 // Every direction as a row: its number, its look and why, a post's cover and
-// a link preview with their titles, and a few people.
+// a link preview with their titles.
 async function board(options: Brand[], titles: string[]) {
   const W = 1360
   const pad = 24
@@ -141,12 +141,7 @@ async function board(options: Brand[], titles: string[]) {
     const a = placed(drawn(brand, "post", titles[index % titles.length]!), pad, top, cover)
     const b = placed(drawn(brand, "og", titles[(index + 1) % titles.length]!), pad * 2 + cover, top, og)
     parts.push(a.svg, b.svg)
-    const people = ["ada", "grace", "linus", "margaret"]
-    people.forEach((person, i) => {
-      const face = placed(brand.avatar(person), pad * 3 + cover + og, top + i * 72, 64)
-      parts.push(face.svg)
-    })
-    y = top + Math.max(a.h, b.h, people.length * 72) + pad * 1.5
+    y = top + Math.max(a.h, b.h) + pad * 1.5
   }
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${Math.ceil(y)}" viewBox="0 0 ${W} ${Math.ceil(y)}"><rect width="100%" height="100%" fill="#f5f4f1"/>${parts.join("")}</svg>`
   const image = await rasterize(svg, W)
@@ -235,9 +230,9 @@ function agentBlock(module: string) {
   return `<!-- surfaces:start -->
 ## Covers and link previews (@pogrobert/surfaces)
 
-- For pictures the site repeats: covers, link previews, headers, avatars. A picture of one particular thing (a product, a person) is a photo or an image model's job.
+- For pictures the site repeats: covers, link previews, docs, changelog and email headers, empty states, slides. A picture of one particular thing (a product, a person) is a photo or an image model's job.
 - The brand is \`brand\`, exported from \`${module}\`. Change its look there; \`npx @pogrobert/surfaces directions\` draws others to choose from.
-- The pictures are art; the words are the site's, in its own type. A cover is \`brand.cover({ title })\`, \`brand.card\`, \`brand.hero\`; a person's mark \`brand.avatar(user.id)\`. React: \`<Cover brand={brand} title={title} />\` from \`@pogrobert/surfaces/react\` sets the title in the page's font where the art keeps room.
+- The pictures are art; the words are the site's, in its own type. A cover is \`brand.cover({ title })\`, \`brand.card\`, \`brand.hero\`, \`brand.banner\`. React: \`<Cover brand={brand} title={title} />\` from \`@pogrobert/surfaces/react\` sets the title in the page's font where the art keeps room.
 - Words over the art: \`text: "bottom-left"\` (or any place) keeps them room; \`scene.areas[0]\` is its box and \`ink\`. A link preview file is \`toJpeg(brand.og({ title, drawTitle: true }))\` from \`@pogrobert/surfaces/png\`; alt \`describe(scene, { title })\`.
 - \`id: post.slug\` keeps a cover's art when its title is edited. There are no seeds to choose.
 - Look before shipping: \`npx @pogrobert/surfaces preview --title "..."\` writes images to .surfaces/; \`check\` says whether they hold. \`kit\` writes the preview and headers, with the site's logo.
@@ -313,7 +308,7 @@ async function initCommand(root: string, args: Args, log: (line: string) => void
     path: module,
     text: `import { createBrand } from "@pogrobert/surfaces"
 
-// This site's brand: every cover, link preview and avatar comes from it.
+// This site's brand: every cover, link preview and header comes from it.
 // Written by \`npx @pogrobert/surfaces init\`; change any choice here, or run
 // \`npx @pogrobert/surfaces directions\` to see others.
 export const look = ${look}${project.typescript ? " as const" : ""}

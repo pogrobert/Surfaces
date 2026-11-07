@@ -124,21 +124,9 @@
   .exports button:hover { border-color:var(--muted); }
   .exports button:disabled { opacity:.5; cursor:not-allowed; }
   .exports small { display:block; color:var(--muted); }
-  body[data-mode="avatar"] .cover-only, body[data-mode="cover"] .avatar-only { display:none !important; }
   .style .thumb.round { display:grid; place-items:center; }
   .style .thumb.round > div { width:62%; aspect-ratio:1; border-radius:50%; overflow:hidden; position:relative; }
   .style .thumb.round > div > svg { position:absolute; inset:0; width:100%; height:100%; }
-  .people { display:grid; grid-template-columns:auto 1fr; gap:28px; align-items:center; width:100%; }
-  .people .big { width:clamp(96px, 22vw, 168px); aspect-ratio:1; position:relative; }
-  .people .big > div, .person .mark { position:absolute; inset:0; overflow:hidden; line-height:0; }
-  .people ul { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 16px; }
-  .person { display:flex; align-items:center; gap:12px; }
-  .person .slot { position:relative; flex:none; }
-  .person b { display:block; font-size:14px; }
-  .person small { color:var(--muted); }
-  .seeds.avatars button { aspect-ratio:1; border-radius:18%; }
-  .seeds.avatars.round button { border-radius:50%; }
-  @media (max-width: 520px) { .people { grid-template-columns:1fr; justify-items:center; } .people ul { width:100%; } }
   .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--accent); color:var(--on-accent); padding:8px 14px; border-radius:999px; font-size:13px; opacity:0; transition:opacity .2s; pointer-events:none; }
   .toast.show { opacity:1; }
 
@@ -155,11 +143,10 @@
   }
 </style>
 </head>
-<body data-mode="cover">
+<body>
 <div class="wrap">
   <header class="top">
     <h1>Surfaces</h1>
-    <div class="seg" id="mode" role="group" aria-label="Make"></div>
     <p>Pick a style, tune it, take the code.</p>
     <a href="/directions">Directions</a>
     <a href="/sheet" style="margin-left:0">Contact sheet</a>
@@ -201,8 +188,6 @@
       </div>
       <div class="field"><div class="label">Theme</div><div class="seg" id="theme" role="group" aria-label="Theme"></div></div>
       <div class="field cover-only"><div class="label">Size</div><div class="seg" id="size" role="group" aria-label="Size"></div></div>
-      <div class="field avatar-only"><div class="label">Shown at</div><div class="seg" id="avatarSize" role="group" aria-label="Avatar size"></div></div>
-      <div class="field avatar-only"><div class="label">Corners</div><div class="seg" id="corners" role="group" aria-label="Corners"></div></div>
       <div class="field cover-only">
         <div class="label">Content</div>
         <div class="presets" id="layouts"></div>
@@ -242,7 +227,7 @@
 <div class="toast" id="toast" role="status"></div>
 
 <script type="module">
-import { generate, validate, describe, toSvg, toHtml, catalog, formats, PLACES, MOODS, GRAINS, DETAILS, MOTIONS, avatar, validateAvatar, AVATAR_STYLES } from "/dist/index.js"
+import { generate, validate, describe, toSvg, toHtml, catalog, formats, PLACES, MOODS, GRAINS, DETAILS, MOTIONS } from "/dist/index.js"
 import { watch } from "/dist/dom.js"
 import { toPngInBrowser } from "/dist/png.js"
 
@@ -281,18 +266,11 @@ const state = {
   mood: "", grain: "natural", detail: "none", motion: "none", shape: "",
   areas: LAYOUTS["Title, bottom left"].map((area) => ({ ...area })),
   title: "How the new search works", context: "alone", tab: "react",
-  // Avatars keep their own style and seed, so switching back and forth loses
-  // neither.
-  mode: "cover", avatarStyle: "riso", person: "ada", avatarSize: "40", corners: "round",
 }
-// The people in the sample list, by handle.
-const PEOPLE = [["ada", "Ada Lovelace"], ["grace", "Grace Hopper"], ["linus", "Linus Torvalds"], ["margaret", "Margaret Hamilton"], ["alan", "Alan Turing"], ["barbara", "Barbara Liskov"], ["dennis", "Dennis Ritchie"], ["katherine", "Katherine Johnson"]]
-const nameOf = (handle) => PEOPLE.find(([h]) => h === handle)?.[1] ?? handle
-const avatarMode = () => state.mode === "avatar"
 let others = Array.from({ length: 8 }, randomSeed)
 
 // The link holds the state, so a setup can be shared.
-const LINKED = ["mode", "style", "seed", "color", "theme", "size", "mood", "grain", "detail", "motion", "shape", "title", "context", "tab", "avatarStyle", "person", "avatarSize", "corners"]
+const LINKED = ["style", "seed", "color", "theme", "size", "mood", "grain", "detail", "motion", "shape", "title", "context", "tab"]
 function readLink() {
   const query = new URLSearchParams(location.hash.slice(1))
   for (const key of LINKED) {
@@ -332,16 +310,6 @@ function input({ seed = state.seed, still = false } = {}) {
   return value
 }
 
-// An avatar's input, exactly as a caller would write it.
-function avatarInput({ seed = state.person, size = Number(state.avatarSize) } = {}) {
-  const value = { style: state.avatarStyle, seed, color: state.color, size }
-  if (state.theme !== "light") value.theme = state.theme
-  if (state.mood) value.mood = state.mood
-  if (state.grain !== "natural") value.grain = state.grain
-  if (state.corners === "square") value.square = true
-  return value
-}
-
 const quietly = (make) => {
   // Seeds like "test" warn once on the console; the page shows warnings itself.
   const warn = console.warn
@@ -363,15 +331,7 @@ function segmented(element, options, key, onChange) {
 const words = (list) => list.map((value) => ({ value, label: value }))
 
 function drawControls() {
-  document.body.dataset.mode = state.mode
-  segmented($("#mode"), [{ value: "cover", label: "Covers" }, { value: "avatar", label: "Avatars" }], "mode", () => {
-    if (!tabs().some((tab) => tab.key === state.tab)) state.tab = "react"
-  })
-  $("#seed").value = avatarMode() ? state.person : state.seed
-  $("#seedLabel").textContent = avatarMode() ? "Seed: the person's id or handle" : "Seed: the page's slug"
-  $("#othersLabel").textContent = avatarMode() ? "Other people, same settings" : "Other seeds, same settings"
-  segmented($("#avatarSize"), ["24", "32", "40", "64", "96"].map((value) => ({ value, label: `${value} px` })), "avatarSize")
-  segmented($("#corners"), [{ value: "round", label: "round" }, { value: "square", label: "square" }], "corners")
+  $("#seed").value = state.seed
   $("#color").value = state.color.length === 7 ? state.color : "#635bff"
   $("#hex").value = state.color
   $("#title").value = state.title
@@ -382,7 +342,7 @@ function drawControls() {
   segmented($("#detail"), words(DETAILS), "detail")
   segmented($("#motion"), words(MOTIONS), "motion")
   segmented($("#contexts"), CONTEXTS.map(({ key, label }) => ({ value: key, label })), "context")
-  segmented($("#tabs"), tabs().map(({ key, label }) => ({ value: key, label })), "tab")
+  segmented($("#tabs"), TABS.map(({ key, label }) => ({ value: key, label })), "tab")
   const shapes = entry()?.shapes ?? []
   $("#shapeField").hidden = !shapes.length
   $("#shape").replaceChildren(...[["", "the seed picks"], ...shapes.map((shape) => [shape, shape])].map(([value, label]) => {
@@ -445,10 +405,9 @@ function drawAreas() {
   }))
 }
 
-$("#seed").addEventListener("input", (event) => { state[avatarMode() ? "person" : "seed"] = event.target.value; update({ keepControls: true }) })
+$("#seed").addEventListener("input", (event) => { state.seed = event.target.value; update({ keepControls: true }) })
 $("#dice").addEventListener("click", () => {
-  if (avatarMode()) state.person = `${WORDS[0][Math.floor(Math.random() * 12)]}-${Math.floor(Math.random() * 9000 + 1000)}`
-  else state.seed = randomSeed()
+  state.seed = randomSeed()
   update()
 })
 $("#color").addEventListener("input", (event) => { state.color = event.target.value; $("#hex").value = state.color; update({ keepControls: true }) })
@@ -512,56 +471,7 @@ function placeContent(cover, scene) {
 }
 
 let stopWatch = null
-// An avatar as people meet it: large on its own, and small beside names in
-// a list, the person being tuned first.
-function drawAvatarPreview() {
-  const problems = validateAvatar(avatarInput())
-  $("#problems").replaceChildren(...problems.errors.map((text) => Object.assign(document.createElement("div"), { className: "error", textContent: text })))
-  stopWatch?.()
-  stopWatch = null
-  $("#replay").hidden = true
-  if (problems.errors.length) return null
-  const size = Number(state.avatarSize)
-  const radius = state.corners === "square" ? "18%" : "50%"
-  const mark = (seed, px) => {
-    const slot = document.createElement("div")
-    slot.className = "slot"
-    Object.assign(slot.style, { width: `${px}px`, height: `${px}px` })
-    const art = document.createElement("div")
-    art.className = "mark"
-    art.style.borderRadius = radius
-    art.innerHTML = toHtml(avatar(avatarInput({ seed, size: px })), { fill: true })
-    slot.append(art)
-    return slot
-  }
-  const big = document.createElement("div")
-  big.className = "big"
-  const inner = document.createElement("div")
-  inner.style.borderRadius = radius
-  inner.innerHTML = toHtml(avatar(avatarInput({ size: 256 })), { fill: true })
-  big.append(inner)
-  const list = document.createElement("ul")
-  const people = [[state.person, nameOf(state.person)], ...PEOPLE.filter(([handle]) => handle !== state.person).slice(0, 5)]
-  for (const [handle, name] of people) {
-    const row = document.createElement("li")
-    row.className = "person"
-    const text = document.createElement("div")
-    text.innerHTML = "<b></b><small></small>"
-    text.querySelector("b").textContent = name
-    text.querySelector("small").textContent = `@${handle}`
-    row.append(mark(handle, size), text)
-    list.append(row)
-  }
-  const view = document.createElement("div")
-  view.className = "people"
-  view.append(big, list)
-  $("#viewport").replaceChildren(view)
-  $("#alt").innerHTML = `<b>Alt text</b>: none beside a name, which says who it is. Standing alone, label it with the person's name.`
-  return true
-}
-
 function drawPreview(replay = false) {
-  if (avatarMode()) return drawAvatarPreview()
   const problems = validate(input())
   $("#problems").replaceChildren(
     ...problems.errors.map((text) => Object.assign(document.createElement("div"), { className: "error", textContent: text })),
@@ -613,12 +523,11 @@ function still(container, value) {
 
 let lastGallery = ""
 function drawStyles() {
-  const key = JSON.stringify([state.mode, state.color, state.theme === "dark" ? "dark" : "light", state.mood, state.grain, avatarMode() ? state.person : state.seed, state.corners])
+  const key = JSON.stringify([state.color, state.theme === "dark" ? "dark" : "light", state.mood, state.grain, state.seed])
   const cards = $("#styles")
   if (key !== lastGallery) {
     lastGallery = key
-    const shown = avatarMode() ? catalog.filter((item) => item.avatar) : catalog
-    cards.replaceChildren(...shown.map((item) => {
+    cards.replaceChildren(...catalog.map((item) => {
       const card = document.createElement("button")
       card.type = "button"
       card.className = "style"
@@ -628,47 +537,20 @@ function drawStyles() {
       card.querySelector(".looks").textContent = item.looks
       card.title = `${item.looks} ${item.suits}`
       card.addEventListener("click", () => {
-        if (avatarMode()) state.avatarStyle = item.style
-        else { state.style = item.style; state.shape = "" }
+        state.style = item.style
+        state.shape = ""
         update()
       })
-      if (avatarMode()) {
-        const thumb = card.querySelector(".thumb")
-        thumb.classList.add("round")
-        const disc = document.createElement("div")
-        disc.style.borderRadius = state.corners === "square" ? "18%" : "50%"
-        thumb.append(disc)
-        disc.innerHTML = toSvg(avatar({ ...avatarInput({ size: 160 }), style: item.style }))
-        return card
-      }
       const value = { style: item.style, seed: state.seed || "surfaces", color: state.color, theme: state.theme === "dark" ? "dark" : "light", width: 800, height: 450, ...(state.mood ? { mood: state.mood } : null), ...(state.grain !== "natural" ? { grain: state.grain } : null) }
       if (validate(value).errors.length === 0) still(card.querySelector(".thumb"), value)
       return card
     }))
   }
-  const current = avatarMode() ? state.avatarStyle : state.style
-  for (const card of cards.children) card.setAttribute("aria-pressed", String(card.dataset.style === current))
+  for (const card of cards.children) card.setAttribute("aria-pressed", String(card.dataset.style === state.style))
 }
 
 function drawSeeds() {
   const strip = $("#seeds")
-  strip.classList.toggle("avatars", avatarMode())
-  strip.classList.toggle("round", avatarMode() && state.corners !== "square")
-  if (avatarMode()) {
-    const people = [state.person, ...PEOPLE.map(([handle]) => handle).filter((handle) => handle !== state.person)].slice(0, 9)
-    strip.replaceChildren(...people.map((handle) => {
-      const button = document.createElement("button")
-      button.type = "button"
-      button.setAttribute("aria-pressed", String(handle === state.person))
-      button.setAttribute("aria-label", `Seed ${handle}`)
-      if (validateAvatar(avatarInput({ seed: handle })).errors.length === 0) {
-        button.insertAdjacentHTML("afterbegin", toSvg(avatar(avatarInput({ seed: handle, size: 120 }))))
-      }
-      button.addEventListener("click", () => { state.person = handle; update() })
-      return button
-    }))
-    return
-  }
   strip.replaceChildren(...[state.seed, ...others].map((seed) => {
     const button = document.createElement("button")
     button.type = "button"
@@ -713,44 +595,7 @@ function json(value, indent = "") {
 }
 const contentFor = (kind) => (kind === "title" ? "<h1>{post.title}</h1>" : kind === "logo" ? "<Logo />" : "<Card />")
 
-const AVATAR_TABS = [
-  { key: "react", label: "React" },
-  { key: "input", label: "Input" },
-  { key: "url", label: "URL" },
-  { key: "og", label: "PNG" },
-  { key: "agent", label: "For your agent" },
-]
-const tabs = () => (avatarMode() ? AVATAR_TABS : TABS)
-
-function avatarCode() {
-  const value = avatarInput()
-  const shown = { ...value, seed: "user.id" }
-  const literal = (text) => text.replace('"user.id"', "user.id")
-  const props = Object.entries(shown).map(([key, v]) =>
-    key === "seed" ? "seed={user.id}" : typeof v === "string" ? `${key}="${v}"` : v === true ? key : `${key}={${v}}`)
-  switch (state.tab) {
-    case "input":
-      return { text: literal(json(shown)), note: "An avatar's whole input. validateAvatar(input) checks it without drawing." }
-    case "url": {
-      const query = new URLSearchParams({ style: value.style, seed: "user-42", color: value.color.replace("#", ""), size: String(value.size) })
-      for (const key of ["theme", "mood", "grain"]) if (value[key]) query.set(key, value[key])
-      if (value.square) query.set("square", "1")
-      return { text: `<img src="/avatar?${query}" alt="" width="${value.size}" height="${value.size}">\n\n// The route:\nimport { createAvatarHandler } from "@pogrobert/surfaces/http"\nexport const GET = createAvatarHandler()`, note: "The same id always draws the same avatar, so it caches for good." }
-    }
-    case "og":
-      return { text: `import { avatar } from "@pogrobert/surfaces"\nimport { toPng } from "@pogrobert/surfaces/png"\n\nconst png = await toPng(avatar(${literal(json({ ...shown, size: 512 }))}))`, note: "A picture has one theme: use light or dark, not auto." }
-    case "agent":
-      return {
-        text: `Give every user an avatar with @pogrobert/surfaces (read AGENTS.md in the package first).\n\nUse exactly this, with the user's id as the seed:\n\n${literal(json(shown))}\n\n- In React: <Avatar ${props.join(" ")} />\n- Beside the user's name it needs no label; standing alone, label={user.name}.\n- Don't add options; validateAvatar(input) explains any error.`,
-        note: "Paste into your coding agent.",
-      }
-    default:
-      return { text: `import { Avatar } from "@pogrobert/surfaces/react"\n\n<Avatar ${props.join(" ")} />`, note: "Round unless square. Beside a name it is hidden from screen readers; alone, give it label={user.name}." }
-  }
-}
-
 function code() {
-  if (avatarMode()) return avatarCode()
   const value = input()
   delete value.image
   const shown = { ...value, seed: "post.slug" }
@@ -813,18 +658,10 @@ function save(blob, name) {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 $("#svg").addEventListener("click", () => {
-  if (avatarMode()) {
-    save(new Blob([toSvg(avatar(avatarInput({ size: 256 })))], { type: "image/svg+xml" }), `${state.avatarStyle}-${state.person}.svg`)
-    return
-  }
   const scene = quietly(() => generate({ ...input(), motion: undefined }))
   save(new Blob([toSvg(scene)], { type: "image/svg+xml" }), `${state.style}-${state.seed}.svg`)
 })
 $("#png").addEventListener("click", async () => {
-  if (avatarMode()) {
-    save(await toPngInBrowser(avatar(avatarInput({ size: 512 }))), `${state.avatarStyle}-${state.person}.png`)
-    return
-  }
   const scene = quietly(() => generate({ ...input(), motion: undefined }))
   save(await toPngInBrowser(scene), `${state.style}-${state.seed}.png`)
 })
@@ -850,7 +687,7 @@ function update({ keepControls = false } = {}) {
     drawSeeds()
     drawCode()
     $("#png").disabled = state.theme === "auto"
-    $("#png").querySelector("small").textContent = state.theme === "auto" ? "Pick light or dark: a PNG has one theme" : avatarMode() ? "512 pixels across" : "At the cover's own size"
+    $("#png").querySelector("small").textContent = state.theme === "auto" ? "Pick light or dark: a PNG has one theme" : "At the cover's own size"
     writeLink()
   }, keepControls ? 140 : 0)
 }

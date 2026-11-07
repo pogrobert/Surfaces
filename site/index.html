@@ -99,8 +99,10 @@
   .frame .save { position: absolute; top: 10px; right: 10px; z-index: 2; line-height: 1.2; border: 0; border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 700; cursor: pointer; background: rgb(255 255 255 / 0.9); color: #111; box-shadow: 0 4px 14px -6px rgb(0 0 0 / 0.4); opacity: 0; transition: opacity 0.15s ease; }
   .frame:hover .save, .frame .save:focus-visible { opacity: 1; }
   @media (hover: none) { .frame .save { opacity: 1; } }
-  .face { border-radius: 50%; overflow: hidden; position: relative; line-height: 0; flex: none; }
-  .face > div { position: absolute; inset: 0; }
+  .face { border-radius: 50%; overflow: hidden; position: relative; line-height: 1; flex: none; display: grid; place-items: center; background: #fff; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08); container-type: size; }
+  .face img.logo { width: 64%; height: 64%; object-fit: contain; }
+  .face[data-kind="letter"] { background: var(--brand); color: #fff; font-weight: 800; }
+  .face span { font-size: 46cqh; }
 
   /* The link preview as a feed shows it. */
   .feature { display: grid; justify-items: center; gap: 22px; }
@@ -141,11 +143,6 @@
   .linkedin .me { display: flex; align-items: flex-end; gap: 12px; padding: 0 18px 16px; }
   .linkedin .me .face { width: 72px; height: 72px; margin-top: -36px; box-shadow: 0 0 0 3px var(--sheet); }
   .linkedin .me b { display: block; color: var(--ink); }
-  .thread { display: grid; gap: 14px; }
-  .thread .say { display: grid; grid-template-columns: 36px 1fr; gap: 12px; align-items: start; font-size: 15px; }
-  .thread .say .face { width: 36px; height: 36px; }
-  .thread .say b { display: block; font-size: 14px; }
-  .thread .say span { color: var(--quiet); }
 
   .group h3 { font-size: 15px; font-weight: 700; margin: 0 0 10px; }
   .group p.note { margin: 8px 0 0; font-size: 13px; color: var(--quiet); }
@@ -304,10 +301,6 @@
                 <div class="below"><b>Hi there,</b><br>here is what we shipped this month, and what comes next.</div>
               </div>
             </div>
-          </div>
-          <div>
-            <p class="label"><span><b>People</b>, an avatar for each, from their id</span></p>
-            <div class="thread" id="people"></div>
           </div>
         </div>
       </section>
@@ -842,6 +835,20 @@ function drawVariations(brand) {
 }
 
 // The link preview as X shows it, with the headline over the art.
+// A profile's picture, as a company's is: its logo on white, or its initial
+// in its colour when it has none.
+function badge(brand, target) {
+  if (state.logo) {
+    target.replaceChildren(make("img", { src: state.logoUrl, alt: "", className: "logo" }))
+    target.dataset.kind = "logo"
+  } else {
+    const letter = make("span", { textContent: handle(brand.name)[0]?.toUpperCase() ?? "" })
+    target.replaceChildren(letter)
+    target.dataset.kind = "letter"
+    target.style.setProperty("--brand", brand.look.color ?? "#0078bf")
+  }
+}
+
 function drawFeature(brand) {
   const flat = flatOf(brand)
   const face = faceOf(brand)
@@ -849,9 +856,7 @@ function drawFeature(brand) {
   $("#postName").textContent = handle(brand.name).replace(/^./, (first) => first.toUpperCase())
   $("#postHandle").textContent = `@${handle(brand.name)} · 2h`
   $("#ogFrom").textContent = `From ${brand.name}`
-  const avatar = make("div")
-  avatar.innerHTML = toHtml(flat.avatar(brand.name), { fill: true })
-  $("#postFace").replaceChildren(avatar)
+  badge(brand, $("#postFace"))
   frame("#og", flat.og({ title, id: idOf(title) }), title, face, "og")
 }
 
@@ -863,17 +868,12 @@ function drawSet(brand) {
   const flat = flatOf(brand)
   const face = faceOf(brand)
   const name = handle(brand.name).replace(/^./, (first) => first.toUpperCase())
-  const faceArt = (person, target) => {
-    const art = make("div")
-    art.innerHTML = toHtml(flat.avatar(person), { fill: true })
-    target.replaceChildren(art)
-  }
   frame("#x", flat.banner({ for: "x", id: idOf("x") }), "", face, "x-header")
-  faceArt(brand.name, $("#xFace"))
+  badge(brand, $("#xFace"))
   $("#xName").textContent = name
   $("#xHandle").textContent = `@${handle(brand.name)}`
   frame("#linkedin", flat.banner({ for: "linkedin", id: idOf("linkedin") }), "", face, "linkedin-banner")
-  faceArt(brand.name, $("#inFace"))
+  badge(brand, $("#inFace"))
   $("#inName").textContent = name
   frame("#email", flat.banner({ for: "email", id: idOf("email") }), "", face, "email-header")
   const posts = [[titleOf(), "Today"], ...POSTS]
@@ -884,18 +884,6 @@ function drawSet(brand) {
       const heading = make("h3", { textContent: title })
       heading.style.fontFamily = face.stack
       return make("article", {}, pic, heading, make("time", { textContent: when }))
-    })
-  )
-  const said = [
-    ["Ada", "This is exactly what we needed for the launch."],
-    ["Grace", "The new caching guide saved me an afternoon."],
-    ["Linus", "Shipping v2 next week, then."],
-  ]
-  $("#people").replaceChildren(
-    ...said.map(([person, words]) => {
-      const holder = make("div", { className: "face" })
-      faceArt(person.toLowerCase(), holder)
-      return make("div", { className: "say" }, holder, make("div", {}, make("b", { textContent: person }), make("span", { textContent: words })))
     })
   )
 }

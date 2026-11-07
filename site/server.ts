@@ -133,14 +133,12 @@ createServer(async (request, response) => {
   }
   const path = normalize(decodeURIComponent(url.pathname))
   const file =
-    path === "/mockups" ? join(ROOT, "site/mockups.html")
-    : path === "/next" ? join(ROOT, "site/next.html")
-    : path === "/marks.js" ? join(ROOT, "site/marks.js")
+    path === "/next" ? join(ROOT, "site/next.html")
     : path === "/wall.js" ? join(ROOT, "site/wall.js")
     : path.startsWith("/dist/") ? join(ROOT, path)
     : path.startsWith("/fonts/") ? join(FONTS, path.slice(7))
     : ""
-  if (!file || !(file.startsWith(join(ROOT, "dist")) || file.startsWith(FONTS) || file === join(ROOT, "site/mockups.html") || file === join(ROOT, "site/next.html") || file === join(ROOT, "site/marks.js") || file === join(ROOT, "site/wall.js")) || !existsSync(file) || statSync(file).isDirectory()) {
+  if (!file || !(file.startsWith(join(ROOT, "dist")) || file.startsWith(FONTS) || file === join(ROOT, "site/next.html") || file === join(ROOT, "site/wall.js")) || !existsSync(file) || statSync(file).isDirectory()) {
     response.writeHead(404).end("Not found")
     return
   }

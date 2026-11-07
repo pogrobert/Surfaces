@@ -78,8 +78,9 @@ export function generate(input: SurfaceInput): Scene {
   return draw(input)
 }
 
-// The art filling the whole canvas, composed to its middle, with no areas:
-// what an avatar is cut from. The input is checked by the caller.
+// The art filling the whole canvas, composed to its middle, with no areas,
+// for a mark cut from it, such as a round one. The input is checked by the
+// caller.
 export const drawFilled = (input: SurfaceInput) => draw(input, true)
 
 // A cover from a recipe that isn't a style, such as a combination of the
