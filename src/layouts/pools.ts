@@ -12,6 +12,8 @@ export type PoolPlan = {
   y: number
   rx: number
   ry: number
+  // A share of the recipe's strength, for a pool laid more thinly, as a glow is.
+  strength?: number
 }
 
 export type PoolParams = VeilParams & {
@@ -62,7 +64,7 @@ export function pools(
       ry: (pool.ry / 100) * h * p.spread,
       rotate: 0,
       tone: pool.tone,
-      opacity: p.strength,
+      opacity: p.strength * (pool.strength ?? 1),
       core: p.core,
       ...(frame.motion !== "none"
         ? {

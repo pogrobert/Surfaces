@@ -6,7 +6,7 @@ import type { StyleName } from "./styles/index.ts"
 // looks like. The shapes and whether it takes a photo come from the style's
 // own recipe, so this never drifts from what the library draws.
 const ABOUT: Record<StyleName, { looks: string; suits: string }> = {
-  underpaint: { looks: "Soft pools of the brand's colour under film grain.", suits: "Calm, general-purpose covers." },
+  underpaint: { looks: "An aura: pools of the brand's colour, its deeper and lighter shades and its partner hue, run together under grain.", suits: "Product launches, AI and software, any page that wants colour without a picture." },
   halftone: { looks: "A field of print dots that grow with the tone.", suits: "Editorial, print-flavoured covers." },
   endpaper: { looks: "A dense repeating pattern, like the paper inside a book's cover.", suits: "Quiet backgrounds and tiles." },
   aquatint: { looks: "One clear subject in grainy monochrome light.", suits: "Covers that need a single strong image." },
