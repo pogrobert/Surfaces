@@ -21,6 +21,8 @@ export type Read = {
 const MOST_HTML = 1_500_000
 const MOST_CSS = 800_000
 const MOST_LOGO = 200_000
+// A sprite holds every icon a site has, so it may weigh more than one logo.
+const MOST_SPRITE = 1_000_000
 const MOST_SHEETS = 8
 const WAIT = 8000
 
@@ -106,7 +108,7 @@ const attribute = (tag: string, name: string) => tag.match(new RegExp(String.raw
 
 // The site's logo: an image or inline SVG named for one, else the link home's
 // SVG, else an SVG icon, else the touch icon. The first that loads is kept.
-function logoCandidates(html: string, base: URL) {
+export function logoCandidates(html: string, base: URL) {
   const found: { candidate: { inline: string } | { href: URL }; score: number; place: number }[] = []
   const at = (href: string | undefined) => {
     try {
@@ -118,48 +120,59 @@ function logoCandidates(html: string, base: URL) {
   // Said to be the site's logo: "logo" or "wordmark" as a word of its own,
   // not inside a class such as Primer_Brand__Testimonial, or a label or alt
   // that names the site. A page shows other companies' logos too, its
-  // customers' and partners', so one that names the site outranks one merely
-  // called a logo, and that only counts in the page's header.
+  // customers' and partners', and its own products', so one whose label is
+  // the site's name and no more, "NASA Logo", outranks one that carries the
+  // name among other words, "Asana Service Management", which outranks one
+  // merely called a logo. Below the page's header, where a sub-brand's
+  // sits, BBC Scotland's on the BBC's page, only the first kind counts, and
+  // for less.
   const brand = base.hostname.replace(/^(?:www|open|app|web)\./, "").split(".")[0]!.toLowerCase()
   const word = /(?:^|[^a-z])(?:logo|logotype|wordmark|site-?mark)(?:[^a-z]|$)/i
-  const names = (text: string | undefined) => Boolean(text && text.toLowerCase().includes(brand))
+  const naming = (text: string | undefined) => {
+    // Run together, so "The Verge" names theverge.com.
+    const said = (text ?? "").toLowerCase().replace(/[\s_-]+/g, "")
+    if (!said.includes(brand)) return 0
+    const rest = said.replace(brand, "").replace(/\.[a-z]{2,}\b|\b(?:the|logo|logotype|wordmark|mark|icon|home|homepage|page|go|to|back|link|official)\b|[^a-z]/g, "")
+    return rest ? 2 : 3
+  }
   const headerEnd = (() => {
     const close = html.search(/<\/header>/i)
     if (close >= 0) return close
     const main = html.search(/<main\b/i)
     return main >= 0 ? main : html.length * 0.2
   })()
-  const scored = (named: boolean, called: boolean, place: number) => (named ? 3 : called && place <= headerEnd ? 1 : 0)
+  const scored = (named: number, called: boolean, place: number) => (place <= headerEnd ? named || (called ? 1 : 0) : named === 3 ? 1.5 : 0)
   for (const match of html.matchAll(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi)) {
     const open = match[0].slice(0, match[0].indexOf(">"))
     const label = attribute(open, "aria-label") ?? match[0].match(/<title>([\s\S]*?)<\/title>/i)?.[1]
-    const score = scored(names(label), word.test(attribute(open, "class") ?? "") || word.test(attribute(open, "id") ?? ""), match.index!)
+    const score = scored(naming(label), word.test(attribute(open, "class") ?? "") || word.test(attribute(open, "id") ?? ""), match.index!)
     if (score) found.push({ candidate: { inline: match[0] }, score, place: match.index! })
   }
   for (const match of html.matchAll(/<img\b[^>]*>/gi)) {
     const tag = match[0]
-    const src = attribute(tag, "src")
+    // A drawing beside the bitmap, in the srcset, is the sharper of the two.
+    const src = attribute(tag, "srcset")?.split(",").map((entry) => entry.trim().split(/\s+/)[0]).find((entry) => /\.svg(?:[?#]|$)/i.test(entry ?? "")) ?? attribute(tag, "src")
     const file = src?.split(/[?#]/)[0]?.split("/").pop()
     const href = at(src)
-    const score = scored(names(attribute(tag, "alt")), word.test(file ?? "") || word.test(attribute(tag, "class") ?? "") || word.test(attribute(tag, "id") ?? ""), match.index!)
+    const score = scored(naming(attribute(tag, "alt")), word.test(file ?? "") || word.test(attribute(tag, "class") ?? "") || word.test(attribute(tag, "id") ?? ""), match.index!)
     if (href && score) found.push({ candidate: { href }, score, place: match.index! })
   }
-  // An SVG inside a link home, as a header's logo usually is: one that says
-  // it is the site's, by its label, class or title, so a nav's home icon, a
-  // house, is passed over.
+  // An SVG inside a link home, as a header's logo usually is, and where a
+  // site keeps its own mark, ahead of a product's badge that carries the
+  // name: one that says it is the site's, by its label, class or title, so a
+  // nav's home icon, a house, is passed over. The link's address names the
+  // site whatever the link holds, a search's arrow as much as the logo, so it
+  // says less than a label does. One below the header, a footer's, still
+  // says it is the site's own, so it counts for a little less.
   for (const match of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)) {
-    const link = at(attribute(match[1]!, "href"))
+    const address = attribute(match[1]!, "href")
+    const link = at(address)
     if (!link || link.host !== base.host || link.pathname !== "/" || !/<svg\b/i.test(match[2]!)) continue
     // The link's attributes, and what is inside it without its drawing's paths.
-    const said = `${match[1]} ${match[2]!.replace(/\s(?:d|points)="[^"]*"/g, "")}`.toLowerCase()
-    // The link home is where a site keeps its own mark, ahead of a product's
-    // badge that happens to carry the name.
-    const score = said.includes(brand) ? 3.5 : /logo|wordmark/.test(said) ? 2 : 0
+    const said = `${match[1]!.replace(address!, "")} ${match[2]!.replace(/\s(?:d|points)="[^"]*"/g, "")}`.toLowerCase()
+    const score = said.includes(brand) ? 3.5 : word.test(said) ? 2 : address!.toLowerCase().includes(brand) ? 2.5 : 0
     const svg = match[2]!.match(/<svg\b[\s\S]*?<\/svg>/i)?.[0]
-    if (svg && score) {
-      found.push({ candidate: { inline: svg }, score, place: match.index! })
-      break
-    }
+    if (svg && score) found.push({ candidate: { inline: svg }, score: match.index! <= headerEnd ? score : score - 1, place: match.index! })
   }
   for (const match of html.matchAll(/<link\b[^>]*>/gi)) {
     const tag = match[0]
@@ -168,7 +181,7 @@ function logoCandidates(html: string, base: URL) {
       found.push({ candidate: { href }, score: 0.5, place: match.index! })
     }
   }
-  return found.sort((a, b) => b.score - a.score || a.place - b.place).map((entry) => entry.candidate)
+  return found.sort((a, b) => b.score - a.score || a.place - b.place)
 }
 
 // A logo's own colour: the one its SVG fills most with, leaving out black,
@@ -200,6 +213,39 @@ function resolveVariables(svg: string, source: string) {
 }
 
 // An inline SVG that leans on the page for its size or colour, given both.
+// An SVG that draws by pointing into a sprite, <use href="/icons.svg#dots">,
+// as Asana's does, with the sprite's symbol brought in, from the page or from
+// the sprite's own file, since away from them it draws nothing. Nothing when
+// a symbol it needs can't be found.
+async function unsprite(svg: string, html: string, base: URL) {
+  const uses = [...svg.matchAll(/<use\b[^>]*?\s(?:xlink:)?href\s*=\s*["']([^"'#]*)#([^"']+)["'][^>]*?(?:\/>|>\s*<\/use>)/gi)]
+  let drawn = svg
+  for (const [use, file, id] of uses) {
+    let source = html
+    if (file) {
+      try {
+        source = text((await get(new URL(file, base), MOST_SPRITE, "image/svg+xml")).bytes)
+      } catch {
+        return undefined
+      }
+    }
+    const escaped = id!.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    const symbol = source.match(new RegExp(String.raw`<symbol\b([^>]*\sid\s*=\s*["']${escaped}["'][^>]*)>([\s\S]*?)<\/symbol>`, "i"))
+    if (!symbol) return undefined
+    const box = attribute(`<symbol ${symbol[1]}>`, "viewBox")
+    drawn = drawn.replace(use, `<svg${box ? ` viewBox="${box}"` : ""} width="100%" height="100%">${symbol[2]}</svg>`)
+  }
+  // One with nothing left to draw is no logo.
+  return /<(?:path|rect|circle|ellipse|polygon|polyline|line|text|image)\b/i.test(drawn) ? drawn : undefined
+}
+
+// An image written into the page itself, as a data URL, HubSpot's logo is.
+function fromData(href: string) {
+  const [, type = "", base64, body = ""] = href.match(/^data:([^;,]*)(;base64)?,(.*)$/s) ?? []
+  const bytes = base64 ? Uint8Array.from(Buffer.from(body, "base64")) : new TextEncoder().encode(decodeURIComponent(body))
+  return { type, bytes }
+}
+
 const standalone = (svg: string) => (/xmlns=/.test(svg) ? svg : svg.replace(/<svg\b/i, `<svg xmlns="http://www.w3.org/2000/svg"`))
 
 export async function readSite(address: string): Promise<Read> {
@@ -231,22 +277,23 @@ export async function readSite(address: string): Promise<Read> {
   }
 
   let logo: Read["logo"]
-  for (const candidate of logoCandidates(html, page.url)) {
+  for (const { candidate } of logoCandidates(html, page.url)) {
     if ("inline" in candidate) {
-      if (candidate.inline.length > MOST_LOGO) continue
-      logo = { svg: standalone(resolveVariables(candidate.inline, `${html}\n${css.join("\n")}`)) }
+      const drawn = candidate.inline.length <= MOST_LOGO ? await unsprite(candidate.inline, html, page.url) : undefined
+      if (!drawn) continue
+      logo = { svg: standalone(resolveVariables(drawn, `${html}\n${css.join("\n")}`)) }
       break
     }
     try {
-      const image = await get(candidate.href, MOST_LOGO, "image/svg+xml,image/png")
+      const image = candidate.href.protocol === "data:" ? fromData(candidate.href.href) : await get(candidate.href, MOST_LOGO, "image/svg+xml,image/png")
       if (image.bytes.length >= MOST_LOGO) continue
       const body = text(image.bytes)
       if (/svg/i.test(image.type) || /^\s*(<\?xml[^>]*>\s*)?<svg/i.test(body)) {
         logo = { svg: standalone(resolveVariables(body, `${html}\n${css.join("\n")}`)) }
       } else if (image.bytes[0] === 0x89 && image.bytes[1] === 0x50) {
-        logo = { png: Buffer.from(image.bytes).toString("base64"), from: candidate.href.href }
+        logo = { png: Buffer.from(image.bytes).toString("base64"), from: candidate.href.protocol === "data:" ? page.url.href : candidate.href.href }
       } else continue
-      read.push(candidate.href.href)
+      if (candidate.href.protocol !== "data:") read.push(candidate.href.href)
       break
     } catch {
       // On to the next.

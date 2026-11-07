@@ -6,7 +6,7 @@ import { makePalette } from "./palette.ts"
 import { createRng, hash } from "./random.ts"
 import type { Recipe } from "./recipe.ts"
 import type { Box, Layer, Motion, Scene } from "./scene.ts"
-import { readImage, readLogo } from "./image.ts"
+import { logoColours, readImage, readLogo } from "./image.ts"
 import type { ImageInput } from "./image.ts"
 import { facing, veil } from "../layouts/veil.ts"
 import { micrographics } from "../overlays/micro.ts"
@@ -337,13 +337,12 @@ function reversed(svg: string, ink: string) {
 }
 
 // Why an SVG logo would vanish on a ground, when every colour it is drawn in
-// falls short of the 3:1 a graphic needs to be seen; nothing when it reads,
-// or when its colours aren't written as hex.
+// falls short of the 3:1 a graphic needs to be seen, with a little over for
+// the grain that settles on the ground; nothing when it reads, or when its
+// colours can't be read.
 function fadesInto(svg: string, ground: string) {
-  const written = [...new Set([...svg.matchAll(/#(?:[0-9a-f]{6}|[0-9a-f]{3})\b/gi)].map((match) => match[0].length === 4 ? `#${[...match[0].slice(1)].map((d) => d + d).join("")}` : match[0]))]
-  // One that paints with no colour of its own is drawn black.
-  const colours = written.length || /\b(fill|stroke)\s*[=:]/i.test(svg) ? written : ["#000000"]
-  if (!colours.length || colours.some((colour) => contrast(colour, ground) >= 3)) return ""
+  const colours = logoColours(svg)
+  if (!colours.length || colours.some((colour) => contrast(colour, ground) >= 3.3)) return ""
   return `The logo's colours (${colours.slice(0, 3).join(", ")}) barely show on the ${luminance(ground) < 0.18 ? "dark" : "light"} ground, so it is drawn in one colour there; give logo: { light, dark } to set your own.`
 }
 

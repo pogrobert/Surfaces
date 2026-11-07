@@ -55,9 +55,9 @@ function base64(data: Uint8Array) {
 // The most an SVG logo may weigh; a logo past it carries more than a mark.
 export const MOST_LOGO_BYTES = 200 * 1024
 
-// A logo as a data URL: an SVG file's own text, or a PNG, JPEG or WebP's
-// bytes. Either way it is shown as an image, so nothing in it runs.
-// A logo as a data URL, and its shape, width over height. An SVG keeps its
+// A logo as a data URL, from an SVG file's own text, or a PNG, JPEG or
+// WebP's bytes; either way it is shown as an image, so nothing in it runs. And
+// its shape, width over height. An SVG keeps its
 // drawing and loses the size it was written at, so every renderer fits it to
 // the box it is given, edge to edge, rather than some centring it at its own
 // size inside.
@@ -76,6 +76,17 @@ export function readLogo(logo: string | ImageInput) {
   const data = new TextEncoder().encode(logo.replace(root, sized))
   if (data.length > MOST_LOGO_BYTES) throw new Error(`Expected a logo under ${MOST_LOGO_BYTES / 1024} KB; simplify the SVG first`)
   return { href: `data:image/svg+xml;base64,${base64(data)}`, aspect: w > 0 && h > 0 ? w / h : 1 }
+}
+
+// The colours an SVG logo is drawn in, as hex: those written as hex, and
+// white and black by name, as a logo made for a dark header often is. One
+// that paints with no colour of its own is drawn black.
+export function logoColours(svg: string) {
+  const named: Record<string, string> = { white: "#ffffff", black: "#000000" }
+  const written = [...svg.matchAll(/#(?:[0-9a-f]{6}|[0-9a-f]{3})\b|\b(?:fill|stroke|stop-color)\s*[=:]\s*["']?\s*(white|black)\b/gi)].map((match) =>
+    match[1] ? named[match[1].toLowerCase()]! : match[0].length === 4 ? `#${[...match[0].slice(1)].map((d) => d + d).join("")}` : match[0].toLowerCase()
+  )
+  return [...new Set(written.length || /\b(fill|stroke)\s*[=:]/i.test(svg) ? written : ["#000000"])]
 }
 
 // A PNG's width over height from its header; 1 for anything else.

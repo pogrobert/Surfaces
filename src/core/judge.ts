@@ -11,6 +11,7 @@ import type {
   Tone,
 } from "./scene.ts"
 import { boxesTouch } from "../layouts/geometry.ts"
+import { logoColours } from "./image.ts"
 
 // The judge: what makes a cover good enough to show, checked from the scene
 // alone. Hand-built styles are held to it by the tests; the grammar's
@@ -325,9 +326,7 @@ export function logoContrast(scene: Scene) {
   const data = layer.href.match(/^data:image\/svg\+xml;base64,(.*)$/)?.[1]
   if (!data) return Infinity
   const svg = atob(data)
-  const colours = [...new Set([...svg.matchAll(/#(?:[0-9a-f]{6}|[0-9a-f]{3})\b/gi)].map((match) => (match[0].length === 4 ? `#${[...match[0].slice(1)].map((d) => d + d).join("")}` : match[0])))]
-  // One that paints with no colour of its own is drawn black.
-  const drawn = colours.length || /\b(fill|stroke)\s*[=:]/i.test(svg) ? colours : ["#000000"]
+  const drawn = logoColours(svg)
   if (!drawn.length) return Infinity
   const under = toHex(colorAt(scene, layer.x + layer.w / 2, layer.y + layer.h / 2))
   return Math.max(...drawn.map((colour) => contrast(colour, under)))

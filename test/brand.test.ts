@@ -216,6 +216,10 @@ test("a logo its ground would lose is drawn in one colour, the cover's ink", () 
     const drawn = Buffer.from(String((scene.layers.find((layer) => layer.kind === "logo") as { href: string }).href.split(",")[1]), "base64").toString()
     assert.ok(drawn.includes(scene.ink) && !drawn.includes("#0a2540"), drawn)
   }
+  // As Patagonia's: white by name, made for a dark header.
+  const white = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path fill="white" d="M0 0h10v10H0z"/></svg>`
+  const named = createBrand({ name: "acme.dev", style: "halftone", color: "#10bcec", theme: "light", logo: white }).og({ title: "Hi" })
+  assert.match(Buffer.from(String((named.layers.find((layer) => layer.kind === "logo") as { href: string }).href.split(",")[1]), "base64").toString(), new RegExp(`fill="${named.ink}"`))
   // One that reads on its ground is drawn as it is.
   const light = createBrand({ name: "acme.dev", style: "halftone", color: "#10bcec", theme: "light", logo: navy }).og({ title: "Hi" })
   assert.match(Buffer.from(String((light.layers.find((layer) => layer.kind === "logo") as { href: string }).href.split(",")[1]), "base64").toString(), /#0a2540/)
