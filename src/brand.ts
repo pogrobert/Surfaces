@@ -216,6 +216,9 @@ const OG_LAYOUTS: readonly { title: Place; logo: Place }[] = [
   { title: "bottom-right", logo: "top-right" },
 ]
 const ogLayout = (name: string) => OG_LAYOUTS[hash(`${name}/og`) % OG_LAYOUTS.length]!
+// A long title gets the large area, so it is set at a size a feed can read,
+// and the art gives up a little room; a short one keeps the art large.
+const ogSize = (title: string | undefined) => ((title?.trim().length ?? 0) > 30 ? "lg" : "md")
 
 function logoFor(logo: Logo | undefined, use: Use, name: string): SurfaceInput["logo"] {
   const place = use === "og" ? ogLayout(name).logo : LOGO_AT[use]
@@ -240,7 +243,7 @@ function build(name: string, look: Brand["look"], why: string[], logo?: Logo): B
       seed: `${name}/${about.trim()}`,
       ...(look.color ? { color: look.color } : null),
       ...placing.size,
-      ...areasOf(use === "og" ? { ...placing, areas: placing.areas.map((area) => ({ ...area, place: ogLayout(name).title })) } : placing, drawn),
+      ...areasOf(use === "og" ? { ...placing, areas: placing.areas.map((area) => ({ ...area, place: ogLayout(name).title, size: ogSize(content.title) })) } : placing, drawn),
       theme: look.theme,
       ...(look.mood ? { mood: look.mood } : null),
       ...(look.grain ? { grain: look.grain } : null),

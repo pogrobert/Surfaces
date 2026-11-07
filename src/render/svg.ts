@@ -921,7 +921,7 @@ function drawText(layer: TextLayer, scene: Scene, out: Output) {
     )
     .join("")
   out.body.push(
-    `<text font-family='${FACES[layer.font]}' font-weight="${weight}" font-size="${num(layer.size)}" text-anchor="${layer.align}" ${fill}>${lines}</text>`
+    `<text font-family='${FACES[layer.font]}' font-weight="${weight}" font-size="${num(layer.size)}"${layer.tracking ? ` letter-spacing="${num(layer.tracking * layer.size)}"` : ""} text-anchor="${layer.align}" ${fill}>${lines}</text>`
   )
 }
 

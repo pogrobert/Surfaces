@@ -70,7 +70,7 @@ export function outlinePath(layer: TextLayer) {
   let d = ""
   for (const line of layer.lines) {
     const left = line.x - (layer.align === "start" ? 0 : layer.align === "end" ? line.width : line.width / 2)
-    for (const { code, x } of positions(line.text, layer.font)) {
+    for (const { code, x } of positions(line.text, layer.font, layer.tracking ?? 0)) {
       const origin = left + x * layer.size
       const at = (gx: number, gy: number): [number, number] => [origin + gx * scale, line.y - gy * scale]
       for (const contour of table.get(code) ?? []) d += contourPath(contour, at)

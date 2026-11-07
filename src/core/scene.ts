@@ -197,6 +197,9 @@ export type TextLayer = {
   id: string
   font: "sans" | "serif"
   size: number
+  // Space added after each character, in ems: below zero for display type,
+  // which is set tighter than text. Every line's width includes it.
+  tracking?: number
   tone: Tone
   align: "start" | "middle" | "end"
   lines: { text: string; x: number; y: number; width: number }[]
