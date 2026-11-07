@@ -38,11 +38,11 @@
      brands and shapes, with the words on a card over it. Typing a site turns
      the wall into that site's own. */
   .hero { position: relative; overflow: hidden; height: max(100svh, 640px); }
-  .wall { position: absolute; inset: 0 0 auto 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; padding: 10px; align-content: start; transition: opacity 0.35s ease; }
-  @media (max-width: 560px) { .wall { grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 8px; } }
+  .wall { position: absolute; inset: 0 0 auto 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; padding: 10px; align-content: start; transition: opacity 0.35s ease; }
+  @media (max-width: 560px) { .wall { grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 8px; } }
   .reading .wall { opacity: 0.45; }
   @media (prefers-reduced-motion: reduce) { .wall { transition: none; } }
-  .wall .tile { margin: 0; position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: color-mix(in srgb, var(--ink) 6%, transparent); }
+  .wall .tile { margin: 0; position: relative; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; background: color-mix(in srgb, var(--ink) 6%, transparent); }
   .wall .art { position: absolute; inset: 0; line-height: 0; }
   .wall .art > div { position: absolute; inset: 0; }
   .wall figcaption { position: absolute; left: 8px; bottom: 8px; font-size: 12px; line-height: 1.2; padding: 4px 9px; border-radius: 999px; background: rgb(255 255 255 / 0.92); color: #111; opacity: 0; transition: opacity 0.15s ease; pointer-events: none; }
@@ -343,7 +343,7 @@
 <script type="module">
 import { createBrand, generate, readPage, toHtml, catalog } from "/dist/index.js"
 import { toPngInBrowser } from "/dist/png.js"
-import { KINDS, SAMPLES, scene, tiles, wall } from "/wall.js"
+import { KINDS, SAMPLES, scene, tiles, wall, TILES } from "/wall.js"
 
 const $ = (selector) => document.querySelector(selector)
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i
@@ -364,7 +364,8 @@ const unseen = new IntersectionObserver((entries) => {
   for (const entry of entries) {
     if (!entry.isIntersecting) continue
     unseen.unobserve(entry.target)
-    const tile = tiles(shuffle)[Number(entry.target.dataset.i)]
+    const index = Number(entry.target.dataset.i)
+    const tile = tiles(shuffle, index + 1)[index]
     try {
       entry.target.querySelector(".art > div").innerHTML = toHtml(scene(tile, generate, wallBrand() ?? undefined), { fill: true })
     } catch (error) {
@@ -375,15 +376,41 @@ const unseen = new IntersectionObserver((entries) => {
 function watchWall() {
   for (const tile of document.querySelectorAll("#wall .tile")) if (!tile.querySelector(".art > div").firstChild) unseen.observe(tile)
 }
+// How many tiles fill the landing at this window's size: every column of
+// every row it shows, so no row stops short.
+function needed() {
+  const grid = $("#wall")
+  const columns = getComputedStyle(grid).gridTemplateColumns.split(" ").length
+  const first = grid.querySelector(".tile")
+  const step = first ? first.getBoundingClientRect().height + parseFloat(getComputedStyle(grid).rowGap) : 140
+  return columns * Math.ceil($("#hero").clientHeight / step)
+}
 function drawWall() {
   const brand = wallBrand()
   const key = JSON.stringify({ shuffle, brand })
-  if (key === walled) return
+  if (key === walled) return fillWall()
   walled = key
-  $("#wall").innerHTML = wall(tiles(shuffle), generate, toHtml, { drawn: 0, ...(brand ? { brand } : null) })
+  $("#wall").innerHTML = wall(tiles(shuffle, Math.max(TILES, needed())), generate, toHtml, { drawn: 0, ...(brand ? { brand } : null) })
+  watchWall()
+}
+// A window larger than the drawn wall gets the tiles it is missing, drawn as
+// the rest are.
+function fillWall() {
+  const grid = $("#wall")
+  const have = grid.children.length
+  const want = needed()
+  if (want <= have) return
+  const brand = wallBrand()
+  grid.insertAdjacentHTML("beforeend", wall(tiles(shuffle, want).slice(have), generate, toHtml, { drawn: 0, ...(brand ? { brand } : null) }))
   watchWall()
 }
 watchWall()
+fillWall()
+let refilling
+addEventListener("resize", () => {
+  clearTimeout(refilling)
+  refilling = setTimeout(fillWall, 150)
+})
 $("#shuffle").addEventListener("click", () => {
   shuffle += 1
   drawWall()

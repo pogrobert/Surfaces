@@ -21,9 +21,9 @@ export const KINDS = [
 ]
 const ORDER = KINDS.flatMap(([, styles]) => styles)
 
-// Every tile is one small square, so the wall reads as a grid of what the
-// library draws, every style side by side.
-const SIZE = { w: 800, h: 800 }
+// Every tile is one small card a little wider than it is tall, so the wall
+// reads as a grid of what the library draws, every style side by side.
+const SIZE = { w: 1000, h: 750 }
 export const TILES = 60
 // How many the server draws: all of them, so the whole wall shows with the
 // page, at about 260 KB gzipped.
@@ -32,8 +32,10 @@ export const FIRST = TILES
 // The wall's tiles, the same for one shuffle wherever they are worked out:
 // each a style, a size, a feel and a ground, and a sample brand until a site
 // is read.
-export function tiles(shuffle = 0) {
-  return Array.from({ length: TILES }, (_, i) => ({
+// As many as asked for: the server draws TILES, and a window that shows more
+// asks for the rest.
+export function tiles(shuffle = 0, count = TILES) {
+  return Array.from({ length: count }, (_, i) => ({
     i,
     style: ORDER[(i * 7 + shuffle * 5) % ORDER.length],
     sample: SAMPLES[(i + shuffle) % SAMPLES.length],
