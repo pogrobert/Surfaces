@@ -269,8 +269,10 @@ export const tiles: FigurePart = {
     // bands, large and running off the edge rather than small.
     // That large mark starts from the canvas, not from the thin band, and the
     // edge may take up to 40% of it.
+    // A mark that would come out under half the short side is a timid one
+    // beside a title: it is drawn large instead, as a poster's would be.
     let placed = fit(0, start)
-    if (placed.side < Math.min(w, h) * 0.4) placed = fit(0.4, Math.min(w, h) * 0.62)
+    if (placed.side < Math.min(w, h) * 0.52) placed = fit(0.4, Math.min(w, h) * 0.7)
     const { x, y, side } = placed
     const { units, voids } = assemble(shape, p)
     // A quarter turn or a mirror, so one assembly faces several ways.
