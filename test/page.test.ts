@@ -43,8 +43,13 @@ test("readPage finds a page's colours, ground, type and words", () => {
 
 test("a developer tool gets a technical style in its own colour, dark", () => {
   const brand = lookOf("basin.dev", DEVTOOL)
-  assert.deepEqual(brand.look, { style: "halftone", color: "#635bff", theme: "dark" })
-  assert.match(brand.why.join("\n"), /style halftone: the page .*talks about building software/)
+  // One of the technical styles, the brand's name choosing between them.
+  assert.ok(["halftone", "dither"].includes(brand.look.style), brand.look.style)
+  assert.deepEqual({ ...brand.look, style: "-" }, { style: "-", color: "#635bff", theme: "dark" })
+  assert.match(brand.why.join("\n"), new RegExp(`style ${brand.look.style}: the page .*talks about building software`))
+  // Two developer tools that read alike still look apart.
+  const looks = ["basin.dev", "quarry.dev", "harbour.dev", "fjord.dev", "delta.dev", "anvil.dev"].map((name) => lookOf(name, DEVTOOL).look.style)
+  assert.ok(new Set(looks).size > 1, looks.join())
 })
 
 test("a warm community site gets paint through a stencil", () => {

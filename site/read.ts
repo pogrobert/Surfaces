@@ -64,6 +64,9 @@ async function get(start: URL, most: number, accept: string) {
       redirect: "manual",
       signal: AbortSignal.timeout(WAIT),
       headers: { accept, "user-agent": "Surfaces (reads a site's colours, type and logo)" },
+    }).catch((error: Error) => {
+      if (error.name === "TimeoutError") throw error
+      throw new Error(`${url.hostname} couldn't be reached`)
     })
     if (response.status >= 300 && response.status < 400 && response.headers.get("location")) {
       url = new URL(response.headers.get("location")!, url)
@@ -149,7 +152,9 @@ function logoCandidates(html: string, base: URL) {
     if (!link || link.host !== base.host || link.pathname !== "/" || !/<svg\b/i.test(match[2]!)) continue
     // The link's attributes, and what is inside it without its drawing's paths.
     const said = `${match[1]} ${match[2]!.replace(/\s(?:d|points)="[^"]*"/g, "")}`.toLowerCase()
-    const score = said.includes(brand) ? 3 : /logo|wordmark/.test(said) ? 2 : 0
+    // The link home is where a site keeps its own mark, ahead of a product's
+    // badge that happens to carry the name.
+    const score = said.includes(brand) ? 3.5 : /logo|wordmark/.test(said) ? 2 : 0
     const svg = match[2]!.match(/<svg\b[\s\S]*?<\/svg>/i)?.[0]
     if (svg && score) {
       found.push({ candidate: { inline: svg }, score, place: match.index! })
@@ -177,6 +182,21 @@ function logoColour(svg: string) {
     counts.set(hex, (counts.get(hex) ?? 0) + 1)
   }
   return [...counts].sort((a, b) => b[1] - a[1])[0]?.[0]
+}
+
+// An SVG drawn with the page's own variables, as a design system's logo is,
+// fill="var(--color-ink)", with each set to what the page declares it as.
+// Away from the page they mean nothing; one the page doesn't declare is
+// drawn in the text's colour, which the library makes the cover's ink.
+function resolveVariables(svg: string, source: string) {
+  if (!/var\(/.test(svg)) return svg
+  const declared = new Map<string, string>()
+  for (const match of source.matchAll(/--([\w-]+)\s*:\s*([^;}"<>{]{1,200})/g)) {
+    if (!declared.has(match[1]!)) declared.set(match[1]!, match[2]!.trim())
+  }
+  const follow = (value: string, depth = 0): string =>
+    depth > 6 ? "currentColor" : value.replace(/var\(\s*--([\w-]+)\s*(?:,([^()]*))?\)/g, (_, name: string, fallback?: string) => follow(declared.get(name) ?? fallback?.trim() ?? "currentColor", depth + 1))
+  return follow(svg)
 }
 
 // An inline SVG that leans on the page for its size or colour, given both.
@@ -214,7 +234,7 @@ export async function readSite(address: string): Promise<Read> {
   for (const candidate of logoCandidates(html, page.url)) {
     if ("inline" in candidate) {
       if (candidate.inline.length > MOST_LOGO) continue
-      logo = { svg: standalone(candidate.inline) }
+      logo = { svg: standalone(resolveVariables(candidate.inline, `${html}\n${css.join("\n")}`)) }
       break
     }
     try {
@@ -222,7 +242,7 @@ export async function readSite(address: string): Promise<Read> {
       if (image.bytes.length >= MOST_LOGO) continue
       const body = text(image.bytes)
       if (/svg/i.test(image.type) || /^\s*(<\?xml[^>]*>\s*)?<svg/i.test(body)) {
-        logo = { svg: standalone(body) }
+        logo = { svg: standalone(resolveVariables(body, `${html}\n${css.join("\n")}`)) }
       } else if (image.bytes[0] === 0x89 && image.bytes[1] === 0x50) {
         logo = { png: Buffer.from(image.bytes).toString("base64"), from: candidate.href.href }
       } else continue

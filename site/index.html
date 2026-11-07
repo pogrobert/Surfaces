@@ -386,7 +386,7 @@ $("#ask").addEventListener("submit", async (event) => {
     state.read = true
     state.chosen = {}
     setLogo(site.logo?.svg ?? (site.logo?.png ? { data: bytes(site.logo.png), type: "image/png" } : undefined))
-    state.title = firstTitle(state.facts.words) ?? "How we cut our build times in half"
+    state.title = firstTitle(state.facts.words, site.name) ?? "How we cut our build times in half"
     const found = [state.facts.colors?.length && "its colours", state.facts.fonts && "its type", site.logo && "its logo"].filter(Boolean)
     remember(site.name)
     say(found.length ? `Read ${list(found)} from ${site.name}.` : `${site.name} shows little before its scripts run, so the choices below are ours.`)
@@ -419,7 +419,10 @@ const bytes = (base64) => Uint8Array.from(atob(base64), (char) => char.charCodeA
 const list = (parts) => (parts.length < 3 ? parts.join(" and ") : `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`)
 // A line of the site's own to try titles with: its first phrase of a fair
 // length, with a " - Brand" or " | Brand" ending left off.
-const firstTitle = (words) => words?.split(/\s+[-–—|·:]\s+|[.|·–—]/).map((part) => part.trim()).find((part) => part.length >= 8 && part.length <= 70)
+const firstTitle = (words, name = "") => {
+  const own = name.replace(/^www\./, "").split(".")[0].toLowerCase()
+  return words?.split(/\s+[-–—|·:]\s+|:\s|[.|·–—]/).map((part) => part.trim()).find((part) => part.length >= 8 && part.length <= 70 && part.toLowerCase().replace(/\s+/g, "") !== own)
+}
 
 function setLogo(logo) {
   state.logo = logo

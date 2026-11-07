@@ -1,5 +1,6 @@
 import { contrast, fromOklch, luminance, toOklch } from "./core/color.ts"
 import { formats } from "./core/intent.ts"
+import { hash } from "./core/random.ts"
 import type { Area, Grain, Mood, MotionLevel, Theme } from "./core/intent.ts"
 import type { Font } from "./core/type.ts"
 import { nearest } from "./core/validate.ts"
@@ -77,7 +78,7 @@ function face(family: string | undefined): Face | undefined {
 type Tone = "technical" | "editorial" | "playful" | "warm" | "glossy" | "calm"
 const TONES: Record<Tone, RegExp> = {
   technical: /\b(apis?|sdks?|developers?|devtools?|infrastructure|deploy\w*|databases?|data|code|open source|platform|engineering|cli|cloud|latency|observability|ai|ml)\b/g,
-  editorial: /\b(journal|essays?|stor(y|ies)|notes|magazine|writing|newsletter|reviews?|reading|books?|letters|archive)\b/g,
+  editorial: /\b(journal|essays?|stor(y|ies)|notes|magazine|writing|newsletter|reviews?|reading|books?|letters|archive|ideas|culture|criticism|longform)\b/g,
   playful: /\b(fun|play\w*|creative|indie|zines?|music|games?|weird|party|hey|hello)\b/g,
   warm: /\b(communit(y|ies)|nonprofit|non-profit|together|care|home|food|craft\w*|handmade|people|neighbou?rhoods?|local|fair\w*|kind|famil(y|ies)|bookings?|appointments?|customers|clients|guests)\b/g,
   glossy: /\b(premium|luxury|beauty|fashion|studio|hardware|devices?)\b/g,
@@ -93,9 +94,11 @@ const LEANS: Record<Face | Tone | "dark" | "bright", Partial<Record<StyleName, n
   serif: { engraving: 3, mezzotint: 2, aquatint: 2, marbling: 2, halftone: 1 },
   mono: { dither: 3, halftone: 2, linework: 2, photocopy: 1 },
   rounded: { stencil: 3, riso: 3, screenprint: 2, underpaint: 1, strata: 1 },
-  grotesk: { halftone: 2, screenprint: 1, underpaint: 1, fluted: 1, riso: 1 },
+  // Most sites are set in a plain sans, so it leans a little to many styles,
+  // and the page's words decide.
+  grotesk: { halftone: 1, dither: 1, screenprint: 1, riso: 1, underpaint: 1, fluted: 1 },
   technical: { halftone: 3, dither: 3, screenprint: 1, linework: 1, engraving: 1 },
-  editorial: { halftone: 2, engraving: 2, mezzotint: 2, marbling: 1, photocopy: 1 },
+  editorial: { engraving: 3, mezzotint: 2, halftone: 1, aquatint: 1, marbling: 1, photocopy: 1 },
   playful: { riso: 3, screenprint: 3, photocopy: 2, stencil: 2, endpaper: 1 },
   warm: { stencil: 3, screenprint: 1, underpaint: 1, marbling: 1, strata: 1 },
   glossy: { chrome: 3, glass: 3, fluted: 2, sfumato: 1 },
@@ -181,8 +184,10 @@ function brandOf(facts: PageFacts): { color?: string; said: string } {
   return { said: "the library's default: the page gave no colour of its own" }
 }
 
-// The look a page gives, from facts already checked.
-export function choose(facts: PageFacts): Look {
+// The look a page gives, from facts already checked. Styles the page leans
+// to equally are told apart by the brand's name, so two sites that read
+// alike don't look alike.
+export function choose(facts: PageFacts, name = ""): Look {
   const why: string[] = []
 
   const dark = Boolean(facts.background && luminance(expand(facts.background)) < 0.2)
@@ -199,7 +204,7 @@ export function choose(facts: PageFacts): Look {
   why.push(`color ${color && color !== brand.color ? `${color}: the colour the site's covers already use` : brand.said}`)
 
   const { signals, tones } = signalsOf(facts, color, dark)
-  const ranked = rank(signals)
+  const ranked = rank(signals, name)
   // Nothing to go on gets a print, not a soft gradient: a pale wash of
   // colour behind a title is what a page made without a designer looks like.
   const best = ranked[0]!.score > 0 ? ranked[0]!.style : "riso"
@@ -256,12 +261,13 @@ function signalsOf(facts: PageFacts, color: string | undefined, dark: boolean) {
   return { signals, tones }
 }
 
-// Every style, most leaned toward first; ties keep the catalog's order.
-function rank(signals: Map<Signal, number>) {
+// Every style, most leaned toward first; ties go by the brand's name, or
+// keep the catalog's order without one.
+function rank(signals: Map<Signal, number>, name = "") {
   const score = (style: StyleName) => [...signals].reduce((sum, [signal, weight]) => sum + (LEANS[signal][style] ?? 0) * weight, 0)
   return (Object.keys(STYLES) as StyleName[])
-    .map((style, index) => ({ style, score: score(style), index }))
-    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .map((style, index) => ({ style, score: score(style), tie: name ? hash(`${name}/${style}`) : index }))
+    .sort((a, b) => b.score - a.score || a.tie - b.tie)
 }
 
 // Why a style suits the page, in the page's own terms where it leans that way.

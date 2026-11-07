@@ -168,7 +168,7 @@ function resolve(choices: BrandChoices) {
   // What wasn't decided is chosen from the page; a given colour is a fact
   // like any other, and the first one the page uses.
   const page = { ...facts, colors: color ? [color, ...(facts.colors ?? [])] : facts.colors }
-  const chosen = choose(page)
+  const chosen = choose(page, name)
   // A page with no colour of its own gets a printer's ink, picked by the
   // brand's name, so two such sites still look like two brands.
   const ink = color ?? chosen.color ?? INKS[hash(`${name}/ink`) % INKS.length]!
