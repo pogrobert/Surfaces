@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "description": "Gorgeous covers and backgrounds generated from a seed.",
   "private": true,
+  "license": "MIT-0",
   "type": "module",
   "exports": {
     ".": {
@@ -30,6 +31,7 @@
   "files": [
     "dist",
     "fonts",
+    "LICENSE",
     "AGENTS.md",
     "README.md",
     "llms.txt",
