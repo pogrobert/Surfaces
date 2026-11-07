@@ -56,7 +56,7 @@ export const photocopyStyle = defineRecipe({
     },
   },
   shapes: COPY_MOTIFS,
-  aroundCentre: true,
+  aroundCentre: false,
 
   picture: ({ p, rng, theme }) => [
     {

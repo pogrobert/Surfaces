@@ -38,7 +38,7 @@ export const lineworkStyle = defineRecipe({
     },
   },
   shapes: DIAGRAMS,
-  aroundCentre: true,
+  aroundCentre: false,
 
   layout: (context) => linework(context, context.shape as Diagram, context.p),
   finish: (art, { p, rng }) =>
