@@ -42,11 +42,11 @@
   @media (max-width: 560px) { .wall { grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 8px; } }
   .reading .wall { opacity: 0.45; }
   @media (prefers-reduced-motion: reduce) { .wall { transition: none; } }
-  .wall .tile { margin: 0; position: relative; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; background: color-mix(in srgb, var(--ink) 6%, transparent); }
+  .wall .tile { all: unset; display: block; cursor: pointer; position: relative; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; background: color-mix(in srgb, var(--ink) 6%, transparent); }
   .wall .art { position: absolute; inset: 0; line-height: 0; }
-  .wall .art > div { position: absolute; inset: 0; }
-  .wall figcaption { position: absolute; left: 8px; bottom: 8px; font-size: 12px; line-height: 1.2; padding: 4px 9px; border-radius: 999px; background: rgb(255 255 255 / 0.92); color: #111; opacity: 0; transition: opacity 0.15s ease; pointer-events: none; }
-  .wall .tile:hover figcaption { opacity: 1; }
+  .wall .art > span { position: absolute; inset: 0; }
+  .wall .label { position: absolute; left: 8px; bottom: 8px; font-size: 12px; line-height: 1.2; padding: 4px 9px; border-radius: 999px; background: rgb(255 255 255 / 0.92); color: #111; opacity: 0; transition: opacity 0.15s ease; pointer-events: none; }
+  .wall .tile:hover .label { opacity: 1; }
   /* The wall fades into the page under the card. */
   .hero::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 34%; background: linear-gradient(transparent, var(--paper)); pointer-events: none; }
   .pitch { position: absolute; z-index: 2; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(620px, calc(100% - 32px)); background: var(--sheet); border-radius: 26px; padding: 26px 26px 18px; box-shadow: 0 0 0 1px var(--rule), 0 50px 90px -40px rgb(0 0 0 / 0.55); display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
@@ -208,9 +208,8 @@
 
 <main class="work" id="work" hidden>
   <section class="read" aria-label="Your brand">
-    <span class="site"><img id="readLogo" alt="" hidden><label class="sr" for="name">Your site's name</label><input id="name" type="text" spellcheck="false" autocomplete="off" placeholder="yoursite.com"></span>
+    <span class="site"><img id="readLogo" alt="" hidden><label class="sr" for="name">Your brand's name</label><input id="name" type="text" spellcheck="false" autocomplete="off" placeholder="Your brand's name"></span>
     <span class="part">Colour <span class="colours" id="swatches" role="group" aria-label="The brand's colour"></span></span>
-    <span class="part">Type <span class="choice" id="type" role="group" aria-label="Type"></span></span>
     <span class="grow"></span>
     <span class="part"><span class="choice" id="theme" role="group" aria-label="Ground"></span></span>
   </section>
@@ -251,11 +250,11 @@
           <div class="post">
             <div class="face" id="postFace" style="width:44px;height:44px"></div>
             <div>
-              <div class="who"><b id="postName">yoursite</b><span id="postHandle">@yoursite · 2h</span></div>
+              <div class="who"><b id="postName">Your brand</b><span id="postHandle">@yourbrand · 2h</span></div>
               <p id="postText">Something new on the blog.</p>
               <div class="unfurl">
                 <div class="frame" id="og"></div>
-                <div class="from" id="ogFrom">From yoursite.com</div>
+                <div class="from" id="ogFrom">From your site</div>
               </div>
             </div>
           </div>
@@ -265,7 +264,7 @@
             <p class="label"><span><b>X profile</b>, 1500 × 500 header; the art runs on under the photo</span></p>
             <div class="profile">
               <div class="frame" id="x"></div>
-              <div class="me"><div class="face" id="xFace"></div><b id="xName">yoursite</b><span id="xHandle">@yoursite</span></div>
+              <div class="me"><div class="face" id="xFace"></div><b id="xName">Your brand</b><span id="xHandle">@yourbrand</span></div>
             </div>
           </div>
           <div>
@@ -277,7 +276,7 @@
               <p class="label"><span><b>LinkedIn</b>, 1584 × 396</span></p>
               <div class="boxed linkedin">
                 <div class="frame" id="linkedin"></div>
-                <div class="me"><div class="face" id="inFace"></div><div class="below" style="padding:0"><b id="inName">yoursite</b>Company page</div></div>
+                <div class="me"><div class="face" id="inFace"></div><div class="below" style="padding:0"><b id="inName">Your brand</b>Company page</div></div>
               </div>
             </div>
             <div>
@@ -331,7 +330,7 @@ const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i
 const NAMES = Object.fromEntries(catalog.map((entry) => [entry.style, entry.style[0].toUpperCase() + entry.style.slice(1)]))
 // What the page knows: the site's facts once read, its logo, and what the
 // person has chosen over the brand's own pick.
-const state = { name: "yoursite.com", logo: undefined, logoUrl: "", chosen: {}, title: "", variant: 0 }
+const state = { name: "", logo: undefined, logoUrl: "", chosen: {}, title: "", variant: 0 }
 
 // ---- The landing: the wall ----
 
@@ -339,8 +338,9 @@ const state = { name: "yoursite.com", logo: undefined, logoUrl: "", chosen: {}, 
 // come near the window, and the whole wall again in a site's own colours
 // once one is read, or on a shuffle.
 let shuffle = 0
-let walled = JSON.stringify({ shuffle: 0, brand: null })
-const wallBrand = () => (state.chosen.color ? { name: state.name, color: state.chosen.color } : null)
+let walled = JSON.stringify({ shuffle: 0, color: null })
+// The colour the wall is painted in: the one picked, or each tile its sample's.
+const wallColour = () => state.chosen.color
 const unseen = new IntersectionObserver((entries) => {
   for (const entry of entries) {
     if (!entry.isIntersecting) continue
@@ -348,14 +348,14 @@ const unseen = new IntersectionObserver((entries) => {
     const index = Number(entry.target.dataset.i)
     const tile = tiles(shuffle, index + 1)[index]
     try {
-      entry.target.querySelector(".art > div").innerHTML = toHtml(scene(tile, generate, wallBrand() ?? undefined), { fill: true })
+      entry.target.querySelector(".art > span").innerHTML = toHtml(scene(tile, generate, wallColour()), { fill: true })
     } catch (error) {
       console.warn(error.message)
     }
   }
 }, { rootMargin: "200px" })
 function watchWall() {
-  for (const tile of document.querySelectorAll("#wall .tile")) if (!tile.querySelector(".art > div").firstChild) unseen.observe(tile)
+  for (const tile of document.querySelectorAll("#wall .tile")) if (!tile.querySelector(".art > span").firstChild) unseen.observe(tile)
 }
 // How many tiles fill the landing at this window's size: every column of
 // every row it shows, so no row stops short.
@@ -372,12 +372,8 @@ function needed() {
 // here, as it comes into view.
 const fetched = new Map()
 function wallUrl(n) {
-  const brand = wallBrand()
   const query = new URLSearchParams({ shuffle: String(n), count: String(Math.max(TILES, needed())) })
-  if (brand) {
-    query.set("name", brand.name)
-    query.set("color", brand.color ?? "")
-  }
+  if (wallColour()) query.set("color", wallColour())
   return `/wall?${query}`
 }
 function prefetch(n) {
@@ -389,14 +385,14 @@ function prefetch(n) {
   return fetched.get(url)
 }
 async function drawWall() {
-  const brand = wallBrand()
-  const key = JSON.stringify({ shuffle, brand })
+  const color = wallColour()
+  const key = JSON.stringify({ shuffle, color: color ?? null })
   if (key === walled) return fillWall()
   walled = key
   const html = await prefetch(shuffle)
   // Something else was asked for while this one came.
   if (key !== walled) return
-  $("#wall").innerHTML = html ?? wall(tiles(shuffle, Math.max(TILES, needed())), generate, toHtml, { drawn: 0, ...(brand ? { brand } : null) })
+  $("#wall").innerHTML = html ?? wall(tiles(shuffle, Math.max(TILES, needed())), generate, toHtml, { drawn: 0, color })
   watchWall()
   fillWall()
   prefetch(shuffle + 1)
@@ -408,8 +404,7 @@ function fillWall() {
   const have = grid.children.length
   const want = needed()
   if (want <= have) return
-  const brand = wallBrand()
-  grid.insertAdjacentHTML("beforeend", wall(tiles(shuffle, want).slice(have), generate, toHtml, { drawn: 0, ...(brand ? { brand } : null) }))
+  grid.insertAdjacentHTML("beforeend", wall(tiles(shuffle, want).slice(have), generate, toHtml, { drawn: 0, color: wallColour() }))
   watchWall()
 }
 watchWall()
@@ -459,6 +454,16 @@ function drawLanding() {
     if (!$("#work").hidden) draw()
   })
 }
+// A tile on the wall opens the explorer on its style.
+$("#wall").addEventListener("click", (event) => {
+  const tile = event.target.closest(".tile")
+  if (!tile) return
+  state.chosen = { ...state.chosen, style: tile.dataset.style }
+  delete state.chosen.shape
+  history.length = 0
+  open()
+})
+
 $("#browse").addEventListener("click", () => {
   history.length = 0
   open()
@@ -492,7 +497,9 @@ function step(change) {
 }
 
 function choices() {
-  return { name: state.name.trim() || "yoursite.com", ...(state.logo ? { logo: state.logo } : null), ...state.chosen }
+  // Every drawing needs a name to be its own; until one is typed, one that
+  // stands for any brand.
+  return { name: state.name.trim() || "your-brand", ...(state.logo ? { logo: state.logo } : null), ...state.chosen }
 }
 
 // The face titles are set in here: a sans or a serif, as the brand's type is.
@@ -541,6 +548,11 @@ const seenTheme = () => (darkMode.matches ? "dark" : "light")
 // stays in it.
 const flatOf = (brand) => (brand.look.theme === "auto" ? createBrand({ ...choices(), ...brand.look, theme: seenTheme() }) : brand)
 const handle = (name) => name.replace(/^www\./, "").split(".")[0].toLowerCase()
+// How the mocks name the brand: as typed, or as any brand until it is.
+const shown = () => {
+  const typed = state.name.trim()
+  return typed ? { name: handle(typed).replace(/^./, (first) => first.toUpperCase()), at: handle(typed), site: typed } : { name: "Your brand", at: "yourbrand", site: "your site" }
+}
 const titleOf = () => state.title.trim() || "How we cut our build times in half"
 const idOf = (title) => (state.variant ? `${title}#${state.variant}` : title)
 const make = (tag, props = {}, ...children) => {
@@ -558,7 +570,6 @@ function drawBrand(brand) {
     choose({ color })
     drawLanding()
   })
-  segmented("#type", [["sans", "Sans"], ["serif", "Serif"]], brand.look.font ?? "sans", (font) => choose({ font: font === "sans" ? undefined : font }))
   segmented("#theme", [["light", "Light"], ["dark", "Dark"], ["auto", "Follow the reader"]], brand.look.theme, (theme) => choose({ theme }))
 }
 
@@ -714,7 +725,7 @@ function badge(brand, target) {
     target.replaceChildren(make("img", { src: state.logoUrl, alt: "", className: "logo" }))
     target.dataset.kind = "logo"
   } else {
-    const letter = make("span", { textContent: handle(brand.name)[0]?.toUpperCase() ?? "" })
+    const letter = make("span", { textContent: shown().name[0]?.toUpperCase() ?? "" })
     target.replaceChildren(letter)
     target.dataset.kind = "letter"
     target.style.setProperty("--brand", brand.look.color ?? "#0078bf")
@@ -725,9 +736,9 @@ function drawFeature(brand) {
   const flat = flatOf(brand)
   const face = faceOf(brand)
   const title = titleOf()
-  $("#postName").textContent = handle(brand.name).replace(/^./, (first) => first.toUpperCase())
-  $("#postHandle").textContent = `@${handle(brand.name)} · 2h`
-  $("#ogFrom").textContent = `From ${brand.name}`
+  $("#postName").textContent = shown().name
+  $("#postHandle").textContent = `@${shown().at} · 2h`
+  $("#ogFrom").textContent = `From ${shown().site}`
   badge(brand, $("#postFace"))
   frame("#og", flat.og({ title, id: idOf(title) }), title, face, "og")
 }
@@ -739,11 +750,11 @@ const POSTS = [
 function drawSet(brand) {
   const flat = flatOf(brand)
   const face = faceOf(brand)
-  const name = handle(brand.name).replace(/^./, (first) => first.toUpperCase())
+  const name = shown().name
   frame("#x", flat.banner({ for: "x", id: idOf("x") }), "", face, "x-header")
   badge(brand, $("#xFace"))
   $("#xName").textContent = name
-  $("#xHandle").textContent = `@${handle(brand.name)}`
+  $("#xHandle").textContent = `@${shown().at}`
   frame("#linkedin", flat.banner({ for: "linkedin", id: idOf("linkedin") }), "", face, "linkedin-banner")
   badge(brand, $("#inFace"))
   $("#inName").textContent = name
@@ -766,7 +777,7 @@ function drawSide(brand) {
       make("li", { textContent: line.replace(/^(\w+) /, (_, key) => `${{ color: "Colour", theme: "Ground", style: "Style", mood: "Feel", grain: "Grain", font: "Type", shape: "Mark" }[key] ?? key} `) })
     )
   )
-  const parts = Object.entries({ name: brand.name, ...brand.look }).map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
+  const parts = Object.entries({ name: state.name.trim() || "example.com", ...brand.look }).map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
   const logo = state.logo ? `,\n  logo: await readFile("public/logo.${typeof state.logo === "string" ? "svg" : "png"}"${typeof state.logo === "string" ? `, "utf8"` : ""})` : ""
   $("#code").textContent = `import { createBrand } from "@pogrobert/surfaces"\n\nexport const brand = createBrand({\n  ${parts.join(",\n  ")}${logo},\n})\n\n// On a page: the art, the title in your font\n<Cover brand={brand} title={post.title} />\n\n// A link preview file, its title drawn in\ntoJpeg(brand.og({ title, drawTitle: true }))`
 }
@@ -848,7 +859,7 @@ $("#copy").addEventListener("click", () => navigator.clipboard?.writeText($("#co
 $("#copyAgent").addEventListener("click", () => {
   const look = createBrand(choices()).look
   navigator.clipboard?.writeText(
-    `Add Surfaces to this site for its covers, link previews, headers and any other picture it repeats. Run \`npx @pogrobert/surfaces init\`, then set the brand it writes to ${JSON.stringify({ name: state.name, ...look })}. The pictures are art: set titles in the site's own font over them, with <Cover brand title /> from @pogrobert/surfaces/react, and use \`toJpeg(brand.og({ title, drawTitle: true }))\` only for link preview files. Then run \`npx @pogrobert/surfaces kit\` for the site's preview and headers.`
+    `Add Surfaces to this site for its covers, link previews, headers and any other picture it repeats. Run \`npx @pogrobert/surfaces init\`, then set the brand it writes to ${JSON.stringify({ ...(state.name.trim() ? { name: state.name.trim() } : null), ...look })}${state.name.trim() ? "" : ", with the site's own domain as its name"}. The pictures are art: set titles in the site's own font over them, with <Cover brand title /> from @pogrobert/surfaces/react, and use \`toJpeg(brand.og({ title, drawTitle: true }))\` only for link preview files. Then run \`npx @pogrobert/surfaces kit\` for the site's preview and headers.`
   )
 })
 

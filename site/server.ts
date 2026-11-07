@@ -29,15 +29,13 @@ const walls = new Map<string, { html: string; gzip: Uint8Array }>()
 function wallFor(query: URLSearchParams) {
   const shuffle = Number(query.get("shuffle") ?? 0)
   const count = Number(query.get("count") ?? 60)
-  const name = query.get("name")
   const color = query.get("color")
   if (!Number.isInteger(shuffle) || shuffle < 0 || shuffle > 9999 || !Number.isInteger(count) || count < 1 || count > 240) return null
-  if ((name !== null && !/^[a-z0-9.-]{1,100}$/i.test(name)) || (color !== null && color !== "" && !/^#[0-9a-f]{6}$/i.test(color))) return null
-  const key = JSON.stringify([shuffle, count, name, color])
+  if (color !== null && color !== "" && !/^#[0-9a-f]{6}$/i.test(color)) return null
+  const key = JSON.stringify([shuffle, count, color])
   if (!walls.has(key)) {
     if (walls.size > 200) walls.clear()
-    const brand = name ? { name, ...(color ? { color } : null) } : undefined
-    const html = wall(tiles(shuffle, count), generate, toHtml, { drawn: count, ...(brand ? { brand } : null) })
+    const html = wall(tiles(shuffle, count), generate, toHtml, { drawn: count, ...(color ? { color } : null) })
     walls.set(key, { html, gzip: gzipSync(html) })
   }
   return walls.get(key)!
@@ -55,11 +53,11 @@ createServer(async (request, response) => {
     return
   }
   if (url.pathname === "/wall") {
-    // A shuffle of the wall, or the wall in a site's own look, drawn here so
+    // A shuffle of the wall, or the wall in a brand's colour, drawn here so
     // the page only swaps it in.
     const drawn = wallFor(url.searchParams)
     if (!drawn) {
-      response.writeHead(400).end("Ask for /wall?shuffle=1&count=60, with name and color for a site's own")
+      response.writeHead(400).end("Ask for /wall?shuffle=1&count=60, and color=#0078bf for a brand's colour")
       return
     }
     const gzip = /\bgzip\b/.test(String(request.headers["accept-encoding"] ?? ""))

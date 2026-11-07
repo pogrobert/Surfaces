@@ -46,13 +46,13 @@ export function tiles(shuffle = 0, count = TILES) {
   }))
 }
 
-// A tile's scene, in the brand given or its sample's.
-export function scene(tile, generate, brand) {
-  const look = brand ?? { name: tile.sample.name, color: tile.sample.color }
+// A tile's scene, in the colour given or its sample's. The drawing is always
+// its own, so picking a colour repaints the wall rather than redrawing it.
+export function scene(tile, generate, color) {
   return generate({
     style: tile.style,
-    seed: `${look.name}/${tile.id}`,
-    ...(look.color ? { color: look.color } : null),
+    seed: `${tile.sample.name}/${tile.id}`,
+    color: color ?? tile.sample.color,
     theme: tile.theme,
     ...(tile.mood ? { mood: tile.mood } : null),
     width: tile.w,
@@ -61,15 +61,16 @@ export function scene(tile, generate, brand) {
 }
 
 const NAME = (style) => style[0].toUpperCase() + style.slice(1)
-export const label = (tile, name) => `${NAME(tile.style)}${tile.mood ? `, ${tile.mood}` : ""}${tile.theme === "dark" ? ", dark" : ""} · ${name ?? tile.sample.name}`
+export const label = (tile) => `${NAME(tile.style)}${tile.mood ? `, ${tile.mood}` : ""}${tile.theme === "dark" ? ", dark" : ""}`
 
 // The wall as HTML: the first `drawn` tiles with their art, the rest empty
 // until the page draws them.
-export function wall(list, generate, toHtml, { drawn = FIRST, brand } = {}) {
+// Each tile is a button: it opens the explorer on its style.
+export function wall(list, generate, toHtml, { drawn = FIRST, color } = {}) {
   return list
     .map((tile) => {
-      const art = tile.i < drawn ? toHtml(scene(tile, generate, brand), { fill: true }) : ""
-      return `<figure class="tile" data-i="${tile.i}"><div class="art"><div>${art}</div></div><figcaption>${label(tile, brand?.name)}</figcaption></figure>`
+      const art = tile.i < drawn ? toHtml(scene(tile, generate, color), { fill: true }) : ""
+      return `<button type="button" tabindex="-1" class="tile" data-i="${tile.i}" data-style="${tile.style}" aria-label="${label(tile)}"><span class="art"><span>${art}</span></span><span class="label">${label(tile)}</span></button>`
     })
     .join("")
 }
