@@ -220,7 +220,7 @@ const OG_LAYOUTS: readonly { title: Place; logo: Place }[] = [
 const ogLayout = (name: string) => OG_LAYOUTS[hash(`${name}/og`) % OG_LAYOUTS.length]!
 // A long title gets the large area, so it is set at a size a feed can read,
 // and the art gives up a little room; a short one keeps the art large.
-const ogSize = (title: string | undefined) => ((title?.trim().length ?? 0) > 30 ? "lg" : "md")
+const ogSize = (title: string | undefined) => ((title?.trim().length ?? 0) > 45 ? "lg" : "md")
 
 function logoFor(logo: Logo | undefined, use: Use, name: string, title?: string): SurfaceInput["logo"] {
   // A lockup's logo has no room over a long title's large area, so it goes
