@@ -18,6 +18,8 @@ export type FormStage = {
   safe: Keep
   area: Box
   away: { x: number; y: number }
+  // Where a framed form sits, when the cover frames it (see framing.ts).
+  at?: { x: number; y: number }
   // The angle the light comes from.
   lit: number
   size: number

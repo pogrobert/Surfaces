@@ -2,6 +2,7 @@ import { cos, radians, sin, TAU } from "../core/math.ts"
 import type { Art, Frame } from "../core/recipe.ts"
 import type { Box, Enter, Layer, Mark, Motion, Paint, Pool, Shape, Stop, Tone } from "../core/scene.ts"
 import { seat } from "../shapes/subjects.ts"
+import { framing } from "./framing.ts"
 import { clearing } from "./stage.ts"
 
 // One polished object in a pool of light. Chrome shows the world reflected in
@@ -65,9 +66,13 @@ function place(frame: Frame, shape: ObjectShape, size: number): Placed {
     const box = { x: x - bw / 2, y: y - bh / 2, w: bw, h: bh }
     return { box, outline: { type: "rect", ...box, radii: [bw / 2, bw / 2, 0, 0] } }
   }
-  const seated = unit * 0.42 * size
-  const { x, y } = seat({ area, safe: keep, w, h, away }, seated)
-  const r = seated * fit(frame, x, y, seated * 2, seated * 2)
+  // With nothing to keep clear, most orbs and rings are framed large and on
+  // a third, running off the edges (see framing.ts), so nothing shrinks
+  // them to keep their rim on the canvas.
+  const framed = framing(frame, frame.rng.fork("object"))
+  const seated = framed ? (framed.reach * Math.min(w, h)) / 2 : unit * 0.42 * size
+  const { x, y } = framed ?? seat({ area, safe: keep, w, h, away }, seated)
+  const r = framed ? seated : seated * fit(frame, x, y, seated * 2, seated * 2)
   const box = { x: x - r, y: y - r, w: r * 2, h: r * 2 }
   if (shape === "ring") {
     return { box, outline: { type: "ring", cx: x, cy: y, r, inner: r * 0.56 } }

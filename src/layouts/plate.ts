@@ -2,6 +2,7 @@ import { atan2, cos, radians, sin, smoothstep, TAU } from "../core/math.ts"
 import type { Art, Frame } from "../core/recipe.ts"
 import type { Layer, Mark, Shape } from "../core/scene.ts"
 import { drawForm } from "../shapes/forms.ts"
+import { framing } from "./framing.ts"
 import type { Form } from "../shapes/forms.ts"
 import { center, furthestAlong } from "./geometry.ts"
 import { lines } from "./lines.ts"
@@ -46,6 +47,9 @@ function presenceBeside(
 export function linePlate(frame: Frame, form: Form, p: PlateLayoutParams): Art {
   const { w, h, keep, rng } = frame
   const { area, away } = clearing(frame)
+  // With nothing to keep clear, most orbs and ripples are framed large and
+  // on a third (see framing.ts); the other forms fill the area already.
+  const framed = form === "orb" || form === "ripple" ? framing(frame, rng.fork("plate")) : undefined
   const drawn = drawForm(
     form,
     {
@@ -54,8 +58,9 @@ export function linePlate(frame: Frame, form: Form, p: PlateLayoutParams): Art {
       safe: keep,
       area,
       away,
+      ...(framed ? { at: { x: framed.x, y: framed.y } } : null),
       lit: atan2(away.y, away.x) + radians(p.lightTurn),
-      size: p.size,
+      size: framed ? (framed.reach * Math.min(w, h)) / Math.min(area.w, area.h) : p.size,
       bulge: p.bulge,
       rng: rng.fork("form"),
     },

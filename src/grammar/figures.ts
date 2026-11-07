@@ -1,5 +1,6 @@
 import { atan2, clamp, cos, PI, sin, TAU } from "../core/math.ts"
 import type { Box, Shape } from "../core/scene.ts"
+import { framing } from "../layouts/framing.ts"
 import { boxesTouch, inflate } from "../layouts/geometry.ts"
 import { seat } from "../shapes/subjects.ts"
 import type { Context, DrawnFigure, FigurePart, FigureStage } from "./parts.ts"
@@ -279,20 +280,10 @@ export const tiles: FigurePart = {
       const large = fit(0.35, Math.min(w, h) * 1.12)
       if (large.side > placed.side * 1.15) placed = large
     }
-    // With nothing to keep clear, the whole frame is the mark's. Most covers
-    // draw it large, seated on a third and running off the edges, as a
-    // poster crops its subject; the rest whole in the middle. Each title
-    // draws its own, so a page of covers is one mark seen many ways.
-    if (!context.titled && !context.fill && !context.calm.length) {
-      const frame = rng.fork("frame")
-      if (frame.next() < 0.7) {
-        const side = Math.min(w, h) * frame.between([1.05, 1.4])
-        const third = frame.next() < 0.5 ? 1 / 3 : 2 / 3
-        const x = w > h ? w * third : w / 2 + (frame.next() * 2 - 1) * w * 0.12
-        const y = w > h ? h / 2 + (frame.next() * 2 - 1) * h * 0.18 : h * third
-        placed = { x, y, side }
-      }
-    }
+    // With nothing to keep clear, the whole frame is the mark's (see
+    // framing.ts).
+    const framed = framing(context, rng)
+    if (framed) placed = { x: framed.x, y: framed.y, side: Math.min(w, h) * framed.reach }
     const { x, y, side } = placed
     const { units, voids } = assemble(shape, p)
     // A quarter turn or a mirror, so one assembly faces several ways.

@@ -1,6 +1,7 @@
 import { cos, PI, sin, TAU } from "../core/math.ts"
 import type { Art, Frame } from "../core/recipe.ts"
 import type { Box, Enter, Loop, Mark, Paint, Shape } from "../core/scene.ts"
+import { framing } from "./framing.ts"
 import { seat } from "../shapes/subjects.ts"
 import { center, furthestAlong, stops } from "./geometry.ts"
 import { clearing } from "./stage.ts"
@@ -53,9 +54,12 @@ export function overprint(
   const calm = frame.calm[0] ?? (frame.fill ? { x: w * 0.25, y: h * 0.25, w: w * 0.5, h: h * 0.5 } : undefined)
   const across = calm ? { x: 0, y: 1 } : { x: -away.y, y: away.x }
   // And drawn at least as large as the title is wide, so it reaches past it.
-  const unit = Math.max(Math.min(area.w, area.h), calm ? calm.w : 0)
+  // With nothing to keep clear, most covers frame it large and on a third
+  // (see framing.ts); a motif spans about 0.9 of its unit.
+  const framed = motif === "rise" ? undefined : framing(frame, rng.fork("overprint"))
+  const unit = framed ? (Math.min(w, h) * framed.reach) / 0.9 : Math.max(Math.min(area.w, area.h), calm ? calm.w : 0)
   const seatIn = (radius: number) =>
-    calm ? center(calm) : seat({ area, safe: keep, w, h, away }, radius)
+    calm ? center(calm) : framed ? { x: framed.x, y: framed.y } : seat({ area, safe: keep, w, h, away }, radius)
 
   const sheets: Record<Motif, () => Sheet> = {
     discs() {

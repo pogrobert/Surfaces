@@ -3,6 +3,7 @@ import type { Art, Frame } from "../core/recipe.ts"
 import type { Box, Enter, Motion } from "../core/scene.ts"
 import { DRAW_SUBJECT } from "../shapes/subjects.ts"
 import type { Subject, SubjectParams } from "../shapes/subjects.ts"
+import { framing } from "./framing.ts"
 import { center, clearArea } from "./geometry.ts"
 
 // One subject, set in the largest clear area beside the title, with its light
@@ -69,6 +70,10 @@ export function stage(frame: Frame, subject: Subject, p: StageParams): Art {
   // on wide covers: on square and tall ones there isn't the room.
   const round = subject === "orb" || subject === "ring" || subject === "eclipse"
   const bold = rng.fork("scale").next() < 0.2 && round && w >= h * 1.3
+  // With nothing to keep clear, most round subjects are framed large and on
+  // a third, running off the edges (see framing.ts); the others are drawn
+  // from an edge already, or lose their crown when cropped.
+  const framed = round ? framing(frame, rng.fork("stage")) : undefined
   const drawn = DRAW_SUBJECT[subject](
     {
       w,
@@ -78,7 +83,8 @@ export function stage(frame: Frame, subject: Subject, p: StageParams): Art {
       away,
       lit,
       light,
-      size: bold ? p.size * 1.25 : p.size,
+      size: framed ? (framed.reach * Math.min(w, h)) / Math.min(area.w, area.h) : bold ? p.size * 1.25 : p.size,
+      ...(framed ? { at: { x: framed.x, y: framed.y } } : null),
       peak: p.peak,
       rng: rng.fork("subject"),
     },

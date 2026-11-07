@@ -1,6 +1,7 @@
 import type { Frame } from "../core/recipe.ts"
 import type { Box } from "../core/scene.ts"
 import { seat } from "../shapes/subjects.ts"
+import { framing } from "./framing.ts"
 import { boxesTouch, center, furthestAlong, inflate } from "./geometry.ts"
 import { clearing } from "./stage.ts"
 
@@ -36,8 +37,11 @@ export function placeDiscs(
   const unit = Math.min(area.w, area.h)
 
   if (shape === "disc") {
-    const r = unit * 0.5 * size
-    const { x, y } = seat({ area, safe: keep, w, h, away }, r)
+    // With nothing to keep clear, most covers frame the disc large and on a
+    // third, running off the edges (see framing.ts).
+    const framed = framing(frame, rng.fork("disc"))
+    const r = framed ? (Math.min(w, h) * framed.reach) / 2 : unit * 0.5 * size
+    const { x, y } = framed ?? seat({ area, safe: keep, w, h, away }, r)
     return {
       discs: [{ x, y, r }],
       subject: { x: x - r, y: y - r, w: r * 2, h: r * 2 },

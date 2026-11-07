@@ -3,6 +3,7 @@ import type { Art, Frame } from "../core/recipe.ts"
 import type { Box, Mark, Shape } from "../core/scene.ts"
 import { seat } from "../shapes/subjects.ts"
 import { center, distanceFrom, furthestAlong } from "./geometry.ts"
+import { framing } from "./framing.ts"
 import { clearing } from "./stage.ts"
 
 // A smooth tone, printed as 1-bit cells through an 8 by 8 ordered (Bayer)
@@ -41,12 +42,17 @@ export function dither(frame: Frame, form: ToneForm, p: DitherParams): Art {
     -(x - middle.x) * away.y + (y - middle.y) * away.x
   const shape = rng.fork("tone")
   let subject: Box | undefined
+  // With nothing to keep clear, most orbs and rings are framed large and on
+  // a third, running off the edges (see framing.ts).
+  const framed = form === "orb" || form === "ring" ? framing(frame, rng.fork("dither")) : undefined
+  const seatAt = { area, safe: keep, w, h, away, ...(framed ? { at: { x: framed.x, y: framed.y } } : null) }
+  const radius = framed ? (framed.reach * Math.min(w, h)) / 2 : unit * 0.5 * p.size
 
   // The tone, from 0 to 1, at a point.
   let tone: (x: number, y: number) => number
   if (form === "orb") {
-    const r = unit * 0.5 * p.size
-    const { x: cx, y: cy } = seat({ area, safe: keep, w, h, away }, r)
+    const r = radius
+    const { x: cx, y: cy } = seat(seatAt, r)
     const lit = atan2(away.y, away.x) + PI + radians(p.lightTurn)
     const lx = cos(lit)
     const ly = sin(lit)
@@ -71,8 +77,8 @@ export function dither(frame: Frame, form: ToneForm, p: DitherParams): Art {
     }
   } else if (form === "ring") {
     // A lit torus seen face on: bright where its tube turns to the light.
-    const r = unit * 0.5 * p.size
-    const { x: cx, y: cy } = seat({ area, safe: keep, w, h, away }, r)
+    const r = radius
+    const { x: cx, y: cy } = seat(seatAt, r)
     const lit = atan2(away.y, away.x) + PI + radians(p.lightTurn)
     const lx = cos(lit)
     const ly = sin(lit)

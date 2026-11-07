@@ -3,6 +3,7 @@ import type { Art, Frame } from "../core/recipe.ts"
 import type { Box, Loop, Mark, Motion, Shape } from "../core/scene.ts"
 import { seat } from "../shapes/subjects.ts"
 import { boxesTouch, inflate } from "./geometry.ts"
+import { framing } from "./framing.ts"
 import { clearing } from "./stage.ts"
 
 // Diagrams drawn in hairlines of one ink, the small print of science and
@@ -72,6 +73,8 @@ const circle = (cx: number, cy: number, r: number): Shape => ({
 // Diagrams that run along a band rather than sit round a point. On a wide
 // cover with the title low they take the band across the top.
 const BANDS: readonly Diagram[] = ["coil", "ridges", "chart"]
+// The diagrams drawn round a centre, which a cover can frame.
+const SEATED: readonly Diagram[] = ["orbits", "contour", "dial", "globe", "spiral", "lissajous", "rose", "bars"]
 
 export function linework(frame: Frame, diagram: Diagram, p: LineworkParams): Art {
   const { w, h, safe, keep, titled, rng } = frame
@@ -84,7 +87,12 @@ export function linework(frame: Frame, diagram: Diagram, p: LineworkParams): Art
   // Wide covers leave a narrow strip beside the title, where a diagram drawn
   // to fit reads small, so it is drawn larger and may run off the far edge.
   const scale = wide ? 1.3 : 1
-  const unit = Math.min(area.w, area.h) * scale
+  // With nothing to keep clear, most diagrams drawn round a centre are framed
+  // large and on a third, running off the edges (see framing.ts); a diagram
+  // reaches about 0.46 of its unit from its centre.
+  const framed = SEATED.includes(diagram) ? framing(frame, rng.fork("linework")) : undefined
+  const unit = framed ? (framed.reach * Math.min(w, h)) / 0.92 : Math.min(area.w, area.h) * scale
+  const seatAt = (radius: number) => framed ?? seat({ area, safe: keep, w, h, away }, radius)
   const margin = Math.min(w, h) * 0.05
   const draw = rng.fork("diagram")
   const across = { x: -away.y, y: away.x }
@@ -96,7 +104,7 @@ export function linework(frame: Frame, diagram: Diagram, p: LineworkParams): Art
 
   if (diagram === "orbits") {
     const r = unit * 0.48 * p.size
-    const { x, y } = seat({ area, safe: keep, w, h, away }, r)
+    const { x, y } = seatAt(r)
     const rings = 4 + Math.floor(p.count * 4)
     // Like an atom drawn in a textbook: every orbit shares the centre, turned
     // evenly round it, and each carries a body somewhere along it.
@@ -155,7 +163,7 @@ export function linework(frame: Frame, diagram: Diagram, p: LineworkParams): Art
   } else if (diagram === "contour") {
     // Nested rings around a peak, like a map's contour lines.
     const r = unit * 0.5 * p.size
-    const { x, y } = seat({ area, safe: keep, w, h, away }, r)
+    const { x, y } = seatAt(r)
     const rings = 7 + Math.floor(p.count * 6)
     const a1 = draw.between([0.06, 0.12])
     const a2 = draw.between([0.03, 0.07])
@@ -180,7 +188,7 @@ export function linework(frame: Frame, diagram: Diagram, p: LineworkParams): Art
   } else if (diagram === "dial") {
     // An instrument face: rings, a scale of ticks, and one reading marked.
     const r = unit * 0.48 * p.size
-    const { x, y } = seat({ area, safe: keep, w, h, away }, r)
+    const { x, y } = seatAt(r)
     for (const share of [1, 0.84, 0.46]) {
       shapes.push(line(ellipse(x, y, r * share, r * share, 0), p.hair))
     }
@@ -288,7 +296,7 @@ export function linework(frame: Frame, diagram: Diagram, p: LineworkParams): Art
     // A globe seen from a little above, turned and tilted: its meridians and
     // parallels projected from a sphere, and only the face toward us drawn.
     const r = unit * 0.46 * p.size
-    const { x, y } = seat({ area, safe: keep, w, h, away }, r)
+    const { x, y } = seatAt(r)
     const tilt = draw.between([-0.4, 0.4])
     const lift = draw.between([0.25, 0.55])
     const spin = draw.next() * TAU
@@ -333,7 +341,7 @@ export function linework(frame: Frame, diagram: Diagram, p: LineworkParams): Art
   } else if (diagram === "spiral") {
     // An Archimedean spiral: even turns, like a record's groove.
     const r = unit * 0.42 * p.size
-    const { x, y } = seat({ area, safe: keep, w, h, away }, r)
+    const { x, y } = seatAt(r)
     const turns = 6 + Math.floor(p.count * 6)
     const start = draw.next() * TAU
     const points: Point[] = []
@@ -349,7 +357,7 @@ export function linework(frame: Frame, diagram: Diagram, p: LineworkParams): Art
   } else if (diagram === "lissajous") {
     // The figure an oscilloscope draws from two tones at a simple ratio.
     const r = unit * 0.4 * p.size
-    const { x, y } = seat({ area, safe: keep, w, h, away }, r)
+    const { x, y } = seatAt(r)
     const [a, b] = draw.pick([
       [3, 2],
       [5, 4],
@@ -408,7 +416,7 @@ export function linework(frame: Frame, diagram: Diagram, p: LineworkParams): Art
   } else if (diagram === "rose") {
     // A rose curve: one line drawing a ring of petals.
     const r = unit * 0.42 * p.size
-    const { x, y } = seat({ area, safe: keep, w, h, away }, r)
+    const { x, y } = seatAt(r)
     const [n, d] = draw.pick([
       [5, 1],
       [7, 1],
@@ -433,7 +441,7 @@ export function linework(frame: Frame, diagram: Diagram, p: LineworkParams): Art
   } else if (diagram === "bars") {
     // A barcode: verticals of a few fixed widths, thinning out to one side.
     const side = unit * 0.92 * p.size
-    const { x, y } = seat({ area, safe: keep, w, h, away }, side / 2)
+    const { x, y } = seatAt(side / 2)
     const box: Box = { x: x - side / 2, y: y - side / 2, w: side, h: side }
     const widths = [1, 1, 1, 2, 2, 4, 7]
     let cursor = box.x

@@ -32,6 +32,8 @@ export type Stage = {
   size: number
   peak: number
   rng: Rng
+  // Where a framed subject sits, when the cover frames it (see framing.ts).
+  at?: { x: number; y: number }
 }
 
 export type SubjectParams = {
@@ -45,9 +47,10 @@ export type Drawn = { light: Mark[]; subject?: Box; cx: number; cy: number }
 // Pushes a subject's box away from the title until it clears it, and lets it
 // bleed off the far edge of the canvas if it has to.
 export function seat(
-  stage: Pick<Stage, "area" | "safe" | "w" | "h" | "away">,
+  stage: Pick<Stage, "area" | "safe" | "w" | "h" | "away" | "at">,
   radius: number
 ) {
+  if (stage.at) return stage.at
   const { area, safe, w, h } = stage
   const margin = Math.min(w, h) * 0.06
   const middle = center(area)
