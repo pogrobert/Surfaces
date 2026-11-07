@@ -25,7 +25,7 @@ const brand = createBrand({ name: "acme.dev", color: "#635bff" })
 brand.cover({ title: post.title })      // a post's cover, title at the bottom left
 brand.card({ title: post.title })       // a card in a list, title beside it: art only
 brand.hero({ title: "Pricing" })        // title in the middle; the one cover that moves
-brand.og({ title: post.title })         // a link preview, 1200x630
+brand.og({ title: post.title })         // a link preview, 1200x630, in the brand's own layout
 brand.banner({ for: "x", title })       // a header: "x" 1500x500, "linkedin" 1584x396, "email" 1200x400
 brand.avatar(user.id)                   // a person's mark
 brand.input("post", { title })          // the input any of those draws, for components
@@ -39,10 +39,16 @@ brand.input("post", { title })          // the input any of those draws, for com
   its bottom left, where X lays the profile's photo; the art runs on under
   it. There is no icon: an icon is a brand's
   identity, and a site keeps its own.
+- A link preview's layout is the brand's own, picked by its name and kept
+  for all its previews, from four judged for every style: the title at the
+  foot with the logo at the head, the title at the head with the logo at the
+  foot, the two mirrored, or the logo locked up just over the title. A title
+  over 45 characters takes a large area; a shorter one leaves the art large.
 - `logo` is that identity, set as it is on the pictures a site shows of
-  itself elsewhere: the link preview and the email header (top left, over the
-  title, on its edge, as a letterhead's) and the profile headers (at the
-  right, clear of the photo X and LinkedIn lay over the left). A post's cover goes on the site itself, which shows its logo
+  itself elsewhere: the link preview (where its layout puts it, on the
+  title's edge), the email header (top left, over the title, as a
+  letterhead's) and the profile headers (at the right, clear of the photo X
+  and LinkedIn lay over the left). A post's cover goes on the site itself, which shows its logo
   already, so it has none. An SVG file's text, or `{ data, type }` for a PNG,
   JPEG or WebP; `{ light, dark }` gives one for each ground, and a logo whose
   colours all fall under 3:1 on its ground, with no `dark` given, is drawn
@@ -66,10 +72,15 @@ brand.look   // { style: "stencil", color: "#f59e0b", theme: "light" }: keep it 
 brand.why    // ["style stencil: the page is set in a rounded, friendly sans and sounds warm", ...]
 ```
 
-`readPage` reads source text, without a browser or a fetch: colours (named
-for the brand first, a ramp by its middle shade, then by use, leaving out a
-framework's own palette), the background and text colours, a dark mode, the
-heading and body fonts, and the title, description and first heading.
+`readPage` reads source text, without a browser or a fetch: colours, the
+background and text colours, a dark mode, the heading and body fonts, and
+the title, description and first heading. Colours come in this order: the
+one Safari's pinned tab is drawn in, a strong `theme-color`, variables named
+for the brand or its primary (followed through any `var()` they are built
+from; a plain name before a ramp's shade, the shade nearest its middle), the
+strong colour the page uses most, accent names, and then every colour by
+use. Names for text, borders, grounds, focus rings and muted states, a
+widget's own variables, and a framework's whole palette are left out.
 Variables may be hex, `rgb()`, `hsl()`, `oklch()` or shadcn's bare HSL
 channels. A site's `DESIGN.md`, given third (`readPage(html, css, design)`),
 says its brand outright: its colours, headings' and text's type, name,
