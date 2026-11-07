@@ -88,9 +88,12 @@
   @media (min-width: 901px) { .controls { position: sticky; top: 20px; align-self: start; max-height: calc(100vh - 40px); overflow: auto; padding-right: 6px; } }
   .group h2 { font-size: 15px; font-weight: 600; margin: 0 0 10px; letter-spacing: -0.01em; }
   .group p.note { margin: 6px 0 0; font-size: 13px; color: var(--quiet); }
-  .why { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--quiet); }
-  .why b { color: var(--ink); font-weight: 600; }
-  .why .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 4px; box-shadow: inset 0 0 0 1px #0002; }
+  .why { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+  .why .decided { display: grid; grid-template-columns: 64px 1fr; align-items: baseline; gap: 8px; font-size: 15px; }
+  .why .label { color: var(--quiet); font-size: 14px; }
+  .why b { color: var(--ink); font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+  .why .reason { display: block; margin: 2px 0 0 72px; color: var(--quiet); font-size: 13px; line-height: 1.4; }
+  .why .swatch { display: inline-block; width: 14px; height: 14px; border-radius: 4px; box-shadow: inset 0 0 0 1px #0002; }
   .field { display: flex; gap: 8px; align-items: center; }
   .field input[type="text"] { flex: 1; min-width: 0; height: 38px; border-radius: 8px; border: 1px solid var(--rule); background: var(--sheet); padding: 0 10px; font-size: 15px; }
   .field input[type="color"] { width: 38px; height: 38px; padding: 3px; border-radius: 8px; border: 1px solid var(--rule); background: var(--sheet); flex: none; }
@@ -473,21 +476,34 @@ function drawControls(brand) {
   const why = $("#why")
   why.replaceChildren(
     ...brand.why.map((line) => {
+      // Each decision on a line of its own, what it is, then why, in small.
       const item = document.createElement("li")
       const [, key, value, reason] = line.match(/^(\w+) ([^:]+): (.*)$/) ?? []
       if (!key) {
         item.textContent = line
         return item
       }
+      const LABELS = { color: "Colour", theme: "Ground", style: "Style", mood: "Feel", grain: "Grain", font: "Type", shape: "Mark" }
+      const GROUNDS = { light: "Light", dark: "Dark", auto: "Follows the reader" }
+      const head = document.createElement("div")
+      head.className = "decided"
+      const label = document.createElement("span")
+      label.className = "label"
+      label.textContent = LABELS[key] ?? key
+      const shown = document.createElement("b")
       if (key === "color") {
         const swatch = document.createElement("span")
         swatch.className = "swatch"
         swatch.style.background = value
-        item.append(swatch)
+        shown.append(swatch)
       }
-      const name = document.createElement("b")
-      name.textContent = key === "style" ? NAMES[value] ?? value : key === "theme" ? `${value} ground` : value
-      item.append(name, `: ${reason}`)
+      shown.append(key === "style" ? NAMES[value] ?? value : key === "theme" ? GROUNDS[value] ?? value : key === "font" ? (value === "serif" ? "A serif" : "A sans") : value)
+      head.append(label, shown)
+      const said = document.createElement("span")
+      said.className = "reason"
+      // The reason reads as a sentence of its own.
+      said.textContent = reason.replace(/^./, (first) => first.toUpperCase())
+      item.append(head, said)
       return item
     })
   )
