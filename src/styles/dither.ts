@@ -42,15 +42,6 @@ export const ditherStyle = defineRecipe({
   },
   shapes: TONES,
 
-  picture: ({ p, theme }) => [
-    {
-      type: "screen",
-      tone: "strong",
-      screen: "bayer",
-      cell: p.cell * 0.42,
-      invert: theme === "dark",
-    },
-  ],
   layout(context) {
     // A dot matrix needs larger cells than solid pixels to read as dots.
     const p = { ...context.p, gap: context.p.gap < 0.12 ? 0 : context.p.gap }

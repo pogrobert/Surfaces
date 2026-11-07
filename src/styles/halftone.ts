@@ -43,15 +43,6 @@ export const halftone = defineRecipe({
   palette: BASE_PALETTE,
   shapes: SHAPES,
 
-  picture: ({ p, theme }) => [
-    {
-      type: "screen",
-      tone: "strong",
-      screen: "dots",
-      cell: p.cell * 0.32,
-      invert: theme === "dark",
-    },
-  ],
   layout: (context) => field(context, context.shape as Cell, context.p),
   finish: (art, { p, rng }) =>
     film(art, {

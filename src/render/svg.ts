@@ -745,106 +745,6 @@ function fillRect(layer: Fill, scene: Scene, bleed = 0) {
   return `<rect${place} width="${num(w + bleed * 2)}" height="${num(h + bleed * 2)}" ${colour("fill", scene.palette[layer.tone])}/>`
 }
 
-// The photo's luminance, or its darkness, into the alpha channel.
-const lumaToAlpha = (invert: boolean) =>
-  invert
-    ? `<feColorMatrix in="SourceGraphic" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .2126 .7152 .0722 0 0" result="t"/>`
-    : `<feColorMatrix in="SourceGraphic" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -.2126 -.7152 -.0722 0 1" result="t"/>`
-
-// A tile of thresholds, as a small SVG of its own, for feImage to repeat. Dots
-// are a grey ramp from the middle of each dot out; Bayer is 64 flat greys.
-function screenTile(screen: "dots" | "bayer", cell: number) {
-  if (screen === "bayer") {
-    const order = [
-      0, 32, 8, 40, 2, 34, 10, 42, 48, 16, 56, 24, 50, 18, 58, 26, 12, 44, 4, 36, 14,
-      46, 6, 38, 60, 28, 52, 20, 62, 30, 54, 22, 3, 35, 11, 43, 1, 33, 9, 41, 51, 19,
-      59, 27, 49, 17, 57, 25, 15, 47, 7, 39, 13, 45, 5, 37, 63, 31, 55, 23, 61, 29,
-      53, 21,
-    ]
-    const size = cell * 8
-    const rects = order
-      .map((rank, i) => {
-        const grey = Math.round(((rank + 0.5) / 64) * 255)
-        return `<rect x="${num((i % 8) * cell)}" y="${num(Math.floor(i / 8) * cell)}" width="${num(cell)}" height="${num(cell)}" fill="rgb(${grey},${grey},${grey})"/>`
-      })
-      .join("")
-    return { size, svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${num(size)}" height="${num(size)}" shape-rendering="crispEdges">${rects}</svg>` }
-  }
-  // Dots on a grid turned 45 degrees: one in each corner and one in the middle.
-  // A dot's threshold is highest at its middle, so the lightest tones still
-  // ink a speck there, and the dark between the dots never inks at all.
-  const size = cell * 1.4142
-  const r = size / 2
-  const dot = (x: number, y: number) =>
-    `<circle cx="${num(x)}" cy="${num(y)}" r="${num(r)}" fill="url(#d)"/>`
-  return {
-    size,
-    svg:
-      `<svg xmlns="http://www.w3.org/2000/svg" width="${num(size)}" height="${num(size)}">` +
-      `<defs><radialGradient id="d"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#000"/></radialGradient></defs>` +
-      `<rect width="${num(size)}" height="${num(size)}" fill="#000"/>` +
-      dot(0, 0) + dot(size, 0) + dot(0, size) + dot(size, size) + dot(r, r) +
-      `</svg>`,
-  }
-}
-
-const svgData = (svg: string) =>
-  `data:image/svg+xml,${svg.replace(/#/g, "%23").replace(/"/g, "'").replace(/</g, "%3C").replace(/>/g, "%3E")}`
-
-function drawPicture(
-  layer: Extract<Layer, { kind: "picture" }>,
-  prefix: string,
-  scene: Scene,
-  out: Output
-) {
-  const { w, h } = scene.size
-  const region = `filterUnits="userSpaceOnUse" x="0" y="0" width="${num(w)}" height="${num(h)}" color-interpolation-filters="sRGB"`
-  layer.treatments.forEach((treatment, index) => {
-    const id = `${prefix}${layer.id}${index}`
-    const color = scene.palette[treatment.tone]
-    let steps: string
-    if (treatment.type === "toner") {
-      const span = Math.max(treatment.high - treatment.low, 0.01)
-      steps =
-        lumaToAlpha(treatment.invert) +
-        // Only the stretch of tone between the two levels holds ink.
-        `<feComponentTransfer in="t" result="a"><feFuncA type="linear" slope="${fraction(1 / span)}" intercept="${fraction(-treatment.low / span)}"/></feComponentTransfer>` +
-        noise(treatment.scale, treatment.seed) +
-        `<feColorMatrix in="n" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 3.4 0 0 0 -1.2" result="d"/>` +
-        `<feComposite in="a" in2="d" operator="arithmetic" k2="1" k3="1" k4="-1" result="s"/>` +
-        `<feComponentTransfer in="s" result="g"><feFuncA type="linear" slope="${num(treatment.hardness)}"/></feComponentTransfer>` +
-        `<feFlood ${colour("flood-color", color)} result="c"/>` +
-        `<feComposite in="c" in2="g" operator="in" result="dots"/>` +
-        `<feComposite in="c" in2="a" operator="in" result="l"/>` +
-        `<feComponentTransfer in="l" result="wash"><feFuncA type="linear" slope="${fraction(treatment.wash)}"/></feComponentTransfer>` +
-        `<feMerge><feMergeNode in="wash"/><feMergeNode in="dots"/></feMerge>`
-    } else {
-      const tile = screenTile(treatment.screen, treatment.cell)
-      // Each channel: the photo's tone, less the threshold, plus a half. Where
-      // that falls under a half the cell takes ink.
-      const luma = treatment.invert
-        ? `<feColorMatrix in="SourceGraphic" values="-.2126 -.7152 -.0722 0 1 -.2126 -.7152 -.0722 0 1 -.2126 -.7152 -.0722 0 1 0 0 0 0 1" result="t"/>`
-        : `<feColorMatrix in="SourceGraphic" values=".2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 0 0 0 0 1" result="t"/>`
-      steps =
-        luma +
-        `<feImage href="${svgData(tile.svg)}" x="0" y="0" width="${num(tile.size)}" height="${num(tile.size)}" result="tile"/>` +
-        `<feTile in="tile" result="screen"/>` +
-        `<feComposite in="t" in2="screen" operator="arithmetic" k2="1" k3="-1" k4="0.5" result="v"/>` +
-        `<feColorMatrix in="v" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -60 0 0 0 30" result="g"/>` +
-        `<feFlood ${colour("flood-color", color)} result="c"/>` +
-        `<feComposite in="c" in2="g" operator="in"/>`
-    }
-    out.defs.push(`<filter id="${id}" ${region}>${steps}</filter>`)
-    const image = `<image href="${layer.href}" width="${num(w)}" height="${num(h)}" preserveAspectRatio="${layer.fit}" filter="url(#${id})"/>`
-    const offset = treatment.type === "toner" ? treatment.offset : undefined
-    out.body.push(
-      offset
-        ? `<g transform="translate(${num(offset.dx)} ${num(offset.dy)})" style="mix-blend-mode:${offset.blend}">${image}</g>`
-        : image
-    )
-  })
-}
-
 function drawClip(
   layer: Extract<Layer, { kind: "clip" }>,
   prefix: string,
@@ -885,9 +785,6 @@ export function drawLayer(layer: Layer, prefix: string, scene: Scene, out: Outpu
       break
     case "clip":
       drawClip(layer, prefix, scene, out)
-      break
-    case "picture":
-      drawPicture(layer, prefix, scene, out)
       break
     case "text":
       drawText(layer, scene, out)

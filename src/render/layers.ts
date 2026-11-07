@@ -203,7 +203,7 @@ function hold(layer: Layer, context: Context, frame: Box, limit: Box): { html: s
     const clip = whole ? "" : clipStyle(layer, context, frame)
     return { html: `<div class="${root}f"${still || clip ? ` style="${still}${clip}"` : ""}>${moved}</div>`, box: shown }
   }
-  if (layer.kind === "fill" || layer.kind === "grain" || layer.kind === "picture" || layer.kind === "text" || layer.kind === "logo" || !(layer.motion?.loop || arrivesFiltered(layer))) {
+  if (layer.kind === "fill" || layer.kind === "grain" || layer.kind === "text" || layer.kind === "logo" || !(layer.motion?.loop || arrivesFiltered(layer))) {
     // Its loop is inside a filter, which can't be lifted out without changing
     // the picture: drawn again on every frame. The styles avoid this, and the
     // tests hold them to it.
@@ -326,7 +326,6 @@ function bounds(layer: Layer): Box | null {
   switch (layer.kind) {
     case "fill":
     case "grain":
-    case "picture":
     case "blur":
       return null
     case "logo":

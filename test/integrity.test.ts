@@ -77,7 +77,6 @@ function tonesUsed(layers: Layer[]): string[] {
     if (layer.kind === "blur" || layer.kind === "soften" || layer.kind === "clip") {
       return tonesUsed(layer.layers)
     }
-    if (layer.kind === "picture") return layer.treatments.map((item) => item.tone)
     const paint = layer.paint
     return paint.type === "solid"
       ? [paint.tone]

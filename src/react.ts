@@ -55,11 +55,10 @@ export function Surface({ className, css, children, label, areas, ...input }: Su
     : children !== undefined
       ? [{ place: "bottom-left", size: "lg", content: children }]
       : []
-  // Every input but the photo is plain data, so its JSON is the drawing's
-  // identity; the photo counts by its own bytes.
+  // The input is plain data, so its JSON is the drawing's identity.
   const plain = asked.map(({ content: _, ...area }) => area)
-  const key = JSON.stringify({ ...input, areas: plain, image: input.image?.type })
-  const scene = useMemo(() => generate({ ...input, ...(plain.length ? { areas: plain } : null) }), [key, input.image?.data])
+  const key = JSON.stringify({ ...input, areas: plain })
+  const scene = useMemo(() => generate({ ...input, ...(plain.length ? { areas: plain } : null) }), [key])
   // Layers, so a moving cover is moved by the graphics card (see layers.ts).
   const art = useMemo(() => toHtml(scene, { fill: true }), [scene])
   // A moving cover arrives when it is scrolled to and rests off screen.

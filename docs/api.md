@@ -11,7 +11,7 @@ What it is for: the pictures a site repeats, its covers, link previews,
 headers, email headers and avatars, which should look like one brand, carry
 their titles exactly and come out the same on every build. A picture of one
 particular thing, a product, a person or a place, is a photo's job, or an
-image model's; a photo can still be printed in a style's inks (`image`).
+image model's.
 
 ## Brands
 
@@ -179,7 +179,6 @@ type SurfaceInput = {
   detail?: "none" | "micro"             // the small marks of a technical drawing
   motion?: "none" | "once" | "loop"     // default "none"
   shape?: string                        // one of the style's approved shapes
-  image?: ImageInput                    // a photo printed in the style's inks
   logo?: { image, dark?, place }        // the brand's logo, as it is, in a small area the art keeps clear
 }
 
@@ -400,8 +399,8 @@ toPng(generate({ ...launch, ...formats.og, areas: [{ place: "bottom-left", size:
    (`@pogrobert/surfaces/schema.json`, also exported as `inputSchema`).
 2. Done: `AGENTS.md`, a rules block under 1 KB, shipped in the package.
 3. Done: the examples-first README and `llms.txt`, both shipped.
-4. Done: `catalog`, each style with what it looks like, what it suits, its
-   shapes, and whether it takes a photo.
+4. Done: `catalog`, each style with what it looks like, what it suits and its
+   shapes.
 5. Later: an MCP server whose `preview` returns an image.
 
 ## What changed inside

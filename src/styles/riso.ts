@@ -72,35 +72,6 @@ export const riso = defineRecipe({
   },
   shapes: RISO_MOTIFS,
   palette: PALETTE,
-
-  picture({ p, rng, theme }) {
-    const press = rng.fork("photo")
-    const angle = radians(p.registerAngle)
-    const toner = {
-      type: "toner",
-      scale: p.grainSize,
-      hardness: p.hardness,
-      wash: p.wash,
-      invert: theme === "dark",
-    } as const
-    return [
-      // The brand's ink takes the shadows and the middle; the partner only
-      // the deepest part, a little out of line.
-      { ...toner, tone: "accent", low: 0.18, high: 0.7, seed: press.int(1, 9998) },
-      {
-        ...toner,
-        tone: "partner",
-        low: 0.45,
-        high: 0.9,
-        seed: press.int(1, 9999),
-        offset: {
-          dx: cos(angle) * p.register,
-          dy: sin(angle) * p.register,
-          blend: theme === "dark" ? "screen" : "multiply",
-        },
-      },
-    ]
-  },
   layout(context) {
     // The finish lands the second ink here; a moving print needs to know it.
     const angle = radians(context.p.registerAngle)

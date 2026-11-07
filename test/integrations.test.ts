@@ -11,7 +11,6 @@ import { toPng } from "../src/png.ts"
 import { Surface } from "../src/react.ts"
 import { STYLES } from "../src/styles/index.ts"
 import { STYLE_NAMES } from "./support/inputs.ts"
-import { rampPng } from "./support/png.ts"
 
 const PNG = [0x89, 0x50, 0x4e, 0x47]
 const widthOf = (png: Uint8Array) =>
@@ -28,8 +27,6 @@ test("every style, in both themes, exports a PNG at its own size", async () => {
       assert.equal(widthOf(png), 600, `${style} ${theme}`)
     }
   }
-  const photo = generate({ style: "halftone", seed: 1, image: { data: rampPng(16, 9), type: "image/png" } })
-  assert.deepEqual([...(await toPng(photo, { width: 320 })).subarray(0, 4)], PNG)
 })
 
 // An ink out of line by a fraction of a unit, drawn smaller than its scene,

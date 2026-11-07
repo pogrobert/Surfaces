@@ -6,9 +6,8 @@ import { makePalette } from "./palette.ts"
 import { createRng, hash } from "./random.ts"
 import type { Recipe } from "./recipe.ts"
 import type { Box, Layer, Motion, Scene } from "./scene.ts"
-import { logoColours, readImage, readLogo } from "./image.ts"
+import { logoColours, readLogo } from "./image.ts"
 import type { ImageInput } from "./image.ts"
-import { facing, veil } from "../layouts/veil.ts"
 import { micrographics } from "../overlays/micro.ts"
 import { STYLES } from "../styles/index.ts"
 import { setTitle } from "./type.ts"
@@ -34,8 +33,6 @@ export type SurfaceInput = {
   motion?: MotionLevel
   // One of the shapes the style has been judged with. The seed picks otherwise.
   shape?: string
-  // A photo to print in the style's own inks, for the styles that take one.
-  image?: ImageInput
   // Words set into the art in the largest area it goes around, for images
   // nothing else can set them on: link previews, files, email.
   title?: string
@@ -187,8 +184,7 @@ function draw(input: SurfaceInput, fill = false, recipe: Recipe = STYLES[input.s
     fill,
     calm: behind ? [behind.box] : [],
     theme,
-    // A photo stays still.
-    motion: input.image ? ("none" as const) : motion,
+    motion,
     mood,
     p,
     shape,
@@ -196,23 +192,7 @@ function draw(input: SurfaceInput, fill = false, recipe: Recipe = STYLES[input.s
   }
   let layers: Layer[]
   let art: { subject?: Scene["subject"] } = {}
-  if (input.image && recipe.picture) {
-    const { href, fit } = readImage(input.image)
-    // The photo fills the canvas and the title gets the same veil the pools
-    // do, at full strength in its core, so it sits on paper whatever the photo.
-    layers = [
-      { kind: "fill", id: "ground", tone: "ground" },
-      { kind: "picture", id: "photo", href, fit, treatments: recipe.picture(context) },
-      // Only the veil's core: its wide outer haze would wash out half the
-      // photo, and the core alone holds the title's box.
-      ...veil(context, facing(context), {
-        veil: 1,
-        veilShift: 0.3,
-        veilTilt: 0,
-        veilRatio: 1,
-      }).filter((pool) => pool.id === "veil"),
-    ]
-  } else {
+  {
     const drawn = recipe.layout(context)
     art = drawn
     layers = recipe.finish(drawn, context)

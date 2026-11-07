@@ -3,7 +3,7 @@ import { STYLES } from "./styles/index.ts"
 import type { StyleName } from "./styles/index.ts"
 
 // Every style, said plainly, so a person or an agent can choose one by what it
-// looks like. The shapes and whether it takes a photo come from the style's
+// looks like. The shapes come from the style's
 // own recipe, so this never drifts from what the library draws.
 const ABOUT: Record<StyleName, { looks: string; suits: string }> = {
   underpaint: { looks: "An aura: pools of the brand's colour, its deeper and lighter shades and its partner hue, run together under grain.", suits: "Product launches, AI and software, any page that wants colour without a picture." },
@@ -33,8 +33,6 @@ export type CatalogEntry = {
   suits: string
   // The shapes it can be asked for by `shape`; empty when it has none.
   shapes: readonly string[]
-  // Whether it can print a caller's photo, by `image`.
-  takesImage: boolean
   // Whether it also makes avatars, by avatar(): only styles bold enough to
   // read at 24 pixels do.
   avatar: boolean
@@ -44,6 +42,5 @@ export const catalog: readonly CatalogEntry[] = (Object.keys(STYLES) as StyleNam
   style,
   ...ABOUT[style],
   shapes: (STYLES[style].shapes ?? []) as readonly string[],
-  takesImage: Boolean(STYLES[style].picture),
   avatar: (AVATAR_STYLES as readonly string[]).includes(style),
 }))

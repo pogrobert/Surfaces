@@ -203,10 +203,6 @@ export function colorAt(scene: Scene, x: number, y: number): Rgb {
       case "blur":
       case "soften":
         return layer.layers.reduce(draw, under)
-      case "picture":
-        // A photo is unknown here, so it counts as its first ink everywhere:
-        // the worst it could be.
-        return tone(layer.treatments[0]!.tone)
       case "clip":
         return contains(layer.shape, x, y)
           ? layer.layers.reduce(draw, under)

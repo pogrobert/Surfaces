@@ -211,14 +211,6 @@ const ART: Record<string, Phrase> = {
     `a glass ${pick({ ring: "ring", capsule: "capsule", arch: "arch" }, shape, "sphere")} glowing ${both(inks)}`,
 }
 
-// How a photo comes out in each style that takes one.
-const PHOTOS: Record<string, Phrase> = {
-  halftone: (_, inks) => `a photo printed in ${both(inks)} dots`,
-  riso: (_, inks) => `a photo printed in ${both(inks)} ink`,
-  dither: (_, inks) => `a pixelated ${both(inks)} photo`,
-  photocopy: (_, inks) => `a grainy ${both(inks)} photocopy of a photo`,
-}
-
 // The inks a drawing actually uses, deepest search first.
 function tonesIn(layers: readonly Layer[], found: Set<Tone>) {
   for (const layer of layers) {
@@ -229,8 +221,6 @@ function tonesIn(layers: readonly Layer[], found: Set<Tone>) {
     } else if (layer.kind === "stipple") {
       found.add(layer.tone)
       tonesIn(layer.layers, found)
-    } else if (layer.kind === "picture") {
-      for (const treatment of layer.treatments) found.add(treatment.tone)
     } else if ("layers" in layer) tonesIn(layer.layers, found)
   }
   return found
@@ -243,7 +233,6 @@ export function describe(scene: Scene, { title }: { title?: string } = {}) {
   const phrase = ART[scene.style]
   if (!phrase) throw new Error(`No description for style "${scene.style}"`)
   const used = tonesIn(scene.layers, new Set())
-  const photo = scene.layers.some((layer) => layer.kind === "picture")
   // The brand's ramp reads as one colour, named by its most colourful tone;
   // the partner, when it shows and is a different colour, as a second. The
   // ground, the title's colour and the palest wash are the page.
@@ -263,7 +252,7 @@ export function describe(scene: Scene, { title }: { title?: string } = {}) {
       if (!inks.includes(partner)) inks.push(partner)
     }
   }
-  const what = (photo ? (PHOTOS[scene.style] ?? ((_, names) => `a photo in ${list(names)}`)) : phrase)(scene.shape, inks)
+  const what = phrase(scene.shape, inks)
   const named = title?.trim()
   return named ? `Abstract cover art for "${named}": ${what}.` : `Abstract art: ${what}.`
 }

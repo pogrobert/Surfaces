@@ -1,7 +1,7 @@
 import type { Grain, Mood, MotionLevel, Theme } from "./intent.ts"
 import type { PaletteSpec } from "./palette.ts"
 import type { Range, Rng } from "./random.ts"
-import type { Box, Fill, Layer, Mark, Motion, Shape, Treatment } from "./scene.ts"
+import type { Box, Fill, Layer, Mark, Motion, Shape } from "./scene.ts"
 
 export type Ranges = Record<string, Range>
 
@@ -100,10 +100,6 @@ export type Recipe<R extends Ranges = Ranges> = {
   // With detail "micro", only the corner marks: for art too soft or too busy
   // to carry a ruler and a label without them reading as noise.
   marksOnly?: boolean
-  // How the style turns a caller's photo into its own inks. Only styles that
-  // map every pixel to the palette take a photo, so a title over it keeps its
-  // contrast without anyone looking at the photo.
-  picture?(context: RecipeContext<Extract<keyof R, string>>): Treatment[]
   layout(context: RecipeContext<Extract<keyof R, string>>): Art
   finish(art: Art, context: RecipeContext<Extract<keyof R, string>>): Layer[]
 }

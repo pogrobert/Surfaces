@@ -22,7 +22,6 @@ const OPTIONS = [
   "detail",
   "motion",
   "shape",
-  "image",
   "title",
   "font",
   "logo",
@@ -158,12 +157,6 @@ export function validate(input: unknown): Problems {
           : `Style "${input.style}" has no shapes to choose from; leave "shape" out.`
       )
     }
-  }
-  if (style && input.image !== undefined && !style.picture) {
-    const takers = Object.values(STYLES)
-      .filter((item) => item.picture)
-      .map((item) => item.style)
-    errors.push(`Style "${input.style}" does not take an image; ${list(takers)} do.`)
   }
 
   const areas = input.areas

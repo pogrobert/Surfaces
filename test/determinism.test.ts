@@ -73,8 +73,6 @@ function geometry(layer: Layer): unknown {
       return [layer.id, layer.radius, layer.ry, layer.layers.map(geometry)]
     case "clip":
       return [layer.id, layer.shape, layer.layers.map(geometry)]
-    case "picture":
-      return [layer.id, layer.fit]
     case "blur":
       return [
         layer.id,

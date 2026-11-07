@@ -64,10 +64,6 @@ export const inputSchema = {
     shape: { type: "string", description: "One of the style's shapes; see catalog." },
     title: { type: "string", maxLength: 160, description: "Words set into the art in the largest area it goes around, for images nothing else can set them on: link previews, files, email." },
     font: { type: "string", enum: ["sans", "serif"], description: "The face the title is set in. Default sans." },
-    image: {
-      type: "object",
-      description: "A photo printed in the style's inks, for styles whose catalog entry says takesImage.",
-    },
     logo: {
       type: "object",
       required: ["image", "place"],

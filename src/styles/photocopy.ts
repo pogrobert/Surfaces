@@ -58,19 +58,6 @@ export const photocopyStyle = defineRecipe({
   shapes: COPY_MOTIFS,
   aroundCentre: false,
 
-  picture: ({ p, rng, theme }) => [
-    {
-      type: "toner",
-      tone: "strong",
-      low: 0.28,
-      high: 0.62,
-      scale: p.grainSize,
-      hardness: p.hardness,
-      wash: p.wash,
-      seed: rng.fork("photo").int(1, 9999),
-      invert: theme === "dark",
-    },
-  ],
   layout: (context) => photocopy(context, context.shape as CopyMotif, context.p),
   finish(art, { p, rng }) {
     const seeds = rng.fork("grain")

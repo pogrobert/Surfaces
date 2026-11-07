@@ -222,8 +222,7 @@ without drawing.
 
 The package ships [AGENTS.md](AGENTS.md), a JSON Schema of the input
 (`@pogrobert/surfaces/schema.json`, also `inputSchema`), and `catalog`: every
-style with what it looks like, what it suits, its shapes and whether it takes
-a photo.
+style with what it looks like, what it suits and its shapes.
 
 ## Styles
 

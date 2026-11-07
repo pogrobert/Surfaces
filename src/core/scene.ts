@@ -157,35 +157,6 @@ export type Shapes = {
 
 export type Fill = { kind: "fill"; id: string; tone: Tone }
 
-// How a photo is turned into ink. Every treatment maps the photo's tone onto
-// one of the palette's inks, so a photo can only ever show the scene's own
-// colours, and a title over it keeps the contrast the palette promises.
-export type Treatment =
-  // Toner or ink laid where the photo is dark (or, with `invert`, light),
-  // between the `low` and `high` levels of that darkness, broken into grain.
-  | {
-      type: "toner"
-      tone: Tone
-      low: number
-      high: number
-      scale: number
-      hardness: number
-      wash: number
-      seed: number
-      invert: boolean
-      // A second pass through a press lands a little out of line.
-      offset?: { dx: number; dy: number; blend: "multiply" | "screen" }
-    }
-  // The photo's tone compared, cell by cell, with a screen of thresholds:
-  // round dots that grow with the dark, or an ordered 8 by 8 dither.
-  | {
-      type: "screen"
-      tone: Tone
-      screen: "dots" | "bayer"
-      cell: number
-      invert: boolean
-    }
-
 export type Mark = Pool | Shapes
 
 // Words set in one of the bundled faces, each line from its baseline at x, y
@@ -232,14 +203,6 @@ export type Layer =
       motion?: Motion
       // How strongly the finished plate shows when still.
       opacity?: number
-    }
-  // A caller's photo, filling the canvas, drawn once for each treatment.
-  | {
-      kind: "picture"
-      id: string
-      href: string
-      fit: string
-      treatments: Treatment[]
     }
   // A brand's own logo, drawn as it is and never recoloured: its file, fitted
   // inside the box at x, y and set to `align` along it.
