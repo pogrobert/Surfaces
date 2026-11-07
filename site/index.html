@@ -52,36 +52,26 @@
   .pitch { position: absolute; z-index: 2; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(620px, calc(100% - 32px)); background: var(--sheet); border-radius: 26px; padding: 26px 26px 18px; box-shadow: 0 0 0 1px var(--rule), 0 50px 90px -40px rgb(0 0 0 / 0.55); display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .pitch h1 { margin: 0; font-size: clamp(40px, 5vw, 58px); line-height: 0.95; letter-spacing: -0.05em; font-weight: 800; }
   .pitch p { margin: 0; font-size: 18px; line-height: 1.45; color: var(--quiet); text-wrap: pretty; }
-  .pitch .row { display: flex; gap: 8px; align-items: center; }
-  .pitch .ask { flex: 1; width: auto; min-width: 0; }
-  .shuffle { height: 58px; border: 1px solid var(--rule); background: var(--sheet); border-radius: 15px; padding: 0 18px; font-weight: 700; cursor: pointer; flex: none; }
-  @media (max-width: 560px) { .pitch { padding: 20px 18px 14px; } .pitch .row { flex-wrap: wrap; } .pitch .ask { flex-basis: 100%; } .shuffle { width: 100%; height: 46px; } }
-  /* The address: one piece, the button inside it. */
-  .ask { position: relative; display: flex; align-items: center; height: 58px; width: min(480px, 100%); background: var(--sheet); border-radius: 15px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 14%, transparent); padding: 6px 6px 6px 18px; gap: 8px; }
-  .ask:focus-within { box-shadow: 0 0 0 2px var(--ink); }
-  .ask .pre { color: var(--quiet); font-size: 17px; user-select: none; }
-  .ask input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 18px; padding: 0; height: 100%; }
-  .ask input::placeholder { color: color-mix(in srgb, var(--quiet) 70%, transparent); }
-  .ask button { height: 46px; border: 0; border-radius: 11px; padding: 0 18px; background: var(--ink); color: var(--paper); font-weight: 700; cursor: pointer; white-space: nowrap; }
-  .ask button:disabled { opacity: 0.6; cursor: progress; }
-  /* Sites for what is typed, under the field. */
-  .suggest { position: absolute; left: 0; right: 0; top: calc(100% + 8px); z-index: 3; margin: 0; padding: 6px; list-style: none; text-align: left; background: var(--sheet); border-radius: 14px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 14%, transparent), 0 18px 40px -24px rgb(0 0 0 / 0.35); }
-  .suggest[hidden] { display: none; }
-  .suggest li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 9px; cursor: pointer; font-size: 16px; }
-  .suggest .icon { width: 22px; height: 22px; border-radius: 5px; object-fit: contain; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: var(--quiet); background: color-mix(in srgb, var(--ink) 7%, transparent); }
-  .suggest img.icon { background: none; }
-  .suggest li[aria-selected="true"], .suggest li:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
-  .suggest b { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .suggest span { color: var(--quiet); white-space: nowrap; }
-  .pitch .or { margin: 0; font-size: 15px; color: var(--quiet); }
-  .link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font-weight: 700; }
-  .pitch .status { min-height: 1.5em; margin: -6px 0 0; font-size: 15px; }
-  @media (max-width: 420px) { .ask .pre { display: none; } }
+  .pitch .row { display: flex; gap: 14px; align-items: center; }
+  .shuffle { height: 44px; border: 1px solid var(--rule); background: var(--sheet); border-radius: 12px; padding: 0 16px; font-weight: 700; cursor: pointer; flex: none; margin-left: auto; }
+  .pitch .go { height: 50px; border: 0; border-radius: 13px; padding: 0 22px; background: var(--ink); color: var(--paper); font-weight: 700; font-size: 17px; cursor: pointer; flex: none; }
+  .pitch .or { margin: 0; font-size: 14px; line-height: 1.4; color: var(--quiet); }
+  .pitch code, .side code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; }
+  @media (max-width: 560px) { .pitch { padding: 20px 18px 16px; } .pitch .row { flex-wrap: wrap; } .shuffle { margin-left: 0; } .pitch .go { width: 100%; } }
+  /* A brand's colour, picked: the usual inks, and any other. */
+  .colours { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .colours button, .colours label { width: 30px; height: 30px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.14); position: relative; flex: none; }
+  .colours button[aria-pressed="true"], .colours label[data-on="true"] { box-shadow: 0 0 0 2px var(--sheet), 0 0 0 4px var(--ink); }
+  .colours label { background: conic-gradient(#f15060, #f59e0b, #00a95c, #00838a, #0078bf, #635bff, #e5488f, #f15060); }
+  .colours label input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .read .colours button, .read .colours label { width: 24px; height: 24px; }
 
   /* What was read, each part a click from being put right. */
   .read { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 26px; padding: 14px 18px; background: var(--sheet); border-radius: 16px; box-shadow: 0 0 0 1px var(--rule); font-size: 15px; }
   .read .site { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; }
   .read .site img { height: 24px; max-width: 120px; object-fit: contain; }
+  .read .site input { font-weight: 700; font-size: 17px; border: 0; background: transparent; padding: 4px 6px; margin-left: -6px; border-radius: 8px; width: 15ch; }
+  .read .site input:hover, .read .site input:focus { background: color-mix(in srgb, var(--ink) 6%, transparent); outline: 0; }
   .read .part { display: flex; align-items: center; gap: 10px; color: var(--quiet); }
   .read .part b { color: var(--ink); font-weight: 600; }
   .read .grow { flex: 1; }
@@ -206,25 +196,21 @@
     <h1>Surfaces</h1>
     <p>Generative art for every picture your site shows: posts, docs, link previews, headers, empty states and slides. Nineteen styles, drawn in your own colours.</p>
     <div class="row">
-      <form class="ask" id="ask">
-        <span class="pre" aria-hidden="true">https://</span>
-        <label class="sr" for="url">Your site's address</label>
-        <input id="url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="yoursite.com" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggest">
-        <button id="go" type="submit">Make it mine</button>
-        <ul class="suggest" id="suggest" role="listbox" aria-label="Sites" hidden></ul>
-      </form>
+      <div class="colours" id="landColours" role="group" aria-label="Your brand's colour"></div>
       <button class="shuffle" type="button" id="shuffle">Shuffle</button>
     </div>
-    <p class="or">No site yet? <button class="link" type="button" id="browse">Explore the styles</button></p>
-    <p class="status" id="status" role="status" aria-live="polite"></p>
+    <div class="row">
+      <button class="go" type="button" id="browse">Explore the styles</button>
+      <p class="or">In your project, <code>npx @pogrobert/surfaces init</code> reads your site and picks for you.</p>
+    </div>
   </div>
 </section>
 
 <main class="work" id="work" hidden>
-  <section class="read" aria-label="What we read">
-    <span class="site"><img id="readLogo" alt="" hidden><span id="readName">yoursite.com</span></span>
-    <span class="part">Colour <span class="swatches" id="swatches" role="group" aria-label="The brand's colour"></span></span>
-    <span class="part">Type <b id="readFont">A sans</b></span>
+  <section class="read" aria-label="Your brand">
+    <span class="site"><img id="readLogo" alt="" hidden><label class="sr" for="name">Your site's name</label><input id="name" type="text" spellcheck="false" autocomplete="off" placeholder="yoursite.com"></span>
+    <span class="part">Colour <span class="colours" id="swatches" role="group" aria-label="The brand's colour"></span></span>
+    <span class="part">Type <span class="choice" id="type" role="group" aria-label="Type"></span></span>
     <span class="grow"></span>
     <span class="part"><span class="choice" id="theme" role="group" aria-label="Ground"></span></span>
   </section>
@@ -327,11 +313,6 @@
         <p class="note">Set on the link preview and the headers. An SVG, or a PNG.</p>
       </div>
       <div class="group">
-        <h3>Name</h3>
-        <div class="field"><label class="sr" for="name">The brand's name</label><input id="name" type="text" spellcheck="false"></div>
-        <p class="note">It is in every drawing, so no other site gets yours.</p>
-      </div>
-      <div class="group">
         <h3>Why these</h3>
         <ul class="why" id="why"></ul>
         <p style="margin:12px 0 0"><button class="plain" type="button" id="reset">Back to our pick</button></p>
@@ -341,7 +322,7 @@
 </main>
 
 <script type="module">
-import { createBrand, generate, readPage, toHtml, catalog } from "/dist/index.js"
+import { createBrand, generate, toHtml, catalog } from "/dist/index.js"
 import { toPngInBrowser } from "/dist/png.js"
 import { KINDS, SAMPLES, scene, tiles, wall, TILES } from "/wall.js"
 
@@ -350,7 +331,7 @@ const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i
 const NAMES = Object.fromEntries(catalog.map((entry) => [entry.style, entry.style[0].toUpperCase() + entry.style.slice(1)]))
 // What the page knows: the site's facts once read, its logo, and what the
 // person has chosen over the brand's own pick.
-const state = { name: "yoursite.com", facts: {}, logo: undefined, logoUrl: "", read: false, chosen: {}, title: "", variant: 0 }
+const state = { name: "yoursite.com", logo: undefined, logoUrl: "", chosen: {}, title: "", variant: 0 }
 
 // ---- The landing: the wall ----
 
@@ -359,7 +340,7 @@ const state = { name: "yoursite.com", facts: {}, logo: undefined, logoUrl: "", r
 // once one is read, or on a shuffle.
 let shuffle = 0
 let walled = JSON.stringify({ shuffle: 0, brand: null })
-const wallBrand = () => (state.read ? { name: state.name, color: createBrand(choices()).look.color } : null)
+const wallBrand = () => (state.chosen.color ? { name: state.name, color: state.chosen.color } : null)
 const unseen = new IntersectionObserver((entries) => {
   for (const entry of entries) {
     if (!entry.isIntersecting) continue
@@ -444,157 +425,42 @@ $("#shuffle").addEventListener("click", () => {
   drawWall()
 })
 
-// ---- Suggestions as the address is typed ----
+// ---- The brand's colour, picked on the landing ----
 
-// Sites read here before come first, then sites whose names match.
-const RECENT = "surfaces:recent"
-const recent = () => {
-  try {
-    return JSON.parse(localStorage.getItem(RECENT) ?? "[]")
-  } catch {
-    return []
-  }
-}
-const remember = (domain) => {
-  try {
-    localStorage.setItem(RECENT, JSON.stringify([domain, ...recent().filter((other) => other !== domain)].slice(0, 6)))
-  } catch {}
-}
-const suggestions = { list: [], active: -1, asked: 0, waiting: 0 }
-function showSuggestions(list) {
-  suggestions.list = list
-  suggestions.active = -1
-  renderSuggestions()
-}
-function renderSuggestions() {
-  const { list, active } = suggestions
-  $("#suggest").replaceChildren(
-    ...list.map((site, index) => {
-      const item = document.createElement("li")
-      item.id = `suggest-${index}`
-      item.setAttribute("role", "option")
-      item.setAttribute("aria-selected", String(index === active))
-      // The site's favicon, or its first letter where it has none.
-      const icon = document.createElement("img")
-      icon.className = "icon"
-      icon.alt = ""
-      icon.src = `/icon?domain=${encodeURIComponent(site.domain)}`
-      icon.addEventListener("error", () => {
-        const letter = document.createElement("span")
-        letter.className = "icon"
-        letter.textContent = site.name.trim()[0]?.toUpperCase() ?? ""
-        icon.replaceWith(letter)
-      })
-      const name = document.createElement("b")
-      name.textContent = site.name
-      const domain = document.createElement("span")
-      domain.textContent = site.recent ? "read before" : site.name === site.domain ? "" : site.domain
-      item.append(icon, name, domain)
-      // Down, not click, so the field doesn't lose focus and close the list first.
-      item.addEventListener("mousedown", (event) => {
-        event.preventDefault()
-        pick(site.domain)
-      })
-      return item
-    })
+// The usual inks a brand is printed in, and any other through the picker.
+const COLOURS = ["#0078bf", "#3d5588", "#635bff", "#00838a", "#00a95c", "#f59e0b", "#ff6c2f", "#f15060", "#e5488f", "#18181b"]
+function colours(target, current, pick) {
+  const custom = current && !COLOURS.includes(current.toLowerCase())
+  const own = make("label", { title: "Any colour" })
+  own.dataset.on = String(Boolean(custom))
+  if (custom) own.style.background = current
+  const input = make("input", { type: "color", value: HEX.test(current ?? "") && current.length === 7 ? current : "#0078bf" })
+  input.setAttribute("aria-label", "Any colour")
+  input.addEventListener("change", () => pick(input.value.toLowerCase()))
+  own.append(input)
+  target.replaceChildren(
+    ...COLOURS.map((color) => {
+      const swatch = make("button", { type: "button", title: color })
+      swatch.style.background = color
+      swatch.setAttribute("aria-label", `Use ${color}`)
+      swatch.setAttribute("aria-pressed", String(color === current?.toLowerCase()))
+      swatch.addEventListener("click", () => pick(color))
+      return swatch
+    }),
+    own
   )
-  $("#suggest").hidden = !list.length
-  $("#url").setAttribute("aria-expanded", String(list.length > 0))
-  if (active >= 0) $("#url").setAttribute("aria-activedescendant", `suggest-${active}`)
-  else $("#url").removeAttribute("aria-activedescendant")
 }
-function pick(domain) {
-  $("#url").value = domain
-  showSuggestions([])
-  $("#ask").requestSubmit()
+// Picking a colour turns the wall into it at once; the explorer opens in it.
+function drawLanding() {
+  colours($("#landColours"), state.chosen.color, (color) => {
+    state.chosen = { ...state.chosen, color }
+    drawLanding()
+    drawWall()
+    if (!$("#work").hidden) draw()
+  })
 }
-function suggestFor(typed) {
-  clearTimeout(suggestions.waiting)
-  const query = typed.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "")
-  const mine = recent().filter((domain) => domain.startsWith(query)).map((domain) => ({ name: domain, domain, recent: true }))
-  if (query.length < 2) return showSuggestions(mine)
-  showSuggestions(mine)
-  suggestions.waiting = setTimeout(async () => {
-    const asked = ++suggestions.asked
-    const found = await fetch(`/suggest?q=${encodeURIComponent(query)}`).then((response) => response.json()).catch(() => [])
-    // A slower answer to an earlier query never replaces a newer one.
-    if (asked !== suggestions.asked || $("#url").value.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "") !== query) return
-    const seen = new Set(mine.map((site) => site.domain))
-    showSuggestions([...mine, ...found.filter((site) => !seen.has(site.domain))].slice(0, 6))
-  }, 140)
-}
-$("#url").addEventListener("input", () => suggestFor($("#url").value))
-$("#url").addEventListener("focus", () => suggestFor($("#url").value))
-$("#url").addEventListener("blur", () => showSuggestions([]))
-$("#url").addEventListener("keydown", (event) => {
-  const { list, active } = suggestions
-  if (event.key === "ArrowDown" && list.length) {
-    event.preventDefault()
-    suggestions.active = (active + 1) % list.length
-    renderSuggestions()
-  } else if (event.key === "ArrowUp" && list.length) {
-    event.preventDefault()
-    suggestions.active = active <= 0 ? list.length - 1 : active - 1
-    renderSuggestions()
-  } else if (event.key === "Enter" && active >= 0) {
-    event.preventDefault()
-    pick(list[active].domain)
-  } else if (event.key === "Escape") {
-    showSuggestions([])
-  }
-})
-
-// ---- Reading a site ----
-
-const say = (text) => ($("#status").textContent = text)
-
-$("#ask").addEventListener("submit", async (event) => {
-  event.preventDefault()
-  const address = $("#url").value.trim()
-  if (!address) {
-    say("Type your site's address, such as acme.com.")
-    $("#url").focus()
-    return
-  }
-  $("#go").disabled = true
-  $("#go").textContent = "Reading…"
-  $("#hero").classList.add("reading")
-  say(`Reading ${address.replace(/^https?:\/\//, "")}…`)
-  try {
-    const response = await fetch(`/read?url=${encodeURIComponent(address)}`)
-    const site = await response.json()
-    if (!response.ok) throw new Error(site.error ?? "The site couldn't be read")
-    state.name = site.name
-    state.facts = readPage(site.html, site.css)
-    state.read = true
-    state.chosen = {}
-    state.variant = 0
-    history.length = 0
-    setLogo(site.logo?.svg ?? (site.logo?.png ? { data: bytes(site.logo.png), type: "image/png" } : undefined))
-    state.title = firstTitle(state.facts.words, site.name) ?? "How we cut our build times in half"
-    const found = [state.facts.colors?.length && "its colours", state.facts.fonts && "its type", site.logo && "its logo"].filter(Boolean)
-    remember(site.name)
-    say(found.length ? `Read ${list(found)} from ${site.name}.` : `${site.name} shows little before its scripts run, so the choices below are ours.`)
-    open()
-  } catch (error) {
-    say(/doesn't let tools/.test(error.message) ? `${error.message}.` : `${error.message}. Check the address, or browse the styles instead.`)
-  } finally {
-    $("#go").disabled = false
-    $("#go").textContent = "Make it mine"
-    $("#hero").classList.remove("reading")
-  }
-})
-
 $("#browse").addEventListener("click", () => {
-  state.name = "yoursite.com"
-  state.facts = {}
-  state.read = false
-  state.chosen = {}
-  state.variant = 0
   history.length = 0
-  setLogo(undefined)
-  state.title = "How we cut our build times in half"
-  say("")
   open()
 })
 
@@ -602,22 +468,6 @@ function open() {
   $("#work").hidden = false
   draw()
   $("#work").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" })
-}
-
-const bytes = (base64) => Uint8Array.from(atob(base64), (char) => char.charCodeAt(0))
-const list = (parts) => (parts.length < 3 ? parts.join(" and ") : `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`)
-// A line of the site's own to try titles with: its first phrase of a fair
-// length, with a " - Brand" or " | Brand" ending left off, and not its name
-// as a home, "BBC Homepage", nor a note that the page needs scripts to run.
-const firstTitle = (words, name = "") => {
-  const own = name.replace(/^www\./, "").split(".")[0].toLowerCase()
-  return words
-    ?.split(/\s+[-–—|·:\\•/]\s+|:\s|[.!?]\s|[|·•–—]/)
-    .map((part) => part.trim())
-    .find((part) => {
-      const bare = part.toLowerCase().replace(/\b(?:home\s*page|home|official\s+(?:web)?site|welcome)\b/g, "").replace(/[^\p{L}\p{N}]/gu, "")
-      return part.length >= 8 && part.length <= 70 && bare !== own && bare !== "" && !/\b(?:javascript|cookies|browser)\b/i.test(part)
-    })
 }
 
 function setLogo(logo) {
@@ -642,25 +492,14 @@ function step(change) {
 }
 
 function choices() {
-  return { name: state.name.trim() || "yoursite.com", ...state.facts, ...(state.logo ? { logo: state.logo } : null), ...state.chosen }
+  return { name: state.name.trim() || "yoursite.com", ...(state.logo ? { logo: state.logo } : null), ...state.chosen }
 }
 
-// The site's own heading face, loaded from Google Fonts when it is one, so
-// its titles are set in it here as they would be on the site. Anything the
-// page can't load falls back to a face of the same kind.
-const SYSTEM = /^(?:system-ui|-apple-system|blinkmacsystemfont|segoe ui|roboto|helvetica|helvetica neue|arial|sans-serif|serif|georgia|times|times new roman|ui-sans-serif|ui-serif|inherit|var\(.*)$/i
-const loaded = new Set()
+// The face titles are set in here: a sans or a serif, as the brand's type is.
 function faceOf(brand) {
-  const family = (state.facts.fonts?.heading ?? state.facts.fonts?.body ?? "").split(",")[0]?.trim().replace(/^["']|["']$/g, "") ?? ""
-  const kind = brand.look.font === "serif" ? `Georgia, "Times New Roman", serif` : `"Atkinson Hyperlegible Next", "Atkinson Fallback", Arial, sans-serif`
-  if (!/^[A-Za-z0-9 ]{2,40}$/.test(family) || SYSTEM.test(family)) return { stack: kind, name: brand.look.font === "serif" ? "A serif" : "A sans" }
-  if (!loaded.has(family)) {
-    loaded.add(family)
-    const link = Object.assign(document.createElement("link"), { rel: "stylesheet", href: `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@500;600;700&display=swap` })
-    link.addEventListener("load", () => document.fonts.ready.then(fitAll))
-    document.head.append(link)
-  }
-  return { stack: `"${family}", ${kind}`, name: family }
+  return brand.look.font === "serif"
+    ? { stack: `Georgia, "Times New Roman", serif`, name: "Serif" }
+    : { stack: `"Atkinson Hyperlegible Next", "Atkinson Fallback", Arial, sans-serif`, name: "Sans" }
 }
 
 // Which view of the chosen style shows: its variations, or the places it goes.
@@ -676,7 +515,7 @@ function draw() {
   }
   // The wall repaints in the brand: the page becomes the site's own.
   drawWall()
-  drawRead(brand)
+  drawBrand(brand)
   drawList(brand)
   drawHead(brand)
   if (view === "variations") drawVariations(brand)
@@ -710,41 +549,16 @@ const make = (tag, props = {}, ...children) => {
   return el
 }
 
-// The page's strong colours, most named and used first: neither near white
-// nor near black, nor grey, so each could be a brand's. Near-twins, such as
-// a red and its hover, count once.
-function ownColours(brand) {
-  const strong = (hex) => {
-    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
-    const high = Math.max(r, g, b)
-    const low = Math.min(r, g, b)
-    const light = (high + low) / 2
-    return high - low > (light > 0.75 ? 0.12 : 0.18) && light > 0.18 && light < 0.94
-  }
-  const channels = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))
-  const apart = (a, b) => Math.hypot(...channels(a).map((value, i) => value - channels(b)[i])) > 60
-  const own = brand.look.color ? [brand.look.color.toLowerCase()] : []
-  for (const color of new Set((state.facts.colors ?? []).filter((color) => HEX.test(color) && color.length === 7).map((color) => color.toLowerCase()))) {
-    if (own.length < 7 && strong(color) && own.every((other) => apart(color, other))) own.push(color)
-  }
-  return own
-}
-
-function drawRead(brand) {
-  $("#readName").textContent = brand.name
+// The brand's few choices, on one strip: its name, colour, type and ground.
+function drawBrand(brand) {
+  if (document.activeElement !== $("#name")) $("#name").value = state.name
   $("#readLogo").hidden = !state.logo
   if (state.logo) $("#readLogo").src = state.logoUrl
-  $("#readFont").textContent = faceOf(brand).name
-  $("#swatches").replaceChildren(
-    ...ownColours(brand).map((color) => {
-      const swatch = make("button", { type: "button", title: color })
-      swatch.style.background = color
-      swatch.setAttribute("aria-label", `Use ${color}`)
-      swatch.setAttribute("aria-pressed", String(color === brand.look.color?.toLowerCase()))
-      swatch.addEventListener("click", () => choose({ color }))
-      return swatch
-    })
-  )
+  colours($("#swatches"), brand.look.color, (color) => {
+    choose({ color })
+    drawLanding()
+  })
+  segmented("#type", [["sans", "Sans"], ["serif", "Serif"]], brand.look.font ?? "sans", (font) => choose({ font: font === "sans" ? undefined : font }))
   segmented("#theme", [["light", "Light"], ["dark", "Dark"], ["auto", "Follow the reader"]], brand.look.theme, (theme) => choose({ theme }))
 }
 
@@ -877,9 +691,10 @@ function drawVariations(brand) {
   const shapes = catalog.find((entry) => entry.style === look.style)?.shapes ?? []
   $("#shapeAxis").hidden = !shapes.length
   $("#shapes").replaceChildren(...shapes.map((shape) => tile(shape[0].toUpperCase() + shape.slice(1), { shape }, as({ shape }).og({ title, id: idOf(title) }))))
-  const own = ownColours(brand)
-  const colours = [...own, ...SAMPLES.map((sample) => sample.color).filter((color) => !own.includes(color))].slice(0, 4)
-  $("#colours").replaceChildren(...colours.map((color) => tile(color, { color }, as({ color }).og({ title, id: idOf(title) }))))
+  // The brand's own colour beside a few others it could be.
+  const current = look.color?.toLowerCase()
+  const others = [current, ...COLOURS.filter((color) => color !== current)].filter(Boolean).slice(0, 4)
+  $("#colours").replaceChildren(...others.map((color) => tile(color, { color }, as({ color }).og({ title, id: idOf(title) }))))
   const input = flat.input("card", { id: idOf(title) })
   $("#sizes").replaceChildren(
     ...[
@@ -951,7 +766,6 @@ function drawSide(brand) {
       make("li", { textContent: line.replace(/^(\w+) /, (_, key) => `${{ color: "Colour", theme: "Ground", style: "Style", mood: "Feel", grain: "Grain", font: "Type", shape: "Mark" }[key] ?? key} `) })
     )
   )
-  $("#name").value = state.name
   const parts = Object.entries({ name: brand.name, ...brand.look }).map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
   const logo = state.logo ? `,\n  logo: await readFile("public/logo.${typeof state.logo === "string" ? "svg" : "png"}"${typeof state.logo === "string" ? `, "utf8"` : ""})` : ""
   $("#code").textContent = `import { createBrand } from "@pogrobert/surfaces"\n\nexport const brand = createBrand({\n  ${parts.join(",\n  ")}${logo},\n})\n\n// On a page: the art, the title in your font\n<Cover brand={brand} title={post.title} />\n\n// A link preview file, its title drawn in\ntoJpeg(brand.og({ title, drawTitle: true }))`
@@ -1038,6 +852,9 @@ $("#copyAgent").addEventListener("click", () => {
   )
 })
 
+
+// The landing's colours, once everything they draw with is defined.
+drawLanding()
 </script>
 </body>
 </html>
