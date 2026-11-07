@@ -219,10 +219,6 @@
       <div class="field cover-only" id="shapeField"><label for="shape">Shape</label><select id="shape"></select></div>
       <div class="field cover-only"><div class="label">Detail</div><div class="seg" id="detail" role="group" aria-label="Detail"></div></div>
       <div class="field cover-only"><div class="label">Motion</div><div class="seg" id="motion" role="group" aria-label="Motion"></div></div>
-      <div class="field cover-only" id="photoField" hidden>
-        <label for="photo">Photo, printed in the style's inks</label>
-        <div class="row"><input type="file" id="photo" accept="image/png,image/jpeg,image/webp"><button class="icon" id="clearPhoto" type="button" hidden>Remove</button></div>
-      </div>
     </div>
   </div>
 
@@ -246,7 +242,7 @@
 <div class="toast" id="toast" role="status"></div>
 
 <script type="module">
-import { generate, validate, describe, toSvg, toHtml, catalog, formats, PLACES, MOODS, GRAINS, DETAILS, MOTIONS, MOST_IMAGE_BYTES, avatar, validateAvatar, AVATAR_STYLES } from "/dist/index.js"
+import { generate, validate, describe, toSvg, toHtml, catalog, formats, PLACES, MOODS, GRAINS, DETAILS, MOTIONS, avatar, validateAvatar, AVATAR_STYLES } from "/dist/index.js"
 import { watch } from "/dist/dom.js"
 import { toPngInBrowser } from "/dist/png.js"
 
@@ -293,7 +289,6 @@ const state = {
 const PEOPLE = [["ada", "Ada Lovelace"], ["grace", "Grace Hopper"], ["linus", "Linus Torvalds"], ["margaret", "Margaret Hamilton"], ["alan", "Alan Turing"], ["barbara", "Barbara Liskov"], ["dennis", "Dennis Ritchie"], ["katherine", "Katherine Johnson"]]
 const nameOf = (handle) => PEOPLE.find(([h]) => h === handle)?.[1] ?? handle
 const avatarMode = () => state.mode === "avatar"
-let photo = null
 let others = Array.from({ length: 8 }, randomSeed)
 
 // The link holds the state, so a setup can be shared.
@@ -334,7 +329,6 @@ function input({ seed = state.seed, still = false } = {}) {
   if (state.detail !== "none") value.detail = state.detail
   if (state.motion !== "none" && !still) value.motion = state.motion
   if (state.shape && entry()?.shapes.includes(state.shape)) value.shape = state.shape
-  if (photo && entry()?.takesImage) value.image = photo
   return value
 }
 
@@ -398,8 +392,6 @@ function drawControls() {
     option.selected = state.shape === value
     return option
   }))
-  $("#photoField").hidden = !entry()?.takesImage
-  $("#clearPhoto").hidden = !photo
   drawAreas()
   $("#layouts").replaceChildren(...Object.entries(LAYOUTS).map(([name, areas]) => {
     const chip = document.createElement("button")
@@ -472,14 +464,6 @@ for (const [id, kind, place, size] of [["#addTitle", "title", "bottom-left", "lg
     update()
   })
 }
-$("#photo").addEventListener("change", async (event) => {
-  const file = event.target.files?.[0]
-  if (!file) return
-  if (file.size > MOST_IMAGE_BYTES) { toast(`That photo is over ${MOST_IMAGE_BYTES / 1024 / 1024} MB`); return }
-  photo = { data: new Uint8Array(await file.arrayBuffer()), type: file.type }
-  update()
-})
-$("#clearPhoto").addEventListener("click", () => { photo = null; $("#photo").value = ""; update() })
 
 // ---- Drawing --------------------------------------------------------------
 // Content placed in its area, aligned to the side it hangs from, coloured
@@ -774,10 +758,9 @@ function code() {
   const onlyTitle = state.areas.length === 1 && state.areas[0].kind === "title" && state.areas[0].place === "bottom-left" && state.areas[0].size === "lg"
   const props = Object.entries(shown).filter(([key]) => key !== "areas").map(([key, v]) =>
     key === "seed" ? `seed={post.slug}` : typeof v === "number" ? `${key}={${v}}` : `${key}="${v}"`)
-  const photoNote = photo ? "\n// image: your photo's bytes, as { data, type }." : ""
   switch (state.tab) {
     case "input":
-      return { text: literal(json(shown)) + photoNote, note: "The whole input. Every value comes from a fixed list; validate(input) checks it without drawing." }
+      return { text: literal(json(shown)), note: "The whole input. Every value comes from a fixed list; validate(input) checks it without drawing." }
     case "react": {
       const head = `import { Surface } from "@pogrobert/surfaces/react"\n\n`
       if (onlyTitle) return { text: `${head}<Surface\n  ${props.join("\n  ")}\n>\n  <h1>{post.title}</h1>\n</Surface>`, note: "Children are one large title at the bottom left." }
