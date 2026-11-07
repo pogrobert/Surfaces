@@ -205,8 +205,20 @@ export function createBrand(choices: BrandChoices): Brand {
 }
 
 // The logo as an input takes it: one image, and one for dark covers.
-function logoFor(logo: Logo | undefined, use: Use): SurfaceInput["logo"] {
-  const place = LOGO_AT[use]
+// A link preview's layout, one of three judged for every style, picked by
+// the brand's name and kept for all its previews, so a site's link previews
+// are one set and two sites' are not alike: the title at the foot with the
+// logo over it, at the head with the logo at the foot, or mirrored, the art
+// on the left. Each logo sits as a letterhead's does, on the title's edge.
+const OG_LAYOUTS: readonly { title: Place; logo: Place }[] = [
+  { title: "bottom-left", logo: "top-left" },
+  { title: "top-left", logo: "bottom-left" },
+  { title: "bottom-right", logo: "top-right" },
+]
+const ogLayout = (name: string) => OG_LAYOUTS[hash(`${name}/og`) % OG_LAYOUTS.length]!
+
+function logoFor(logo: Logo | undefined, use: Use, name: string): SurfaceInput["logo"] {
+  const place = use === "og" ? ogLayout(name).logo : LOGO_AT[use]
   if (!logo || !place) return undefined
   const both = typeof logo === "object" && "light" in logo ? logo : { light: logo as string | ImageInput }
   return { image: both.light, ...(both.dark ? { dark: both.dark } : null), place }
@@ -228,14 +240,14 @@ function build(name: string, look: Brand["look"], why: string[], logo?: Logo): B
       seed: `${name}/${about.trim()}`,
       ...(look.color ? { color: look.color } : null),
       ...placing.size,
-      ...areasOf(placing, drawn),
+      ...areasOf(use === "og" ? { ...placing, areas: placing.areas.map((area) => ({ ...area, place: ogLayout(name).title })) } : placing, drawn),
       theme: look.theme,
       ...(look.mood ? { mood: look.mood } : null),
       ...(look.grain ? { grain: look.grain } : null),
       ...(look.shape ? { shape: look.shape } : content.tag?.trim() ? familyShape(look.style, name, content.tag.trim()) : null),
       ...(drawn ? { title: content.title!.trim(), ...(look.font ? { font: look.font } : null) } : null),
       ...(placing.motion && !drawn ? { motion: placing.motion } : null),
-      ...(logoFor(logo, use) ? { logo: logoFor(logo, use) } : null),
+      ...(logoFor(logo, use, name) ? { logo: logoFor(logo, use, name) } : null),
     }
   }
   const draw = (use: Use) => (content: Content) => generate(input(use, content))

@@ -104,7 +104,7 @@ const LEANS: Record<Face | Tone | "dark" | "bright", Partial<Record<StyleName, n
   glossy: { chrome: 3, glass: 3, fluted: 2, sfumato: 1 },
   calm: { underpaint: 3, sfumato: 2, aquatint: 2 },
   dark: { mezzotint: 1, moire: 1, sfumato: 1, chrome: 1 },
-  bright: { stencil: 2, riso: 2, screenprint: 2, underpaint: 1, strata: 1, halftone: 1, marbling: 1, engraving: -2, mezzotint: -2, aquatint: -1, moire: -1 },
+  bright: { stencil: 2, riso: 2, screenprint: 2, underpaint: 1, strata: 1, halftone: 1, dither: 1, marbling: 1, engraving: -2, mezzotint: -2, aquatint: -1, moire: -1 },
 }
 
 const SAID: Record<Face | Tone | "bright", string> = {
@@ -127,9 +127,10 @@ export const PLACING: Record<Use, { size: { width: number; height: number }; are
   post: { size: { width: 1600, height: 900 }, areas: [{ place: "bottom-left", size: "lg" }], said: "a post's cover carries its title at the bottom left" },
   card: { size: { width: 1600, height: 900 }, areas: [], said: "a card's title sits beside the cover, so the art fills it" },
   hero: { size: { width: 2400, height: 1200 }, areas: [{ place: "center", size: "lg" }], motion: "loop", said: "a hero carries its title in the middle and is the one cover on the page that moves" },
-  // A link preview's title sits at its foot, so the art has the top and the
-  // right to be seen at the size a feed shows it.
-  og: { size: formats.og, areas: [{ place: "bottom-left", size: "md" }], said: "a link preview carries its title at the bottom left" },
+  // A link preview's title sits at an edge, so the art has the rest to be
+  // seen at the size a feed shows it: which edge is the brand's own (see
+  // OG_LAYOUTS in brand.ts).
+  og: { size: formats.og, areas: [{ place: "bottom-left", size: "md" }], said: "a link preview carries its title at an edge" },
   // A profile's header. X lays the profile's photo over its bottom left, so
   // nothing that must be seen goes there; the art runs on under the photo,
   // with no patch of ground cut out for it.
@@ -400,7 +401,16 @@ function readStyles(html: string, css: string): Omit<PageFacts, "covers"> {
     .filter((entry): entry is { name: string; color: string } => Boolean(entry.color) && !NOT_BRAND.test(entry.name))
     .sort((a, b) => rank(a.name) - rank(b.name))
     .map((entry) => entry.color)
-  const colors = [...new Set([...named, ...[...counts].sort((a, b) => b[1] - a[1]).map(([color]) => color)])]
+  // Colours the page declares for itself in its head: the one Safari draws
+  // its pinned tab in, chosen as the brand's mark colour, first of all; and
+  // the browser's theme colour after the named ones, as it is as often the
+  // page's ground as its brand. A ground among them is passed over later.
+  const tags = html.match(/<(?:meta|link)\b[^>]*>/gi) ?? []
+  const tagged = (test: RegExp, key: string) =>
+    tags.filter((tag) => test.test(tag) && !/prefers-color-scheme:\s*dark/i.test(tag)).map((tag) => hex(tag.match(new RegExp(String.raw`\b${key}\s*=\s*["']\s*([^"']+?)\s*["']`, "i"))?.[1]?.trim())).filter((color): color is string => Boolean(color))
+  const pinned = tagged(/rel\s*=\s*["'][^"']*mask-icon/i, "color")
+  const themed = tagged(/name\s*=\s*["']theme-color["']/i, "content")
+  const colors = [...new Set([...pinned, ...named, ...themed, ...[...counts].sort((a, b) => b[1] - a[1]).map(([color]) => color)])]
   if (colors.length) facts.colors = colors
 
   if (/prefers-color-scheme\s*:\s*dark|\.dark\b|data-theme=["']?dark/i.test(source)) facts.darkMode = true

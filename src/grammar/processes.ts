@@ -174,11 +174,15 @@ export const press: ProcessPart = {
       paint: { type: "solid" as const, tone: "accent" as const, opacity: 1 },
       shapes: [piece.clip],
     }))
-    const second = shapes.length < 2 ? shapes : shapes.filter((_, index) => index % 2 === 1)
+    // Each piece in one ink, as a two-colour screen lays them: the brand's,
+    // and every other piece its partner's, out of line with the first. One
+    // ink over the other, a complement as often as not, prints mud.
+    const first = shapes.filter((_, index) => index % 2 === 0)
+    const second = shapes.filter((_, index) => index % 2 === 1)
     const seeds = rng.fork("press")
     const angle = radians(p.registerAngle!)
     return print(
-      { ...art, marks: [...art.marks, ...shapes], second, pieces: [] },
+      { ...art, marks: [...art.marks, ...first], second, pieces: [] },
       {
         scale: p.grainSize!,
         hardness: p.hardness!,

@@ -195,3 +195,12 @@ test("the faces real sites set their headings in are known", () => {
   assert.equal(createBrand({ name: "a", fonts: { heading: "Kazimir Text", body: "Proxima Nova" } }).look.font, "serif")
   assert.notEqual(createBrand({ name: "a", fonts: { heading: "Airbnb Cereal VF" } }).look.font, "serif")
 })
+
+test("the colours a page declares in its head are read", () => {
+  // Safari's pinned tab is drawn in the brand's mark colour; it leads.
+  const pinned = readPage(`<link rel="mask-icon" href="/mask.svg" color="#FF5A5F"><meta name="theme-color" content="#ffffff">`, `:root { --primary: #222222; } a { color: #d70466; }`)
+  assert.equal(pinned.colors?.[0], "#ff5a5f")
+  // A strong theme colour counts, the light one where both are given.
+  const themed = readPage(`<meta name="theme-color" media="(prefers-color-scheme: light)" content="#3139FB"><meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000">`, `a { color: #fb3a4d; }`)
+  assert.equal(themed.colors?.[0], "#3139fb")
+})
