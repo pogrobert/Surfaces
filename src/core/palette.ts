@@ -59,7 +59,7 @@ export const BASE_PALETTE: PaletteSpec = {
     soft: { l: [0.85, 0.89], c: [0.38, 0.48] },
     body: { l: [0.68, 0.75], c: [0.8, 1] },
     strong: { l: [0.38, 0.45], c: [0.8, 1], turn: 16 },
-    ink: { l: [0.18, 0.21], c: [0.12, 0.2], turn: 10 },
+    ink: { l: [0.18, 0.21], c: [0.32, 0.42], turn: 10 },
   },
   dark: {
     ground: { l: [0.145, 0.175], c: [0.14, 0.22], turn: 8 },
