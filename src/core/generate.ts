@@ -241,8 +241,11 @@ function draw(input: SurfaceInput, fill = false, recipe: Recipe = STYLES[input.s
     ...kept.filter((box) => box !== safe).flatMap((box, index): Layer[] => patch(box, index)),
   ]
   if (patches.length) {
+    // Under a paper frame, if the style lays one round the art, so a patch
+    // never spills over it; else over the art and under the grain.
+    const frame = layers.findIndex((layer) => layer.id === "paper")
     const last = layers.length - 1
-    layers.splice(layers[last]?.kind === "grain" ? last : last + 1, 0, ...patches)
+    layers.splice(frame >= 0 ? frame : layers[last]?.kind === "grain" ? last : last + 1, 0, ...patches)
   }
 
   // The title, over everything, the grain included, so its edges stay clean.
@@ -270,15 +273,19 @@ function draw(input: SurfaceInput, fill = false, recipe: Recipe = STYLES[input.s
       title && align === "start" && title.endsWith("left") ? safe.x - box.x
       : title && align === "end" && title.endsWith("right") ? safe.x + safe.w - (box.x + box.w)
       : 0
+    // A logo whose every colour would vanish on this ground, and with no
+    // version given for it, is drawn reversed: in one colour, the cover's
+    // ink, as a brand's one-colour logo is for a ground its own colours lose.
     const lost = typeof image === "string" && !input.logo.dark && fadesInto(image, palette.ground)
     if (lost && !warned.has(lost)) {
       warned.add(lost)
       console.warn(`surfaces: ${lost}`)
     }
+    const shown = lost && typeof image === "string" ? reversed(image, palette.ink) : image
     // Drawn at its own shape: a mark about half the area's height, a wordmark
     // as tall as the area's width allows, never more than a cap's height
     // above the title.
-    const { href, aspect } = readLogo(image)
+    const { href, aspect } = readLogo(shown)
     const tall = Math.min(box.h * (aspect < 1.6 ? 0.5 : 0.4), box.w / aspect)
     const wide = tall * aspect
     const left = align === "start" ? box.x + edge : align === "end" ? box.x + box.w + edge - wide : box.x + (box.w - wide) / 2
@@ -319,13 +326,25 @@ function draw(input: SurfaceInput, fill = false, recipe: Recipe = STYLES[input.s
   }
 }
 
+// An SVG logo in one colour: every paint it gives, in attributes and styles,
+// set to `ink`, and "none" left as it is.
+function reversed(svg: string, ink: string) {
+  const paint = (value: string) => (/^\s*(none|transparent)\s*$/i.test(value) ? value : ink)
+  return svg
+    .replace(/<svg\b(?![^>]*\sfill=)/i, `<svg fill="${ink}"`)
+    .replace(/\b(fill|stroke|stop-color)\s*=\s*"([^"]*)"/gi, (_, name: string, value: string) => `${name}="${paint(value)}"`)
+    .replace(/\b(fill|stroke|stop-color)\s*:\s*([^;"']+)/gi, (_, name: string, value: string) => `${name}:${paint(value)}`)
+}
+
 // Why an SVG logo would vanish on a ground, when every colour it is drawn in
 // falls short of the 3:1 a graphic needs to be seen; nothing when it reads,
 // or when its colours aren't written as hex.
 function fadesInto(svg: string, ground: string) {
-  const colours = [...new Set([...svg.matchAll(/#(?:[0-9a-f]{6}|[0-9a-f]{3})\b/gi)].map((match) => match[0].length === 4 ? `#${[...match[0].slice(1)].map((d) => d + d).join("")}` : match[0]))]
+  const written = [...new Set([...svg.matchAll(/#(?:[0-9a-f]{6}|[0-9a-f]{3})\b/gi)].map((match) => match[0].length === 4 ? `#${[...match[0].slice(1)].map((d) => d + d).join("")}` : match[0]))]
+  // One that paints with no colour of its own is drawn black.
+  const colours = written.length || /\b(fill|stroke)\s*[=:]/i.test(svg) ? written : ["#000000"]
   if (!colours.length || colours.some((colour) => contrast(colour, ground) >= 3)) return ""
-  return `The logo's colours (${colours.slice(0, 3).join(", ")}) barely show on the ${luminance(ground) < 0.18 ? "dark" : "light"} ground; give logo: { light, dark } with one drawn for it.`
+  return `The logo's colours (${colours.slice(0, 3).join(", ")}) barely show on the ${luminance(ground) < 0.18 ? "dark" : "light"} ground, so it is drawn in one colour there; give logo: { light, dark } to set your own.`
 }
 
 // A soft patch of ground over the art at `box`: solid across the box, fading
