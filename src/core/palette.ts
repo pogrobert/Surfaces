@@ -116,9 +116,15 @@ export function makePalette(
           c: lerp(brand.c, Math.min(brand.c, spec.maxChroma), 0.5),
           h: brand.h,
         })
+  // A dark ground in a warm hue reads as brown, and sinks the colour on it,
+  // so an orange, amber or yellow brand prints on a near-black instead: the
+  // colour glows on it, as it does on a night sky. Cool hues keep their tint.
+  const warm = theme === "dark" && brand.h > 35 && brand.h < 115
+  const deep = (name: "ground" | "quiet") =>
+    warm ? tone(brand, { ...tones[name], c: [tones[name].c[0] * 0.3, tones[name].c[1] * 0.3] }, spec.maxChroma, rng.fork(name)) : make(name)
   return {
-    ground: make("ground"),
-    quiet: make("quiet"),
+    ground: deep("ground"),
+    quiet: deep("quiet"),
     soft: make("soft"),
     body: make("body"),
     strong: make("strong"),
