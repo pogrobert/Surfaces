@@ -10,7 +10,8 @@ import { logoColours, readLogo } from "./image.ts"
 import type { ImageInput } from "./image.ts"
 import { micrographics } from "../overlays/micro.ts"
 import { STYLES } from "../styles/index.ts"
-import { setTitle } from "./type.ts"
+import { setTitle, useFont } from "./type.ts"
+import type { TitleFont } from "../type/fontfile.ts"
 import type { Font } from "./type.ts"
 import { validate } from "./validate.ts"
 import type { StyleName } from "../styles/index.ts"
@@ -36,8 +37,9 @@ export type SurfaceInput = {
   // Words set into the art in the largest area it goes around, for images
   // nothing else can set them on: link previews, files, email.
   title?: string
-  // The face it is set in. Default "sans".
-  font?: Font
+  // The face it is set in: "sans" (the default), "serif", or a site's own
+  // font from loadFont().
+  font?: Font | TitleFont
   // The brand's own logo, drawn as it is in a small area at `place` that the
   // art keeps clear: an SVG file's text, or a PNG, JPEG or WebP. `dark` is
   // the one for a dark cover, for a logo whose colours a dark ground loses.
@@ -233,7 +235,7 @@ function draw(input: SurfaceInput, fill = false, recipe: Recipe = STYLES[input.s
   // It sits in the main area, whose ink was chosen to read there.
   if (input.title) {
     const main = areas.find((area) => area.box === safe && area.art === "around")
-    const text = main && setTitle(input.title, main.box, main.place, input.font ?? "sans", Math.min(w, h))
+    const text = main && setTitle(input.title, main.box, main.place, typeof input.font === "object" ? useFont(input.font) : input.font ?? "sans", Math.min(w, h))
     if (text) layers.push(text)
   }
 

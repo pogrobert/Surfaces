@@ -1,4 +1,5 @@
 import { cos, sin, TAU } from "../core/math.ts"
+import { fontOf } from "../core/type.ts"
 import { hash } from "../core/random.ts"
 import { poolAlpha } from "../core/scene.ts"
 import type {
@@ -810,7 +811,10 @@ function drawText(layer: TextLayer, scene: Scene, out: Output) {
     out.body.push(`<path d="${out.outlines(layer)}" ${fill}/>`)
     return
   }
-  const weight = layer.font === "sans" ? 700 : 600
+  // A site's own font is named as itself, for a page that loads it.
+  const own = fontOf(layer.font)
+  const family = own ? `"${own.family.replace(/["'<>&]/g, "")}", ${own.serif ? "serif" : "sans-serif"}` : FACES[layer.font as keyof typeof FACES]
+  const weight = own ? own.weight : layer.font === "sans" ? 700 : 600
   const lines = layer.lines
     .map(
       (line) =>
@@ -818,7 +822,7 @@ function drawText(layer: TextLayer, scene: Scene, out: Output) {
     )
     .join("")
   out.body.push(
-    `<text font-family='${FACES[layer.font]}' font-weight="${weight}" font-size="${num(layer.size)}"${layer.tracking ? ` letter-spacing="${num(layer.tracking * layer.size)}"` : ""} text-anchor="${layer.align}" ${fill}>${lines}</text>`
+    `<text font-family='${family}' font-weight="${weight}" font-size="${num(layer.size)}"${layer.tracking ? ` letter-spacing="${num(layer.tracking * layer.size)}"` : ""} text-anchor="${layer.align}" ${fill}>${lines}</text>`
   )
 }
 

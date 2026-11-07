@@ -152,7 +152,7 @@ anywhere, and it changes nothing it didn't write.
 
 | Command | Does |
 |---|---|
-| `init` | Reads the site (its `DESIGN.md`, stylesheets, Tailwind config, root layout, fonts, metadata in code), writes the brand module (`surfaces.ts` in `src/`, `app/` or the root), a marked block in `AGENTS.md` (and `CLAUDE.md` when it doesn't already point there), Next.js's `app/opengraph-image.tsx`, and a board of directions. `--pick <n>` takes another direction; `--name` names the brand; `--dry-run` writes nothing. Run again, it leaves what is set up. |
+| `init` | Reads the site (its `DESIGN.md`, stylesheets, Tailwind config, root layout, fonts, metadata in code), writes the brand module (`surfaces.ts` in `src/`, `app/` or the root), a marked block in `AGENTS.md` (and `CLAUDE.md` when it doesn't already point there), Next.js's `app/opengraph-image.tsx` (its title in the site's own font when it finds the file), and a board of directions. `--pick <n>` takes another direction; `--name` names the brand; `--dry-run` writes nothing. Run again, it leaves what is set up. |
 | `kit` | Writes the pictures a site shows of itself that are art, not identity, into its public folder (`static/` for SvelteKit): the link preview, at the path its `og:image` already names or `og.jpg`, and X, LinkedIn and email headers, all on one mark, with the site's own logo SVG set on them as it is (`--logo <file>` for another, `--logo none` for none). It never draws an icon: a site's icon is its own. It leaves files that are there unless `--force`, and prints the `og:image` tag when the site has none. |
 | `directions` | Prints the directions with their reasons and draws them as `.surfaces/directions.jpg`. |
 | `preview` | Draws the brand's covers (`--use`, default `og`; `--title`, repeatable) into `.surfaces/`, each with its alt text. |
@@ -249,6 +249,30 @@ itself: `title`, set into the largest area the art goes around, and `font`,
 brand's cover takes `drawTitle: true`, as in
 `toJpeg(brand.og({ title, drawTitle: true }))`, in the brand's face.
 
+The site's own font sets it instead: `loadFont(bytes)` reads a TTF, an OTF
+with TrueType outlines, a WOFF or a WOFF2, and `drawTitle: { font }` sets the
+title in it (`generate` takes it as `font`). It is laid out from the font's
+own advances and kerning and drawn from its outlines, exactly as the bundled
+faces are.
+
+```ts
+const font = await loadFont(await readFile("public/fonts/Brand.woff2"))
+toJpeg(brand.og({ title, drawTitle: { font } }))
+```
+
+- The decoding is the library's own; only WOFF's deflate and WOFF2's Brotli
+  come from the runtime (`DecompressionStream`, or Node's zlib).
+- A variable font is drawn at its default weight; a font with PostScript
+  (CFF) outlines, or a collection (`.ttc`), is refused with what to give
+  instead. A file over `MOST_FONT_BYTES` (8 MB) is too.
+- A scene names the font by a key, `font.key`, and draws it in the process
+  that loaded it; a font it hasn't been given is an error that says so.
+- `init` finds the file the site's headings use (next/font/local, an
+  `@font-face` rule, an `@fontsource` package) and writes its path into the
+  brand module as `titleFont`; `preview`, `check` and `kit` draw in it.
+  `next/font/google` keeps no file in the project, so its sites get the
+  bundled faces until the file is added.
+
 - It is set as a designer would: large on one or two lines when short, down
   to four balanced lines when long, kerned, and against the side its area
   hangs from. A title that can't fit at the smallest size ends in an ellipsis.
@@ -285,7 +309,8 @@ parameters are the input's own names:
 With `brand`, the handler draws that brand's covers and a URL says only what
 one is about: `title`, `id`, `use` (default `og`), `theme` for one side of a
 brand that follows the reader, and `format`. The title is set into the image
-wherever the cover keeps room for it. With `secret`, only URLs signed by
+wherever the cover keeps room for it, in `font` when the handler is given
+one from `loadFont`. With `secret`, only URLs signed by
 `signUrl(url, secret)` are drawn; anything else gets a 403 that says how to
 sign it. Signing is HMAC-SHA-256 through WebCrypto, so it runs wherever the
 handler does.

@@ -1,7 +1,9 @@
 import { METRICS } from "../type/metrics.ts"
+import type { TitleFont } from "../type/fontfile.ts"
 import type { Box, TextLayer } from "./scene.ts"
 
-// Titles, set the way a designer sets one: in one of two bundled faces, as
+// Titles, set the way a designer sets one: in one of two bundled faces, or a
+// site's own font read from its file (see fontfile.ts), as
 // large as the area allows up to a sensible size, wrapped into balanced lines,
 // and placed against the side of its area that the area hangs from. Layout
 // uses each face's own advances and kerning, so it is exact in every
@@ -17,12 +19,29 @@ export type Font = (typeof FONTS)[number]
 export type FaceMetrics = { ascent: number; descent: number; cap: number; advances: string; kern: string }
 
 type Face = { advance: Map<number, number>; kern: Map<string, number>; cap: number; descent: number }
-const faces = new Map<Font, Face>()
+const faces = new Map<string, Face>()
 
-function face(font: Font): Face {
+// A site's own fonts, by the key a scene names them with, so a scene stays
+// plain data and the renderer in the same process can draw it.
+const custom = new Map<string, TitleFont>()
+export function useFont(font: TitleFont) {
+  custom.set(font.key, font)
+  return font.key
+}
+export const fontOf = (key: string) => custom.get(key)
+// A face a title can be set in: a bundled one, or a font's key.
+export type TitleFace = Font | string
+
+function face(font: TitleFace): Face {
   let found = faces.get(font)
+  const own = custom.get(font)
+  if (!found && own) {
+    found = { advance: own.advance, kern: own.kern, cap: own.cap / 1000, descent: own.descent / 1000 }
+    faces.set(font, found)
+  }
   if (!found) {
-    const data = METRICS[font]
+    if (!(font in METRICS)) throw new Error(`No face "${font}": load a font with loadFont() and pass it, or use "sans" or "serif"`)
+    const data = METRICS[font as Font]
     const advance = new Map<number, number>()
     for (const entry of data.advances.split("|")) {
       const [code, width] = entry.split(":")
@@ -37,7 +56,7 @@ function face(font: Font): Face {
 }
 
 // The characters of `text` a face can't draw, once each.
-export function missing(text: string, font: Font = "sans") {
+export function missing(text: string, font: TitleFace = "sans") {
   const { advance } = face(font)
   return [...new Set([...text].filter((char) => !advance.has(char.codePointAt(0)!) && char !== "\n"))]
 }
@@ -60,8 +79,12 @@ function width(text: string, { advance, kern }: Face, tracking = 0) {
 // How a face is set at a size: display type, a title's large sizes, tighter
 // and closer than text, as a type designer sets a headline. The sans more so
 // than the serif, whose letters are already close.
-function setting(font: Font, size: number, display: number) {
+function setting(font: TitleFace, size: number, display: number) {
   const large = size >= display
+  // A site's own font was drawn to be set as it is, so it is only drawn in a
+  // little at display sizes.
+  const own = custom.get(font)
+  if (own) return own.serif ? { tracking: large ? -0.008 : 0, leading: large ? 1.06 : 1.16 } : { tracking: large ? -0.016 : -0.004, leading: large ? 1.02 : 1.12 }
   return font === "sans"
     ? { tracking: large ? -0.03 : -0.014, leading: large ? 1.0 : 1.1 }
     : { tracking: large ? -0.014 : -0.004, leading: large ? 1.04 : 1.14 }
@@ -116,7 +139,7 @@ const MOST_LINES = 4
 // set large, up to a seventh of the canvas's short side, on one line or two;
 // a long one comes down to an eleventh and below, on as many as four, to a
 // thirtieth at the least; past that, the last line ends in an ellipsis.
-export function setTitle(text: string, box: Box, place: string | null, font: Font, short: number, tone: TextLayer["tone"] = "ink"): TextLayer | undefined {
+export function setTitle(text: string, box: Box, place: string | null, font: TitleFace, short: number, tone: TextLayer["tone"] = "ink"): TextLayer | undefined {
   const f = face(font)
   const words = text.replace(/\s+/g, " ").trim().split(" ").filter(Boolean)
   if (!words.length) return undefined
@@ -153,7 +176,7 @@ export function setTitle(text: string, box: Box, place: string | null, font: Fon
   return {
     kind: "text",
     id: "title",
-    font,
+    font: font as TextLayer["font"],
     size,
     ...(tracking ? { tracking } : null),
     tone,
@@ -169,7 +192,7 @@ export function setTitle(text: string, box: Box, place: string | null, font: Fon
 
 // Where each character of a run starts, in ems from the run's start, kerned
 // and tracked as `width` measures it: for drawing a line's outlines.
-export function positions(text: string, font: Font, tracking = 0) {
+export function positions(text: string, font: TitleFace, tracking = 0) {
   const f = face(font)
   const placed: { code: number; x: number }[] = []
   let x = 0
@@ -184,4 +207,4 @@ export function positions(text: string, font: Font, tracking = 0) {
 }
 
 // A run's width in ems, kerned: for setting a label by hand.
-export const measure = (text: string, font: Font) => width(text, face(font))
+export const measure = (text: string, font: TitleFace) => width(text, face(font))

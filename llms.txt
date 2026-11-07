@@ -2,7 +2,7 @@
 
 > Generative art for every picture a site repeats: post covers, link previews, docs and changelog headers, empty states, episode art, slides and profile headers. Make a brand once, from a colour or from the site's own HTML and CSS; every cover then follows from its title, the same bytes forever. It is for pictures a site repeats; a picture of one particular thing is a photo's job. A wrong input throws an error that names the fix.
 
-Rules for writing code with it are in AGENTS.md. In short: `const brand = createBrand({ name: "acme.dev", ...readPage(html, css) })`, then `brand.cover({ title })`, `brand.og({ title })`, `brand.hero`, `brand.card`, `brand.banner({ for: "x" })`, drawn by `toHtml`, `toSvg`, or `toJpeg`/`toPng` (from `/png`). The images are art: the site sets its titles in its own font over `scene.areas[0]`, and `drawTitle: true` draws one in where it can't, or `<Cover brand={brand} title={title} />` (from `/react`). `generate(input)` is the lower level, for one exact cover.
+Rules for writing code with it are in AGENTS.md. In short: `const brand = createBrand({ name: "acme.dev", ...readPage(html, css) })`, then `brand.cover({ title })`, `brand.og({ title })`, `brand.hero`, `brand.card`, `brand.banner({ for: "x" })`, drawn by `toHtml`, `toSvg`, or `toJpeg`/`toPng` (from `/png`). The images are art: the site sets its titles in its own font over `scene.areas[0]`, and `drawTitle: { font: await loadFont(bytes) }` draws one in where it can't, in the site's font file (or `drawTitle: true` for a bundled face), or `<Cover brand={brand} title={title} />` (from `/react`). `generate(input)` is the lower level, for one exact cover.
 
 ## Docs
 

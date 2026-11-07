@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
-import { join, relative } from "node:path"
+import { dirname, join, relative } from "node:path"
 import { toOklch } from "./core/color.ts"
 
 // A site as its files show it, for the CLI: its name, its framework, and the
@@ -27,8 +27,66 @@ export type Project = {
   // Its logo's SVG, relative to the root: one named for a logo before a
   // mark, and either before the icon a browser tab shows.
   logo?: string
+  // The font files it loads, for drawing titles in its own type.
+  fonts: FontFile[]
   // Every file read, relative to the root, for saying what was read.
   read: string[]
+}
+
+// A font file a site loads: its family as the site names it, its weight
+// (a variable font's range), and the file, relative to the root.
+export type FontFile = { family: string; weight: number | [number, number]; file: string }
+
+const FONT_FILE = /\.(woff2|woff|ttf|otf)$/i
+const FORMATS = ["woff2", "woff", "ttf", "otf"]
+const unquote = (text: string) => text.trim().replace(/^["']|["']$/g, "")
+
+// Fonts a stylesheet declares with @font-face. A url from the root is in the
+// public folder; any other is beside the stylesheet.
+function fontFaces(root: string, file: string, text: string, publicDir: string): FontFile[] {
+  const found: FontFile[] = []
+  for (const block of text.matchAll(/@font-face\s*\{([^}]*)\}/g)) {
+    const body = block[1]!
+    if (/font-style\s*:\s*(italic|oblique)/.test(body)) continue
+    const family = body.match(/font-family\s*:\s*([^;]+)/)?.[1]
+    const weights = body.match(/font-weight\s*:\s*(\d+)(?:\s+(\d+))?/)
+    const urls = [...body.matchAll(/url\(\s*["']?([^)"']+)["']?\s*\)/g)].map((match) => match[1]!.split(/[?#]/)[0]!).filter((url) => FONT_FILE.test(url))
+    const url = urls.sort((a, b) => FORMATS.indexOf(a.split(".").pop()!.toLowerCase()) - FORMATS.indexOf(b.split(".").pop()!.toLowerCase()))[0]
+    if (!family || !url || /^(https?:|data:)/.test(url)) continue
+    const path = url.startsWith("/") ? join(root, publicDir, url) : join(dirname(file), url)
+    if (!existsSync(path)) continue
+    const weight: FontFile["weight"] = weights?.[2] ? [Number(weights[1]), Number(weights[2])] : Number(weights?.[1] ?? 400)
+    found.push({ family: unquote(family), weight, file: relative(root, path) })
+  }
+  return found
+}
+
+// Fonts loaded in code: next/font/local's files, beside the code that names
+// them, and @fontsource packages' files in node_modules.
+function fontsLoaded(root: string, file: string, text: string): FontFile[] {
+  const found: FontFile[] = []
+  if (/["']next\/font\/local["']/.test(text)) {
+    for (const call of text.matchAll(/localFont\s*\(\s*\{([\s\S]*?)\}\s*\)\s*(?:;|\n)/g)) {
+      const body = call[1]!
+      const family = body.match(/variable\s*:\s*["'`]--(?:font-)?([\w-]+)["'`]/)?.[1]
+      for (const match of body.matchAll(/["'`]([^"'`]+\.(?:woff2|woff|ttf|otf))["'`]([^{}]{0,80})/gi)) {
+        const path = join(dirname(file), match[1]!)
+        if (!existsSync(path)) continue
+        const weight = match[2]!.match(/weight\s*:\s*["'`](\d+)(?:\s+(\d+))?/)
+        found.push({ family: family ?? match[1]!.split("/").pop()!.replace(FONT_FILE, ""), weight: weight?.[2] ? [Number(weight[1]), Number(weight[2])] : Number(weight?.[1] ?? 400), file: relative(root, path) })
+      }
+    }
+  }
+  for (const match of text.matchAll(/["']@fontsource(-variable)?\/([\w-]+)/g)) {
+    const name = match[2]!
+    const dir = join(root, "node_modules", `@fontsource${match[1] ?? ""}`, name, "files")
+    if (!existsSync(dir)) continue
+    for (const entry of readdirSync(dir)) {
+      const parts = entry.match(new RegExp(`^${name}-latin-(\\d+|wght)-normal\\.woff2$`))
+      if (parts) found.push({ family: name.replace(/-/g, " "), weight: parts[1] === "wght" ? [100, 900] : Number(parts[1]), file: relative(root, join(dir, entry)) })
+    }
+  }
+  return found
 }
 
 const SKIP = new Set(["node_modules", ".git", ".next", ".nuxt", ".svelte-kit", ".astro", ".output", ".vercel", "dist", "build", "out", "coverage", "public", "vendor", ".turbo", ".cache"])
@@ -37,6 +95,8 @@ const CONFIG = /^tailwind\.config\.(js|cjs|mjs|ts)$/
 // The files that hold a site's shell: its root layout, document or page
 // template, and the home page.
 const SHELL = /^(layout|root|_document|_app|app|\+layout|index|Layout|BaseLayout|Base|landing|home|page|\+page)\.(tsx|jsx|ts|js|html|astro|svelte|vue)$/
+// And the modules a site loads its fonts in, as next/font/local is.
+const FONT_MODULE = /^(fonts?|typography)\.(tsx|jsx|ts|js|mjs)$/
 const MOST_BYTES = 3_000_000
 
 function walk(root: string, dir: string, found: string[], depth = 0) {
@@ -46,7 +106,7 @@ function walk(root: string, dir: string, found: string[], depth = 0) {
     const path = join(dir, name)
     const stat = statSync(path)
     if (stat.isDirectory()) walk(root, path, found, depth + 1)
-    else if (stat.size < 1_000_000 && (STYLES.test(name) || CONFIG.test(name) || SHELL.test(name))) found.push(path)
+    else if (stat.size < 1_000_000 && (STYLES.test(name) || CONFIG.test(name) || SHELL.test(name) || FONT_MODULE.test(name))) found.push(path)
   }
 }
 
@@ -117,6 +177,8 @@ export function readProject(root: string): Project {
   const titles: string[] = []
   const descriptions: string[] = []
   const faces: string[] = []
+  const fonts: FontFile[] = []
+  const publicDir = deps["@sveltejs/kit"] ? "static" : "public"
   // Shells first, the root layout before pages, so a site's own title and
   // fonts are read before a component's, and before stylesheets fill the
   // budget.
@@ -127,6 +189,7 @@ export function readProject(root: string): Project {
     if (total + text.length > MOST_BYTES) continue
     total += text.length
     read.push(relative(root, file))
+    fonts.push(...fontFaces(root, file, text, publicDir), ...fontsLoaded(root, file, text))
     if (STYLES.test(file) || CONFIG.test(file.split("/").pop()!)) css.push(text)
     else {
       html.push(text)
@@ -180,6 +243,7 @@ export function readProject(root: string): Project {
     css: [logo ? `:root { --brand-logo: ${logo}; }` : "", loaded, ...css].join("\n"),
     design: design ? readFileSync(design, "utf8") : "",
     ...(logoFile ? { logo: relative(root, logoFile) } : null),
+    fonts: fonts.filter((font, index) => fonts.findIndex((other) => other.file === font.file) === index),
     read,
   }
 }

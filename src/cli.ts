@@ -14,11 +14,13 @@ import { validate } from "./core/validate.ts"
 import { readPage } from "./page.ts"
 import type { PageFacts, Use } from "./page.ts"
 import { readProject } from "./project.ts"
-import type { Project } from "./project.ts"
+import type { FontFile, Project } from "./project.ts"
 import { rasterize } from "./raster.ts"
 import { outlinePath } from "./render/glyphs.ts"
 import { encodeJpeg } from "./render/jpeg.ts"
 import { toSvg } from "./render/svg.ts"
+import { loadFont } from "./type/fontfile.ts"
+import type { TitleFont } from "./type/fontfile.ts"
 
 // The command line, for a person or an agent in a project:
 //
@@ -84,6 +86,14 @@ function readLook(file: string): BrandChoices {
   }
 }
 
+// The site's own font a brand module names, loaded, for drawing its titles.
+async function readTitleFont(root: string, file: string) {
+  const path = readFileSync(file, "utf8").match(/export const titleFont\s*=\s*["'`]([^"'`]+)["'`]/)?.[1]
+  if (!path) return undefined
+  if (!existsSync(join(root, path))) throw new Error(`${relative(root, file)} names titleFont "${path}", which isn't there; point it at the font file, or remove it for the bundled faces`)
+  return loadFont(readFileSync(join(root, path)))
+}
+
 function brandFile(project: Project, args: Args) {
   const given = one(args, "brand")
   if (given) return join(project.root, given)
@@ -102,10 +112,50 @@ async function jpeg(scene: Scene, width = scene.output.w) {
 // has it beside.
 const titled = (use: Use) => use !== "card"
 
-const drawn = (brand: Brand, use: Use, title: string) => {
+const drawn = (brand: Brand, use: Use, title: string, font?: TitleFont) => {
   const light = brand.look.theme === "auto" ? createBrand({ name: brand.name, ...brand.look, theme: "light" }) : brand
-  return generate(light.input(use, titled(use) ? { title, drawTitle: true } : { title }))
+  return generate(light.input(use, titled(use) ? { title, drawTitle: font ? { font } : true } : { title }))
 }
+
+// A heading family as one word to compare by: "Fraunces Variable", serif
+// and var(--font-fraunces) are both "fraunces".
+const familyKey = (family: string) =>
+  (family.match(/var\(\s*--(?:font-)?([\w-]+)/)?.[1] ?? family.split(",")[0]!)
+    .toLowerCase()
+    .replace(/["']/g, "")
+    .replace(/\s*variable$/, "")
+    .replace(/[^a-z0-9]/g, "")
+
+// The file of the face the site's headings are set in, when the site keeps
+// one, so titles drawn into images are in its own type: the face nearest a
+// title's weight, a static one before a variable one, which draws only its
+// default, and only one that draws the alphabet.
+async function titleFontOf(project: Project, facts: PageFacts, log: (line: string) => void) {
+  const heading = facts.fonts?.heading ?? facts.fonts?.body
+  const key = heading ? familyKey(heading) : ""
+  const keys = new Set(project.fonts.map((font) => familyKey(font.family)))
+  const matches = (font: FontFile) => {
+    const own = familyKey(font.family)
+    return key ? own === key || (own.length > 2 && key.length > 2 && (own.includes(key) || key.includes(own))) : keys.size === 1
+  }
+  const distance = (font: FontFile) => (typeof font.weight === "number" ? Math.abs(font.weight - 650) : 251)
+  for (const candidate of project.fonts.filter(matches).sort((a, b) => distance(a) - distance(b))) {
+    try {
+      const font = await loadFont(readFileSync(join(project.root, candidate.file)))
+      if (missingLetters(font)) continue
+      log(`Titles drawn into images are set in the site's own ${font.family} ${font.weight}, from ${candidate.file}`)
+      return candidate.file
+    } catch (error) {
+      log(`Not ${candidate.file} for titles: ${(error as Error).message}`)
+    }
+  }
+  if (heading && /next\/font\/google/.test(project.html)) {
+    log(`The site's headings come from Google Fonts through next/font, which keeps no file in the project, so titles drawn into images are set in the bundled sans or serif. To use its own, put the .woff2 or .ttf in public/fonts/ and set titleFont in the brand module to its path.`)
+  }
+  return undefined
+}
+
+const missingLetters = (font: TitleFont) => [..."ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"].some((char) => !font.advance.has(char.codePointAt(0)!))
 
 // One line of type as a path, for labels on a board.
 function label(text: string, x: number, y: number, size: number, fill: string, font: "sans" | "serif" = "sans") {
@@ -186,21 +236,24 @@ async function previewCommand(root: string, args: Args, log: (line: string) => v
   const project = readProject(root)
   const file = brandFile(project, args)
   const brand = createBrand(readLook(file))
+  const font = await readTitleFont(root, file)
   const use = (one(args, "use") ?? "og") as Use
   const titles = args.flags.get("title") ?? SAMPLES
   const out = join(root, one(args, "out") ?? OUT)
   mkdirSync(out, { recursive: true })
   for (const [index, title] of titles.entries()) {
-    const scene = drawn(brand, use, title)
+    const scene = drawn(brand, use, title, font)
     const path = join(out, `${use}-${index + 1}.jpg`)
     writeFileSync(path, await jpeg(scene))
     log(`${relative(root, path)}  ${describe(scene, { title })}`)
   }
 }
 
-function checkCommand(root: string, args: Args, log: (line: string) => void) {
+async function checkCommand(root: string, args: Args, log: (line: string) => void) {
   const project = readProject(root)
-  const brand = createBrand(readLook(brandFile(project, args)))
+  const file = brandFile(project, args)
+  const brand = createBrand(readLook(file))
+  const font = await readTitleFont(root, file)
   const uses = (args.flags.get("use") ?? ["post", "og", "hero", "card"]) as Use[]
   const titles = args.flags.get("title") ?? SAMPLES
   const themes = brand.look.theme === "auto" ? (["light", "dark"] as const) : [brand.look.theme]
@@ -209,7 +262,7 @@ function checkCommand(root: string, args: Args, log: (line: string) => void) {
     const themed = createBrand({ name: brand.name, ...brand.look, theme })
     for (const use of uses) {
       for (const title of titles) {
-        const input = themed.input(use, titled(use) ? { title, drawTitle: true } : { title })
+        const input = themed.input(use, titled(use) ? { title, drawTitle: font ? { font } : true } : { title })
         const scene = generate(input)
         const verdict = judge(scene)
         // A title set without some of its letters doesn't hold either.
@@ -233,7 +286,7 @@ function agentBlock(module: string) {
 - For pictures the site repeats: covers, link previews, docs, changelog and email headers, empty states, slides. A picture of one particular thing (a product, a person) is a photo or an image model's job.
 - The brand is \`brand\`, exported from \`${module}\`. Change its look there; \`npx @pogrobert/surfaces directions\` draws others to choose from.
 - The pictures are art; the words are the site's, in its own type. A cover is \`brand.cover({ title })\`, \`brand.card\`, \`brand.hero\`, \`brand.banner\`. React: \`<Cover brand={brand} title={title} />\` from \`@pogrobert/surfaces/react\` sets the title in the page's font where the art keeps room.
-- Words over the art: \`text: "bottom-left"\` (or any place) keeps them room; \`scene.areas[0]\` is its box and \`ink\`. A link preview file is \`toJpeg(brand.og({ title, drawTitle: true }))\` from \`@pogrobert/surfaces/png\`; alt \`describe(scene, { title })\`.
+- Words over the art: \`text: "bottom-left"\` (or any place) keeps them room; \`scene.areas[0]\` is its box and \`ink\`. A link preview file is \`toJpeg(brand.og({ title, drawTitle: true }))\` from \`@pogrobert/surfaces/png\`; alt \`describe(scene, { title })\`. In the site's own font: \`drawTitle: { font: await loadFont(await readFile(titleFont)) }\`, where the brand module exports \`titleFont\`.
 - \`id: post.slug\` keeps a cover's art when its title is edited. There are no seeds to choose.
 - Look before shipping: \`npx @pogrobert/surfaces preview --title "..."\` writes images to .surfaces/; \`check\` says whether they hold. \`kit\` writes the preview and headers, with the site's logo.
 - Everything else: node_modules/@pogrobert/surfaces/docs/api.md.
@@ -248,8 +301,9 @@ function withBlock(existing: string, block: string) {
 
 // The Next.js link preview for the whole site, from the App Router's own
 // convention: the site's title, set into its brand.
-function nextImage(fromApp: string, title: string) {
-  return `import { toJpeg } from "@pogrobert/surfaces/png"
+function nextImage(fromApp: string, title: string, font: boolean) {
+  if (!font) {
+    return `import { toJpeg } from "@pogrobert/surfaces/png"
 import { brand } from "${fromApp}"
 
 // The site's link preview, drawn from its brand. A route of its own, such as
@@ -260,6 +314,26 @@ export const alt = ${JSON.stringify(title)}
 
 export default async function Image() {
   const jpeg = await toJpeg(brand.og({ title: alt, drawTitle: true }))
+  return new Response(jpeg as BodyInit, { headers: { "content-type": contentType } })
+}
+`
+  }
+  return `import { readFile } from "node:fs/promises"
+import { join } from "node:path"
+import { loadFont } from "@pogrobert/surfaces"
+import { toJpeg } from "@pogrobert/surfaces/png"
+import { brand, titleFont } from "${fromApp}"
+
+// The site's link preview, drawn from its brand, its title in the site's own
+// font. A route of its own, such as a post, gets one the same way, with that
+// page's title.
+export const size = { width: 1200, height: 630 }
+export const contentType = "image/jpeg"
+export const alt = ${JSON.stringify(title)}
+
+export default async function Image() {
+  const font = await loadFont(await readFile(join(process.cwd(), titleFont)))
+  const jpeg = await toJpeg(brand.og({ title: alt, drawTitle: { font } }))
   return new Response(jpeg as BodyInit, { headers: { "content-type": contentType } })
 }
 `
@@ -300,6 +374,8 @@ async function initCommand(root: string, args: Args, log: (line: string) => void
   log(`Look: ${describeLook(brand)}`)
   for (const reason of brand.why) log(`  ${reason}`)
 
+  const titleFont = await titleFontOf(project, facts, log)
+
   const writes: { path: string; text: string; skip?: string }[] = []
   const extension = project.typescript ? "ts" : "js"
   const module = join(project.source, `surfaces.${extension}`)
@@ -314,7 +390,11 @@ async function initCommand(root: string, args: Args, log: (line: string) => void
 export const look = ${look}${project.typescript ? " as const" : ""}
 
 export const brand = createBrand(look)
-`,
+${titleFont ? `
+// The site's heading font, for titles drawn into images:
+// drawTitle: { font: await loadFont(await readFile(titleFont)) }
+export const titleFont = ${JSON.stringify(titleFont)}
+` : ""}`,
   })
   for (const file of ["AGENTS.md", "CLAUDE.md"]) {
     const path = join(root, file)
@@ -334,7 +414,7 @@ export const brand = createBrand(look)
     const title = facts.words?.split(/[.·|–—-]/)[0]?.trim() || name
     const fromApp = relative(join(root, project.app), join(root, module)).replace(/\.(ts|js)$/, "").replace(/^(?!\.)/, "./")
     const taken = ["tsx", "ts", "jsx", "js", "png", "jpg"].some((ext) => existsSync(join(root, project.app!, `opengraph-image.${ext}`)))
-    writes.push({ path, text: nextImage(fromApp, title), ...(taken ? { skip: "the site has a link preview image already" } : null) })
+    writes.push({ path, text: nextImage(fromApp, title, Boolean(titleFont)), ...(taken ? { skip: "the site has a link preview image already" } : null) })
   }
 
   for (const write of writes) {
@@ -360,6 +440,7 @@ export const brand = createBrand(look)
   log(`  npm install @pogrobert/surfaces @resvg/resvg-js`)
   if (project.framework === "next") log(`  In next.config, add serverExternalPackages: ["@resvg/resvg-js"], so Next leaves its native module alone.`)
   else if (RECIPES[project.framework]) log(`  Serve link previews from a route. ${RECIPES[project.framework]}`)
+  if (titleFont && project.framework !== "next") log(`  For titles in the site's own font: const font = await loadFont(await readFile(titleFont)), then drawTitle: { font }.`)
   log(`  Look at the result: npx @pogrobert/surfaces preview --title "A real post title"`)
 }
 
@@ -391,7 +472,9 @@ async function kitCommand(root: string, args: Args, log: (line: string) => void)
   const dry = Boolean(one(args, "dry-run"))
   const force = Boolean(one(args, "force"))
   const project = readProject(root)
-  const brand = createBrand(readLook(brandFile(project, args)))
+  const file = brandFile(project, args)
+  const brand = createBrand(readLook(file))
+  const font = await readTitleFont(root, file)
   const publicDir = one(args, "out") ?? (project.framework === "sveltekit" ? "static" : "public")
   // The site's pictures are art with its logo; its words are its own, in its
   // own type. A title asked for is drawn in, for a preview that has to carry it.
@@ -413,7 +496,7 @@ async function kitCommand(root: string, args: Args, log: (line: string) => void)
 
   const og = served(publicDir, pointed, brand.name) ?? join(publicDir, "og.jpg")
   const assets: { path: string; what: string; make: () => Promise<Uint8Array> }[] = [
-    { path: og, what: title ? `link preview, "${title}"` : "link preview", make: () => { const scene = title ? flat.og({ title, drawTitle: true }) : flat.og({ id: "home", text: "none" }); return /\.png$/i.test(og) ? png(scene) : jpeg(scene) } },
+    { path: og, what: title ? `link preview, "${title}"` : "link preview", make: () => { const scene = title ? flat.og({ title, drawTitle: font ? { font } : true }) : flat.og({ id: "home", text: "none" }); return /\.png$/i.test(og) ? png(scene) : jpeg(scene) } },
     { path: join(publicDir, "x-header.jpg"), what: "X header", make: () => jpeg(flat.banner({ for: "x" })) },
     { path: join(publicDir, "linkedin-banner.jpg"), what: "LinkedIn banner", make: () => jpeg(flat.banner({ for: "linkedin" })) },
     { path: join(publicDir, "email-header.jpg"), what: "email header", make: () => jpeg(flat.banner({ for: "email" })) },
@@ -453,7 +536,7 @@ export async function main(argv: string[], root = process.cwd(), log: (line: str
         await kitCommand(root, args, log)
         return 0
       case "check":
-        return checkCommand(root, args, log)
+        return await checkCommand(root, args, log)
       case "help":
       case "--help":
       case "-h":

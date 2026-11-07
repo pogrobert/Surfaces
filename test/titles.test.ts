@@ -20,7 +20,7 @@ function assertInside(layer: TextLayer, box: { x: number; y: number; w: number; 
   for (const line of layer.lines) {
     const left = line.x - (layer.align === "start" ? 0 : layer.align === "end" ? line.width : line.width / 2)
     assert.ok(left >= box.x - 0.01 && left + line.width <= box.x + box.w + 0.01, `${name}: "${line.text}" runs out sideways`)
-    const { cap, descent } = METRICS[layer.font]
+    const { cap, descent } = METRICS[layer.font as "sans" | "serif"]
     const top = line.y - (cap / 1000) * layer.size
     const bottom = line.y + (Math.abs(descent) / 1000) * layer.size
     assert.ok(top >= box.y - 0.01 && bottom <= box.y + box.h + 0.01, `${name}: "${line.text}" runs out of its area`)

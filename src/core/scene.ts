@@ -166,7 +166,8 @@ export type Mark = Pool | Shapes
 export type TextLayer = {
   kind: "text"
   id: string
-  font: "sans" | "serif"
+  // A bundled face, or the key of a site's own font (see fontfile.ts).
+  font: "sans" | "serif" | `font:${string}`
   size: number
   // Space added after each character, in ems: below zero for display type,
   // which is set tighter than text. Every line's width includes it.

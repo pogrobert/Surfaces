@@ -10,6 +10,7 @@ import type { Font } from "./core/type.ts"
 import type { Grain, Mood, Theme } from "./core/intent.ts"
 import { coverage, HAIRLINE, worstTitleContrast } from "./core/judge.ts"
 import type { Scene } from "./core/scene.ts"
+import type { TitleFont } from "./type/fontfile.ts"
 import { nearest } from "./core/validate.ts"
 import { STYLES } from "./styles/index.ts"
 import type { StyleName } from "./styles/index.ts"
@@ -68,7 +69,7 @@ const LOGO_AT: Partial<Record<Use, Place>> = { og: "top-left", x: "right", linke
 // gives the art the whole frame. `drawTitle` sets the title into the image
 // in the library's own face instead, for a file that has to carry it and a
 // site that can't set its own.
-export type Content = { title?: string; id?: string; tag?: string; text?: Place | "none"; drawTitle?: boolean }
+export type Content = { title?: string; id?: string; tag?: string; text?: Place | "none"; drawTitle?: boolean | { font: TitleFont } }
 
 export type Brand = {
   name: string
@@ -233,7 +234,12 @@ function build(name: string, look: Brand["look"], why: string[], logo?: Logo): B
     if (typeof about !== "string" || !about.trim()) {
       throw new Error(`Give the ${use} a "title", or an "id" that names it, such as the post's slug`)
     }
-    const drawn = content.drawTitle === true
+    // Drawn in the brand's face, or in a site's own font given with it.
+    const drawn = content.drawTitle === true || (typeof content.drawTitle === "object" && content.drawTitle !== null)
+    const own = typeof content.drawTitle === "object" && content.drawTitle !== null ? content.drawTitle.font : undefined
+    if (typeof content.drawTitle === "object" && content.drawTitle !== null && (typeof own !== "object" || own === null || own.kind !== "font")) {
+      throw new Error(`drawTitle's "font" is a font read by loadFont(): drawTitle: { font: await loadFont(await readFile("public/fonts/Brand.woff2")) }`)
+    }
     if (drawn && !content.title?.trim()) throw new Error(`A ${use} drawn with its title needs a "title"`)
     if (content.text !== undefined && content.text !== "none" && !(PLACES as readonly string[]).includes(content.text)) {
       throw new Error(`Unknown text place "${String(content.text)}". Use one of ${PLACES.map((place) => `"${place}"`).join(", ")}, or "none".${nearest(String(content.text), PLACES)}`)
@@ -255,7 +261,7 @@ function build(name: string, look: Brand["look"], why: string[], logo?: Logo): B
       ...(look.mood ? { mood: look.mood } : null),
       ...(look.grain ? { grain: look.grain } : null),
       ...(look.shape ? { shape: look.shape } : content.tag?.trim() ? familyShape(look.style, name, content.tag.trim()) : null),
-      ...(drawn ? { title: content.title!.trim(), ...(look.font ? { font: look.font } : null) } : null),
+      ...(drawn ? { title: content.title!.trim(), ...(own ? { font: own } : look.font ? { font: look.font } : null) } : null),
       ...(placing.motion && !drawn ? { motion: placing.motion } : null),
       ...(logoFor(logo, use, name, drawn ? content.title : undefined) ? { logo: logoFor(logo, use, name, drawn ? content.title : undefined) } : null),
     }

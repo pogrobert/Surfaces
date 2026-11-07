@@ -113,15 +113,25 @@ export async function GET(request: Request) {
 }
 ```
 
-Where that can't be done, `drawTitle: true` sets the title into the image
-itself, in a bundled sans or serif drawn from its outlines, so no font is
-needed anywhere:
+Where that can't be done, `drawTitle` sets the title into the image itself,
+drawn from the font's own outlines, so nothing needs installing anywhere.
+Give it the site's font file, a TTF, a WOFF or a WOFF2:
 
 ```ts
+import { readFile } from "node:fs/promises"
+import { loadFont } from "@pogrobert/surfaces"
 import { toJpeg } from "@pogrobert/surfaces/png"
 
-const jpeg = await toJpeg(brand.og({ title: post.title, drawTitle: true }))
+const font = await loadFont(await readFile("public/fonts/Brand.woff2"))
+const jpeg = await toJpeg(brand.og({ title: post.title, drawTitle: { font } }))
 ```
+
+`init` finds the file the site's headings use (next/font/local, an
+`@font-face` or an `@fontsource` package), and writes its path into the
+brand module as `titleFont` and into the link preview route. `drawTitle:
+true` sets the title in a bundled sans or serif instead: Inter or Fraunces.
+A variable font is drawn at its default weight, and a font with PostScript
+(CFF) outlines isn't read yet.
 
 A JPEG keeps a grainy picture to about 50–170 KB, under what chat apps show;
 `toPng` gives it losslessly. On Node they use `@resvg/resvg-js` or
@@ -180,7 +190,8 @@ export const GET = createHandler({ brand, jpeg: (input) => toJpeg(generate(input
 ```
 
 With a brand, a URL says only what the picture is about: `title`, `id`, `use`
-and `format`, and the title is drawn in. With a `secret`, only signed URLs
+and `format`, and the title is drawn in, in `font` when the handler is given
+one from `loadFont`. With a `secret`, only signed URLs
 are drawn, so no one else can have it draw what they like.
 
 ## One exact picture

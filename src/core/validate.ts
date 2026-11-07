@@ -1,6 +1,7 @@
 import { AREA_ART, AREA_SIZES, DETAILS, GRAINS, MAX_RATIO, MOODS, MOTIONS, PLACES, THEMES, areaShare } from "./intent.ts"
 import type { Box } from "./scene.ts"
-import { FONTS, missing } from "./type.ts"
+import { FONTS, missing, useFont } from "./type.ts"
+import type { TitleFont } from "../type/fontfile.ts"
 import type { Font } from "./type.ts"
 import { STYLES } from "../styles/index.ts"
 
@@ -97,7 +98,9 @@ export function validate(input: unknown): Problems {
   word("grain", GRAINS)
   word("detail", DETAILS)
   word("motion", MOTIONS)
-  word("font", FONTS)
+  // A bundled face by name, or a font read by loadFont().
+  const ownFont = isObject(input.font) && (input.font as { kind?: unknown }).kind === "font"
+  if (!ownFont) word("font", FONTS)
 
   // A title drawn into the art: for images, where nothing else can set it.
   const title = input.title
@@ -110,9 +113,10 @@ export function validate(input: unknown): Problems {
       if (!asked.some((area) => isObject(area) && area.art !== "behind")) {
         errors.push(`A "title" needs an area to sit in: add areas: [{ place: "bottom-left", size: "lg" }].`)
       }
-      const font = (typeof input.font === "string" && (FONTS as readonly string[]).includes(input.font) ? input.font : "sans") as Font
+      const font = ownFont ? useFont(input.font as TitleFont) : ((typeof input.font === "string" && (FONTS as readonly string[]).includes(input.font) ? input.font : "sans") as Font)
       const lost = missing(title, font)
-      if (lost.length) warnings.push(`The ${font} face can't draw ${lost.map((char) => JSON.stringify(char)).join(", ")}; the title is set without ${lost.length > 1 ? "them" : "it"}.`)
+      const named = ownFont ? (input.font as TitleFont).family : font
+      if (lost.length) warnings.push(`The ${named} face can't draw ${lost.map((char) => JSON.stringify(char)).join(", ")}; the title is set without ${lost.length > 1 ? "them" : "it"}.`)
     }
   } else if (input.font !== undefined) {
     warnings.push(`"font" sets the title, and there is no "title"; give one, or leave "font" out.`)

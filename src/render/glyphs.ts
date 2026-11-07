@@ -1,4 +1,4 @@
-import { positions } from "../core/type.ts"
+import { fontOf, positions } from "../core/type.ts"
 import type { Font } from "../core/type.ts"
 import type { TextLayer } from "../core/scene.ts"
 import { OUTLINES } from "../type/outlines.ts"
@@ -65,7 +65,10 @@ function contourPath(points: Contour, at: (x: number, y: number) => [number, num
 }
 
 export function outlinePath(layer: TextLayer) {
-  const table = glyphsOf(layer.font)
+  // A site's own font draws from its file's outlines; a bundled face from the
+  // ones shipped with it.
+  const own = fontOf(layer.font)
+  const table = own ? { get: (code: number) => own.contours(code) } : glyphsOf(layer.font as Font)
   const scale = layer.size / 1000
   let d = ""
   for (const line of layer.lines) {

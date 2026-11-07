@@ -1,5 +1,6 @@
 import { createBrand } from "./brand.ts"
 import type { Brand } from "./brand.ts"
+import type { TitleFont } from "./type/fontfile.ts"
 import { generate } from "./core/generate.ts"
 import type { SurfaceInput } from "./core/generate.ts"
 import { hash } from "./core/random.ts"
@@ -41,6 +42,8 @@ export type HandlerOptions = {
   // A brand's covers instead of any input: the URL then says only what a
   // cover is about (see readBrand, below).
   brand?: Brand
+  // The font a brand's titles are drawn in, from loadFont(): the site's own.
+  font?: TitleFont
   // With it, only URLs signed with it are drawn, so no one else can have the
   // endpoint draw what they like; sign them with signUrl().
   secret?: string
@@ -56,7 +59,7 @@ class Forbidden extends BadRequest {}
 // keeps room for it, since an image has nowhere else to show it.
 const BRAND_PARAMETERS = ["title", "id", "tag", "use", "theme", "format", "sig"]
 
-function readBrand(url: URL, brand: Brand): SurfaceInput {
+function readBrand(url: URL, brand: Brand, font?: TitleFont): SurfaceInput {
   const query = url.searchParams
   for (const key of query.keys()) {
     if (!BRAND_PARAMETERS.includes(key)) {
@@ -71,7 +74,7 @@ function readBrand(url: URL, brand: Brand): SurfaceInput {
   const title = query.get("title") ?? undefined
   const id = query.get("id") ?? undefined
   const tag = query.get("tag") ?? undefined
-  return themed.input(use, { ...(title ? { title } : null), ...(id ? { id } : null), ...(tag ? { tag } : null), drawTitle: use !== "card" && Boolean(title) })
+  return themed.input(use, { ...(title ? { title } : null), ...(id ? { id } : null), ...(tag ? { tag } : null), drawTitle: use !== "card" && Boolean(title) ? (font ? { font } : true) : false })
 }
 
 // The URL without its signature, its parameters in order, as both sides sign it.
@@ -213,12 +216,12 @@ async function respond<I>(request: Request, { read, draw, theme, png, jpeg }: Ro
   return new Response(body, { headers })
 }
 
-export function createHandler({ defaults = {}, png, jpeg, brand, secret }: HandlerOptions = {}) {
+export function createHandler({ defaults = {}, png, jpeg, brand, font, secret }: HandlerOptions = {}) {
   return (request: Request) =>
     respond(request, {
       read: async (url) => {
         if (secret) await verify(url, secret)
-        return brand ? readBrand(url, brand) : read(url, defaults)
+        return brand ? readBrand(url, brand, font) : read(url, defaults)
       },
       draw: (input) => toSvg(generate(input)),
       theme: (input) => input.theme,
