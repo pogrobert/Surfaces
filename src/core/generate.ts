@@ -333,7 +333,7 @@ function reversed(svg: string, ink: string) {
   return svg
     .replace(/<svg\b(?![^>]*\sfill=)/i, `<svg fill="${ink}"`)
     .replace(/\b(fill|stroke|stop-color)\s*=\s*"([^"]*)"/gi, (_, name: string, value: string) => `${name}="${paint(value)}"`)
-    .replace(/\b(fill|stroke|stop-color)\s*:\s*([^;"']+)/gi, (_, name: string, value: string) => `${name}:${paint(value)}`)
+    .replace(/\b(fill|stroke|stop-color)\s*:\s*([^;"'}]+)/gi, (_, name: string, value: string) => `${name}:${paint(value)}`)
 }
 
 // Why an SVG logo would vanish on a ground, when every colour it is drawn in

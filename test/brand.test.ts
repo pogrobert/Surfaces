@@ -206,6 +206,11 @@ test("a logo in the title's way fails, naming the fix", async () => {
 test("a logo its ground would lose is drawn in one colour, the cover's ink", () => {
   const navy = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 25"><path fill="#0a2540" d="M0 4h18v18H0z"/></svg>`
   const plain = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M5 0 10 10H0z"/></svg>`
+  // As Mozilla's footer logo: white, by a rule in its own style sheet.
+  const styled = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><style>.st0{fill:#fff}</style><path class="st0" d="M0 0h10v10H0z"/></svg>`
+  const onLight = createBrand({ name: "acme.dev", style: "halftone", color: "#10bcec", theme: "light", logo: styled }).og({ title: "Hi" })
+  const drawnStyled = Buffer.from(String((onLight.layers.find((layer) => layer.kind === "logo") as { href: string }).href.split(",")[1]), "base64").toString()
+  assert.ok(drawnStyled.includes(`.st0{fill:${onLight.ink}}`), drawnStyled)
   for (const logo of [navy, plain]) {
     const scene = createBrand({ name: "acme.dev", style: "halftone", color: "#10bcec", theme: "dark", logo }).og({ title: "Hi" })
     const drawn = Buffer.from(String((scene.layers.find((layer) => layer.kind === "logo") as { href: string }).href.split(",")[1]), "base64").toString()
