@@ -34,29 +34,28 @@
   :focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-  /* The hero: marks scattered round the words like stickers on a desk, from
-     sites like yours until one is read, then that site's own. */
-  /* The window's height from the first paint, so nothing moves when the
-     marks are drawn. */
-  .hero { position: relative; overflow: hidden; height: max(100svh, 560px); }
-  .marks { position: absolute; inset: 0; }
-  /* Each mark at its spot, its size scaled from a 1440-wide window. */
-  .marks .mark { position: absolute; left: var(--x); top: var(--y); width: clamp(calc(var(--s) * 0.62px), calc(var(--s) * 100vw / 1440), calc(var(--s) * 1.15px)); aspect-ratio: 1; transform: translate(-50%, -50%) rotate(var(--r)); line-height: 0; overflow: hidden; }
-  .marks .mark.over { visibility: hidden; }
-  /* While a site is read, the sample marks step back, to make way for its own. */
-  .marks .mark { transition: opacity 0.4s ease; }
-  .reading .marks .mark { opacity: 0.35; }
-  @media (prefers-reduced-motion: reduce) { .marks .mark { transition: none; } }
-  /* On a dark page a mark's own dark ground needs an edge to sit apart. */
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) .marks .mark { box-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.6); }
-    :root:not([data-theme="light"]) .marks .mark::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08); pointer-events: none; }
-  }
-  @media (max-width: 760px) { .marks .mark.mid { display: none; } }
-  .marks .mark > div { position: absolute; inset: 0; }
-  .pitch { position: absolute; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, calc(100% - 32px)); text-align: center; display: grid; justify-items: center; }
-  .pitch h1 { margin: 0; font-size: clamp(56px, 7vw, 104px); line-height: 0.95; letter-spacing: -0.05em; font-weight: 800; }
-  .pitch p { margin: 14px 0 28px; max-width: 34ch; font-size: 21px; line-height: 1.4; color: var(--quiet); text-wrap: balance; }
+  /* The landing: a wall of what the library draws, every style in many
+     brands and shapes, with the words on a card over it. Typing a site turns
+     the wall into that site's own. */
+  .hero { position: relative; overflow: hidden; height: max(100svh, 640px); }
+  .wall { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); grid-auto-rows: 10px; grid-auto-flow: dense; gap: 10px; padding: 10px; align-content: start; transition: opacity 0.35s ease; }
+  @media (max-width: 560px) { .wall { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 8px; gap: 8px; padding: 8px; } }
+  .reading .wall { opacity: 0.45; }
+  @media (prefers-reduced-motion: reduce) { .wall { transition: none; } }
+  .wall .tile { margin: 0; position: relative; border-radius: 10px; overflow: hidden; background: color-mix(in srgb, var(--ink) 6%, transparent); }
+  .wall .art { position: absolute; inset: 0; line-height: 0; }
+  .wall .art > div { position: absolute; inset: 0; }
+  .wall figcaption { position: absolute; left: 8px; bottom: 8px; font-size: 12px; line-height: 1.2; padding: 4px 9px; border-radius: 999px; background: rgb(255 255 255 / 0.92); color: #111; opacity: 0; transition: opacity 0.15s ease; pointer-events: none; }
+  .wall .tile:hover figcaption { opacity: 1; }
+  /* The wall fades into the page under the card. */
+  .hero::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 34%; background: linear-gradient(transparent, var(--paper)); pointer-events: none; }
+  .pitch { position: absolute; z-index: 2; left: 50%; bottom: max(28px, 6vh); transform: translateX(-50%); width: min(620px, calc(100% - 32px)); background: var(--sheet); border-radius: 26px; padding: 26px 26px 18px; box-shadow: 0 0 0 1px var(--rule), 0 50px 90px -40px rgb(0 0 0 / 0.55); display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .pitch h1 { margin: 0; font-size: clamp(40px, 5vw, 58px); line-height: 0.95; letter-spacing: -0.05em; font-weight: 800; }
+  .pitch p { margin: 0; font-size: 18px; line-height: 1.45; color: var(--quiet); text-wrap: pretty; }
+  .pitch .row { display: flex; gap: 8px; align-items: center; }
+  .pitch .ask { flex: 1; width: auto; min-width: 0; }
+  .shuffle { height: 58px; border: 1px solid var(--rule); background: var(--sheet); border-radius: 15px; padding: 0 18px; font-weight: 700; cursor: pointer; flex: none; }
+  @media (max-width: 560px) { .pitch { padding: 20px 18px 14px; } .pitch .row { flex-wrap: wrap; } .pitch .ask { flex-basis: 100%; } .shuffle { width: 100%; height: 46px; } }
   /* The address: one piece, the button inside it. */
   .ask { position: relative; display: flex; align-items: center; height: 58px; width: min(480px, 100%); background: var(--sheet); border-radius: 15px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 14%, transparent); padding: 6px 6px 6px 18px; gap: 8px; }
   .ask:focus-within { box-shadow: 0 0 0 2px var(--ink); }
@@ -74,18 +73,10 @@
   .suggest li[aria-selected="true"], .suggest li:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
   .suggest b { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .suggest span { color: var(--quiet); white-space: nowrap; }
-  .pitch .or { margin: 14px 0 0; font-size: 15px; }
+  .pitch .or { margin: 0; font-size: 15px; color: var(--quiet); }
   .link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font-weight: 700; }
-  .pitch .status { min-height: 1.5em; margin: 8px 0 0; font-size: 15px; }
+  .pitch .status { min-height: 1.5em; margin: -6px 0 0; font-size: 15px; }
   @media (max-width: 420px) { .ask .pre { display: none; } }
-
-  /* The work: the site's set shown where it will be seen, a shared link
-     first, then the rest of the family; the choices folded away under it. */
-  .work { max-width: 1080px; margin: 0 auto; padding: 44px 24px 96px; display: grid; gap: 64px; }
-  .work[hidden] { display: none; }
-  @media (max-width: 700px) { .work { padding: 28px 16px 64px; gap: 48px; } }
-  .work h2 { margin: 0; font-size: 24px; line-height: 1.2; letter-spacing: -0.025em; }
-  .work .lede { margin: 6px 0 0; color: var(--quiet); max-width: 62ch; }
 
   /* What was read, each part a click from being put right. */
   .read { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 26px; padding: 14px 18px; background: var(--sheet); border-radius: 16px; box-shadow: 0 0 0 1px var(--rule); font-size: 15px; }
@@ -120,21 +111,13 @@
   .post p { margin: 2px 0 12px; font-size: 16px; line-height: 1.4; }
   .unfurl { border-radius: 16px; overflow: hidden; box-shadow: 0 0 0 1px var(--rule); }
   .unfurl .from { padding: 9px 14px 11px; font-size: 14px; line-height: 1.3; color: var(--quiet); }
-  .headline { width: min(620px, 100%); display: flex; gap: 10px; align-items: center; }
+  .headline { display: flex; gap: 10px; align-items: center; }
   .headline label { color: var(--quiet); font-size: 14px; white-space: nowrap; }
   .headline input { flex: 1; min-width: 0; height: 40px; border-radius: 10px; border: 1px solid var(--rule); background: var(--sheet); padding: 0 12px; font-size: 15px; }
-  .again { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; }
+  .again { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   .again .go { border: 0; background: var(--ink); color: var(--paper); border-radius: 999px; padding: 10px 18px; font-weight: 700; cursor: pointer; }
   .again .soft { border: 1px solid var(--rule); background: var(--sheet); border-radius: 999px; padding: 9px 16px; font-weight: 600; cursor: pointer; }
   .again .soft:disabled { opacity: 0.45; cursor: default; }
-  .dirs { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-  .dirs button { all: unset; cursor: pointer; display: grid; gap: 6px; justify-items: center; font-size: 13px; color: var(--quiet); }
-  .dirs .thumb { width: 112px; aspect-ratio: 1200 / 630; border-radius: 8px; overflow: hidden; position: relative; line-height: 0; box-shadow: 0 0 0 1px var(--rule); }
-  .dirs .thumb > div { position: absolute; inset: 0; }
-  .dirs button[aria-pressed="true"] { color: var(--ink); font-weight: 700; }
-  .dirs button[aria-pressed="true"] .thumb { box-shadow: 0 0 0 2px var(--ink); }
-  .dirs button:focus-visible .thumb { box-shadow: 0 0 0 2px var(--action); }
-
   /* The rest of the family, each where it is seen. */
   .set { display: grid; gap: 40px; }
   .profile { background: var(--sheet); border-radius: 18px; overflow: hidden; box-shadow: 0 0 0 1px var(--rule); }
@@ -164,165 +147,181 @@
   .thread .say b { display: block; font-size: 14px; }
   .thread .say span { color: var(--quiet); }
 
-  /* Every choice, folded away until it is wanted. */
-  .tune { border-top: 1px solid var(--rule); padding-top: 22px; }
-  .tune summary { cursor: pointer; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; list-style: none; display: flex; align-items: center; gap: 10px; }
-  .tune summary::-webkit-details-marker { display: none; }
-  .tune summary::after { content: "+"; color: var(--quiet); font-weight: 400; }
-  .tune[open] summary::after { content: "–"; }
-  .tune .groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 26px 34px; margin-top: 22px; }
   .group h3 { font-size: 15px; font-weight: 700; margin: 0 0 10px; }
   .group p.note { margin: 8px 0 0; font-size: 13px; color: var(--quiet); }
-  .group.wide { grid-column: 1 / -1; }
   .field { display: flex; gap: 8px; align-items: center; }
   .field input[type="text"] { flex: 1; min-width: 0; height: 38px; border-radius: 8px; border: 1px solid var(--rule); background: var(--sheet); padding: 0 10px; font-size: 15px; }
   .field input[type="color"] { width: 38px; height: 38px; padding: 3px; border-radius: 8px; border: 1px solid var(--rule); background: var(--sheet); flex: none; }
-  .styles { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
-  .tile { all: unset; cursor: pointer; display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--quiet); }
-  .tile .thumb { aspect-ratio: 16 / 9; border-radius: 7px; overflow: hidden; position: relative; line-height: 0; box-shadow: 0 0 0 1px var(--rule); }
-  .tile .thumb > div { position: absolute; inset: 0; }
-  .tile[aria-pressed="true"] { color: var(--ink); font-weight: 700; }
-  .tile[aria-pressed="true"] .thumb { box-shadow: 0 0 0 2px var(--ink); }
-  .tile:focus-visible .thumb { box-shadow: 0 0 0 2px var(--action); }
   .plain { border: 1px solid var(--rule); background: var(--sheet); border-radius: 8px; padding: 6px 12px; font-size: 14px; cursor: pointer; }
   .logo-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .logo-row img { height: 32px; max-width: 140px; object-fit: contain; background: var(--sheet); border-radius: 6px; padding: 4px; box-shadow: 0 0 0 1px var(--rule); }
   .why { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 14px; color: var(--quiet); }
 
-  .use { display: grid; gap: 14px; }
-  .use p { margin: 0; color: var(--quiet); max-width: 64ch; }
-  .use .buttons { display: flex; gap: 10px; flex-wrap: wrap; }
   pre { margin: 0; background: var(--sheet); border-radius: 10px; box-shadow: 0 0 0 1px var(--rule); padding: 14px 16px; overflow: auto; font: 13.5px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  /* The explorer: the styles down the side, the one chosen across the middle,
+     every way it can be drawn and where it goes, and what to copy beside it. */
+  .work { max-width: 1480px; margin: 0 auto; padding: 28px 24px 96px; display: grid; gap: 22px; }
+  .work[hidden] { display: none; }
+  @media (max-width: 700px) { .work { padding: 20px 16px 64px; } }
+  .explore { display: grid; grid-template-columns: 210px minmax(0, 1fr) 300px; gap: 30px; align-items: start; }
+  @media (max-width: 1180px) { .explore { grid-template-columns: 190px minmax(0, 1fr); } .side { grid-column: 1 / -1; } }
+  @media (max-width: 760px) { .explore { grid-template-columns: 1fr; } }
+  .list { position: sticky; top: 16px; display: grid; gap: 4px; max-height: calc(100vh - 32px); overflow: auto; padding-right: 4px; }
+  @media (max-width: 760px) { .list { position: static; display: flex; overflow-x: auto; max-height: none; gap: 8px; padding-bottom: 6px; } .list h3 { display: none; } }
+  .list h3 { margin: 12px 8px 4px; font-size: 12px; font-weight: 600; color: var(--quiet); }
+  .list h3:first-child { margin-top: 0; }
+  .list button { all: unset; cursor: pointer; display: grid; grid-template-columns: 40px 1fr; gap: 10px; align-items: center; padding: 5px 8px; border-radius: 10px; font-size: 15px; flex: none; }
+  .list button .thumb { width: 40px; height: 40px; border-radius: 8px; overflow: hidden; position: relative; line-height: 0; box-shadow: 0 0 0 1px var(--rule); }
+  .list button .thumb > div { position: absolute; inset: 0; }
+  .list button[aria-pressed="true"] { background: var(--sheet); box-shadow: 0 0 0 1px var(--rule); font-weight: 700; }
+  .list button:focus-visible { outline: 2px solid var(--action); }
+  .main { display: grid; gap: 22px; min-width: 0; }
+  .head { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; }
+  .head h2 { margin: 0; font-size: 44px; line-height: 1; letter-spacing: -0.04em; }
+  .head p { margin: 8px 0 0; color: var(--quiet); max-width: 54ch; }
+  .tabs { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--sheet); box-shadow: 0 0 0 1px var(--rule); }
+  .tabs button { border: 0; background: none; border-radius: 999px; padding: 7px 16px; font-weight: 600; cursor: pointer; color: var(--quiet); }
+  .tabs button[aria-selected="true"] { background: var(--ink); color: var(--paper); }
+  #variations, #inuse { display: grid; gap: 22px; }
+  #variations[hidden], #inuse[hidden] { display: none; }
+  .lead { border-radius: 16px; box-shadow: 0 0 0 1px var(--rule); }
+  .axis h3 { margin: 0 0 10px; font-size: 15px; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  .grid figure { margin: 0; display: grid; gap: 6px; cursor: pointer; }
+  .grid .frame { border-radius: 9px; box-shadow: 0 0 0 1px var(--rule); }
+  .grid figure[aria-current="true"] .frame { box-shadow: 0 0 0 2px var(--ink); }
+  .grid figure:focus-visible { outline: none; }
+  .grid figure:focus-visible .frame { box-shadow: 0 0 0 2px var(--action); }
+  .grid figcaption { font-size: 13px; color: var(--quiet); }
+  .grid.sizes { grid-template-columns: 2fr 1fr 0.7fr 1.4fr; align-items: end; }
+  .side { position: sticky; top: 16px; display: grid; gap: 24px; max-height: calc(100vh - 32px); overflow: auto; }
+  @media (max-width: 1180px) { .side { position: static; max-height: none; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); } }
+  .side pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .side code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 </style>
 </head>
 <body>
 <section class="hero" id="hero">
-  <div class="marks" id="marks" aria-hidden="true"></div>
+  <div class="wall" id="wall" aria-hidden="true"></div>
   <div class="pitch" id="pitch">
     <h1>Surfaces</h1>
-    <p>Every site gets its own marks, covers and link previews.</p>
-    <form class="ask" id="ask">
-      <span class="pre" aria-hidden="true">https://</span>
-      <label class="sr" for="url">Your site's address</label>
-      <input id="url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="yoursite.com" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggest">
-      <button id="go" type="submit">Make my set</button>
-      <ul class="suggest" id="suggest" role="listbox" aria-label="Sites" hidden></ul>
-    </form>
-    <p class="or">No site yet? <button class="link" type="button" id="browse">Browse the styles</button></p>
+    <p>Generative art for every picture your site shows: posts, docs, link previews, headers and the people on it. Nineteen styles, drawn in your own colours.</p>
+    <div class="row">
+      <form class="ask" id="ask">
+        <span class="pre" aria-hidden="true">https://</span>
+        <label class="sr" for="url">Your site's address</label>
+        <input id="url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="yoursite.com" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggest">
+        <button id="go" type="submit">Make it mine</button>
+        <ul class="suggest" id="suggest" role="listbox" aria-label="Sites" hidden></ul>
+      </form>
+      <button class="shuffle" type="button" id="shuffle">Shuffle</button>
+    </div>
+    <p class="or">No site yet? <button class="link" type="button" id="browse">Explore the styles</button></p>
     <p class="status" id="status" role="status" aria-live="polite"></p>
   </div>
 </section>
 
-<script>
-  // Any mark that would touch the words is left out, before the first paint
-  // and whenever the window changes shape.
-  function clearWords() {
-    const words = document.getElementById("pitch").getBoundingClientRect()
-    for (const mark of document.querySelectorAll("#marks .mark")) {
-      const box = mark.getBoundingClientRect()
-      mark.classList.toggle("over", box.left < words.right + 28 && words.left - 28 < box.right && box.top < words.bottom + 28 && words.top - 28 < box.bottom)
-    }
-  }
-  clearWords()
-  addEventListener("resize", clearWords)
-</script>
-
 <main class="work" id="work" hidden>
   <section class="read" aria-label="What we read">
     <span class="site"><img id="readLogo" alt="" hidden><span id="readName">yoursite.com</span></span>
-    <span class="part"><span id="readColourLabel">Colour</span><span class="swatches" id="swatches" role="group" aria-label="The brand's colour"></span></span>
+    <span class="part">Colour <span class="swatches" id="swatches" role="group" aria-label="The brand's colour"></span></span>
     <span class="part">Type <b id="readFont">A sans</b></span>
     <span class="grow"></span>
     <span class="part"><span class="choice" id="theme" role="group" aria-label="Ground"></span></span>
   </section>
 
-  <section class="feature" aria-labelledby="featureHeading">
-    <h2 class="sr" id="featureHeading">A shared link</h2>
-    <div class="post">
-      <div class="face" id="postFace" style="width:44px;height:44px"></div>
-      <div>
-        <div class="who"><b id="postName">yoursite</b><span id="postHandle">@yoursite · 2h</span></div>
-        <p id="postText">Something new on the blog.</p>
-        <div class="unfurl">
-          <div class="frame" id="og"></div>
-          <div class="from" id="ogFrom">From yoursite.com</div>
-        </div>
-      </div>
-    </div>
-    <div class="headline">
-      <label for="title">Your headline</label>
-      <input id="title" type="text" spellcheck="false">
-    </div>
-    <div class="dirs" id="dirs" role="group" aria-label="Directions"></div>
-    <div class="again">
-      <button class="go" type="button" id="more">More like this</button>
-      <button class="soft" type="button" id="else">Something else</button>
-      <button class="soft" type="button" id="undo" disabled>Undo</button>
-    </div>
-  </section>
+  <div class="explore">
+    <nav class="list" id="list" aria-label="Styles"></nav>
 
-  <section class="set" aria-labelledby="setHeading">
-    <header>
-      <h2 id="setHeading">The rest of the set</h2>
-      <p class="lede" id="setNote">One family: the same look on every picture the site shows of itself.</p>
-    </header>
-    <div>
-      <p class="label"><span><b>X profile</b>, 1500 × 500 header; the art runs on under the photo</span></p>
-      <div class="profile">
-        <div class="frame" id="x"></div>
-        <div class="me"><div class="face" id="xFace"></div><b id="xName">yoursite</b><span id="xHandle">@yoursite</span></div>
-      </div>
-    </div>
-    <div>
-      <p class="label"><span><b>Blog</b>, each post's cover drawn from its title, the title set by the page</span></p>
-      <div class="blog" id="blog"></div>
-    </div>
-    <div class="pair">
-      <div>
-        <p class="label"><span><b>LinkedIn</b>, 1584 × 396</span></p>
-        <div class="boxed linkedin">
-          <div class="frame" id="linkedin"></div>
-          <div class="me"><div class="face" id="inFace"></div><div class="below" style="padding:0"><b id="inName">yoursite</b>Company page</div></div>
+    <div class="main">
+      <header class="head">
+        <div>
+          <h2 id="styleName"></h2>
+          <p id="styleLooks"></p>
         </div>
-      </div>
-      <div>
-        <p class="label"><span><b>Email</b>, the newsletter's header, 1200 × 400</span></p>
-        <div class="boxed">
-          <div class="frame" id="email"></div>
-          <div class="below"><b>Hi there,</b><br>here is what we shipped this month, and what comes next.</div>
+        <div class="tabs" role="tablist" aria-label="View">
+          <button role="tab" type="button" id="tabVariations" aria-selected="true" aria-controls="variations">Variations</button>
+          <button role="tab" type="button" id="tabUse" aria-selected="false" aria-controls="inuse">In use</button>
         </div>
-      </div>
-    </div>
-    <div>
-      <p class="label"><span><b>People</b>, an avatar for each, from their id</span></p>
-      <div class="thread" id="people"></div>
-    </div>
-  </section>
+      </header>
 
-  <details class="tune" id="tune">
-    <summary>Fine-tune</summary>
-    <div class="groups">
-      <div class="group wide">
-        <h3>Style</h3>
-        <div class="styles" id="styles"></div>
-      </div>
-      <div class="group">
-        <h3>Colour</h3>
-        <div class="field">
-          <input type="color" id="color" aria-label="Pick the brand's colour">
-          <label class="sr" for="hex">The brand's colour as hex</label>
-          <input type="text" id="hex" spellcheck="false" autocomplete="off">
+      <section id="variations" role="tabpanel" aria-labelledby="tabVariations">
+        <div class="frame lead" id="lead"></div>
+        <div class="headline">
+          <label for="title">Your headline</label>
+          <input id="title" type="text" spellcheck="false">
         </div>
-      </div>
+        <div class="again">
+          <button class="go" type="button" id="more">More like this</button>
+          <button class="soft" type="button" id="undo" disabled>Undo</button>
+        </div>
+        <div class="axis"><h3>Feel</h3><div class="grid" id="feel"></div></div>
+        <div class="axis" id="shapeAxis"><h3>Shape</h3><div class="grid" id="shapes"></div></div>
+        <div class="axis"><h3>Colour</h3><div class="grid" id="colours"></div></div>
+        <div class="axis"><h3>Every size</h3><div class="grid sizes" id="sizes"></div></div>
+      </section>
+
+      <section id="inuse" role="tabpanel" aria-labelledby="tabUse" hidden>
+        <div class="feature">
+          <div class="post">
+            <div class="face" id="postFace" style="width:44px;height:44px"></div>
+            <div>
+              <div class="who"><b id="postName">yoursite</b><span id="postHandle">@yoursite · 2h</span></div>
+              <p id="postText">Something new on the blog.</p>
+              <div class="unfurl">
+                <div class="frame" id="og"></div>
+                <div class="from" id="ogFrom">From yoursite.com</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="set">
+          <div>
+            <p class="label"><span><b>X profile</b>, 1500 × 500 header; the art runs on under the photo</span></p>
+            <div class="profile">
+              <div class="frame" id="x"></div>
+              <div class="me"><div class="face" id="xFace"></div><b id="xName">yoursite</b><span id="xHandle">@yoursite</span></div>
+            </div>
+          </div>
+          <div>
+            <p class="label"><span><b>Blog</b>, each post's cover drawn from its title, the title set by the page</span></p>
+            <div class="blog" id="blog"></div>
+          </div>
+          <div class="pair">
+            <div>
+              <p class="label"><span><b>LinkedIn</b>, 1584 × 396</span></p>
+              <div class="boxed linkedin">
+                <div class="frame" id="linkedin"></div>
+                <div class="me"><div class="face" id="inFace"></div><div class="below" style="padding:0"><b id="inName">yoursite</b>Company page</div></div>
+              </div>
+            </div>
+            <div>
+              <p class="label"><span><b>Email</b>, the newsletter's header, 1200 × 400</span></p>
+              <div class="boxed">
+                <div class="frame" id="email"></div>
+                <div class="below"><b>Hi there,</b><br>here is what we shipped this month, and what comes next.</div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <p class="label"><span><b>People</b>, an avatar for each, from their id</span></p>
+            <div class="thread" id="people"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="side" aria-label="Use it">
       <div class="group">
-        <h3>Feel</h3>
-        <div class="choice" id="mood" role="group" aria-label="Mood"></div>
-        <div class="choice" id="grain" role="group" aria-label="Grain" style="margin-top:8px"></div>
-      </div>
-      <div class="group" id="markGroup">
-        <h3>Mark</h3>
-        <div class="choice" id="shape" role="group" aria-label="Mark"></div>
-        <p class="note">One mark on every picture, or each title its own.</p>
+        <h3>Use this one</h3>
+        <pre id="code"></pre>
+        <div class="buttons">
+          <button class="plain" type="button" id="copy">Copy the code</button>
+          <button class="plain" type="button" id="copyAgent">Copy for your agent</button>
+        </div>
+        <p class="note">In a project, <code>npx @pogrobert/surfaces init</code> reads the same things from its files and writes this brand in. Titles stay in your own font.</p>
       </div>
       <div class="group">
         <h3>Logo</h3>
@@ -339,53 +338,63 @@
         <div class="field"><label class="sr" for="name">The brand's name</label><input id="name" type="text" spellcheck="false"></div>
         <p class="note">It is in every drawing, so no other site gets yours.</p>
       </div>
-      <div class="group wide">
+      <div class="group">
         <h3>Why these</h3>
         <ul class="why" id="why"></ul>
         <p style="margin:12px 0 0"><button class="plain" type="button" id="reset">Back to our pick</button></p>
       </div>
-    </div>
-  </details>
-
-  <section class="use" aria-labelledby="useHeading">
-    <h2 id="useHeading">Use it in your project</h2>
-    <p>The pictures are art; your titles stay in your own font. In the project, this reads the same things from its files and writes this brand in:</p>
-    <pre id="init">npx @pogrobert/surfaces init</pre>
-    <p>Or keep exactly what you see here:</p>
-    <pre id="code"></pre>
-    <div class="buttons">
-      <button class="plain" type="button" id="copy">Copy the code</button>
-      <button class="plain" type="button" id="copyAgent">Copy for your agent</button>
-    </div>
-  </section>
+    </aside>
+  </div>
 </main>
 
 <script type="module">
-import { createBrand, directions, readPage, toHtml, catalog } from "/dist/index.js"
+import { createBrand, generate, readPage, toHtml, catalog } from "/dist/index.js"
 import { toPngInBrowser } from "/dist/png.js"
-import { marks } from "/marks.js"
+import { KINDS, SAMPLES, scene, tiles, wall } from "/wall.js"
 
 const $ = (selector) => document.querySelector(selector)
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i
-const STYLES = catalog.map((entry) => entry.style)
 const NAMES = Object.fromEntries(catalog.map((entry) => [entry.style, entry.style[0].toUpperCase() + entry.style.slice(1)]))
-const PEOPLE = ["ada", "grace", "linus", "margaret", "alan", "hedy"]
 // What the page knows: the site's facts once read, its logo, and what the
 // person has chosen over the brand's own pick.
 const state = { name: "yoursite.com", facts: {}, logo: undefined, logoUrl: "", read: false, chosen: {}, title: "", variant: 0 }
 
-// ---- The hero: marks round the words ----
+// ---- The landing: the wall ----
 
-// The first marks come drawn into the page; these are a site's own, once
-// one is read, drawn again only when its look changes.
-let shown = ""
-function drawHero(looks) {
-  const key = JSON.stringify(looks)
-  if (key === shown) return
-  shown = key
-  $("#marks").innerHTML = marks(looks, createBrand, toHtml)
-  clearWords()
+// The wall's first rows come drawn into the page; the rest are drawn as they
+// come near the window, and the whole wall again in a site's own colours
+// once one is read, or on a shuffle.
+let shuffle = 0
+let walled = JSON.stringify({ shuffle: 0, brand: null })
+const wallBrand = () => (state.read ? { name: state.name, color: createBrand(choices()).look.color } : null)
+const unseen = new IntersectionObserver((entries) => {
+  for (const entry of entries) {
+    if (!entry.isIntersecting) continue
+    unseen.unobserve(entry.target)
+    const tile = tiles(shuffle)[Number(entry.target.dataset.i)]
+    try {
+      entry.target.querySelector(".art > div").innerHTML = toHtml(scene(tile, generate, wallBrand() ?? undefined), { fill: true })
+    } catch (error) {
+      console.warn(error.message)
+    }
+  }
+}, { rootMargin: "200px" })
+function watchWall() {
+  for (const tile of document.querySelectorAll("#wall .tile")) if (!tile.querySelector(".art > div").firstChild) unseen.observe(tile)
 }
+function drawWall() {
+  const brand = wallBrand()
+  const key = JSON.stringify({ shuffle, brand })
+  if (key === walled) return
+  walled = key
+  $("#wall").innerHTML = wall(tiles(shuffle), generate, toHtml, { drawn: 0, ...(brand ? { brand } : null) })
+  watchWall()
+}
+watchWall()
+$("#shuffle").addEventListener("click", () => {
+  shuffle += 1
+  drawWall()
+})
 
 // ---- Suggestions as the address is typed ----
 
@@ -523,7 +532,7 @@ $("#ask").addEventListener("submit", async (event) => {
     say(/doesn't let tools/.test(error.message) ? `${error.message}.` : `${error.message}. Check the address, or browse the styles instead.`)
   } finally {
     $("#go").disabled = false
-    $("#go").textContent = "Make my set"
+    $("#go").textContent = "Make it mine"
     $("#hero").classList.remove("reading")
   }
 })
@@ -606,20 +615,28 @@ function faceOf(brand) {
   return { stack: `"${family}", ${kind}`, name: family }
 }
 
+// Which view of the chosen style shows: its variations, or the places it goes.
+let view = "variations"
+
 function draw() {
   let brand
   try {
     brand = createBrand(choices())
   } catch (error) {
-    $("#setNote").textContent = error.message
+    $("#styleLooks").textContent = error.message
     return
   }
-  // The hero repaints in the brand: the page becomes the site's own.
-  drawHero([{ name: brand.name, ...brand.look }])
+  // The wall repaints in the brand: the page becomes the site's own.
+  drawWall()
   drawRead(brand)
-  drawFeature(brand)
-  drawSet(brand)
-  drawTune(brand)
+  drawList(brand)
+  drawHead(brand)
+  if (view === "variations") drawVariations(brand)
+  else {
+    drawFeature(brand)
+    drawSet(brand)
+  }
+  drawSide(brand)
   $("#undo").disabled = history.length === 0
   fitAll()
   // Once more when the page's own faces arrive, which changes every measure.
@@ -632,19 +649,21 @@ const darkMode = matchMedia("(prefers-color-scheme: dark)")
 darkMode.addEventListener("change", () => {
   if (!$("#work").hidden) draw()
 })
-const flatOf = (brand) => (brand.look.theme === "auto" ? createBrand({ ...choices(), theme: darkMode.matches ? "dark" : "light" }) : brand)
+const seenTheme = () => (darkMode.matches ? "dark" : "light")
+const flatOf = (brand) => (brand.look.theme === "auto" ? createBrand({ ...choices(), theme: seenTheme() }) : brand)
 const handle = (name) => name.replace(/^www\./, "").split(".")[0].toLowerCase()
 const titleOf = () => state.title.trim() || "How we cut our build times in half"
 const idOf = (title) => (state.variant ? `${title}#${state.variant}` : title)
+const make = (tag, props = {}, ...children) => {
+  const el = Object.assign(document.createElement(tag), props)
+  el.append(...children)
+  return el
+}
 
-function drawRead(brand) {
-  $("#readName").textContent = brand.name
-  $("#readLogo").hidden = !state.logo
-  if (state.logo) $("#readLogo").src = state.logoUrl
-  $("#readFont").textContent = faceOf(brand).name
-  // The page's strong colours, most named and used first: neither near white
-  // nor near black, nor grey, so each could be a brand's. Near-twins, such as
-  // a red and its hover, count once.
+// The page's strong colours, most named and used first: neither near white
+// nor near black, nor grey, so each could be a brand's. Near-twins, such as
+// a red and its hover, count once.
+function ownColours(brand) {
   const strong = (hex) => {
     const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
     const high = Math.max(r, g, b)
@@ -658,12 +677,18 @@ function drawRead(brand) {
   for (const color of new Set((state.facts.colors ?? []).filter((color) => HEX.test(color) && color.length === 7).map((color) => color.toLowerCase()))) {
     if (own.length < 7 && strong(color) && own.every((other) => apart(color, other))) own.push(color)
   }
+  return own
+}
+
+function drawRead(brand) {
+  $("#readName").textContent = brand.name
+  $("#readLogo").hidden = !state.logo
+  if (state.logo) $("#readLogo").src = state.logoUrl
+  $("#readFont").textContent = faceOf(brand).name
   $("#swatches").replaceChildren(
-    ...own.map((color) => {
-      const swatch = document.createElement("button")
-      swatch.type = "button"
+    ...ownColours(brand).map((color) => {
+      const swatch = make("button", { type: "button", title: color })
       swatch.style.background = color
-      swatch.title = color
       swatch.setAttribute("aria-label", `Use ${color}`)
       swatch.setAttribute("aria-pressed", String(color === brand.look.color?.toLowerCase()))
       swatch.addEventListener("click", () => choose({ color }))
@@ -673,25 +698,50 @@ function drawRead(brand) {
   segmented("#theme", [["light", "Light"], ["dark", "Dark"], ["auto", "Follow the reader"]], brand.look.theme, (theme) => choose({ theme }))
 }
 
+// Every style, each a thumbnail in the brand's own colour, by kind.
+function drawList(brand) {
+  $("#list").replaceChildren(
+    ...KINDS.flatMap(([kind, styles]) => [
+      make("h3", { textContent: kind }),
+      ...styles.map((style) => {
+        const thumb = make("span", { className: "thumb" })
+        const art = make("div")
+        art.innerHTML = toHtml(flatOf(createBrand({ ...choices(), style, shape: undefined })).card({ id: "thumb" }), { fill: true })
+        thumb.append(art)
+        const button = make("button", { type: "button" }, thumb, NAMES[style])
+        button.setAttribute("aria-pressed", String(style === brand.look.style))
+        button.addEventListener("click", () => step(() => {
+          state.chosen = { ...state.chosen, style }
+          delete state.chosen.shape
+        }))
+        return button
+      }),
+    ])
+  )
+}
+
+function drawHead(brand) {
+  const entry = catalog.find((item) => item.style === brand.look.style)
+  $("#styleName").textContent = NAMES[brand.look.style]
+  $("#styleLooks").textContent = entry ? `${entry.looks} ${entry.suits}` : ""
+  $("#tabVariations").setAttribute("aria-selected", String(view === "variations"))
+  $("#tabUse").setAttribute("aria-selected", String(view === "inuse"))
+  $("#variations").hidden = view !== "variations"
+  $("#inuse").hidden = view !== "inuse"
+}
+
 // A picture with words set over it in the site's own face, where the art
 // keeps room for them, and a way to keep the art.
 function frame(target, scene, words, face, file) {
   const holder = typeof target === "string" ? $(target) : target
   holder.style.aspectRatio = `${scene.output.w} / ${scene.output.h}`
-  const art = document.createElement("div")
-  art.className = "art"
+  const art = make("div", { className: "art" })
   art.innerHTML = toHtml(scene, { fill: true })
   const parts = [art]
   const area = scene.areas[0]
   if (words && area && area.art === "around") {
     const { w, h } = scene.output
-    const set = document.createElement("div")
-    set.className = "words"
-    // The words in a line box of their own, so the room they take is
-    // measured whichever edge they hang from.
-    const line = document.createElement("span")
-    line.textContent = words
-    set.append(line)
+    const set = make("div", { className: "words" }, make("span", { textContent: words }))
     Object.assign(set.style, {
       left: `${(area.x / w) * 100}%`,
       top: `${(area.y / h) * 100}%`,
@@ -704,18 +754,18 @@ function frame(target, scene, words, face, file) {
     })
     parts.push(set)
   }
-  const save = document.createElement("button")
-  save.type = "button"
-  save.className = "save"
-  save.textContent = "Download"
-  save.setAttribute("aria-label", `Download this picture as a PNG`)
-  save.addEventListener("click", async () => {
-    const blob = await toPngInBrowser(scene)
-    const link = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `${state.name}-${file}.png` })
-    link.click()
-    setTimeout(() => URL.revokeObjectURL(link.href), 1000)
-  })
-  parts.push(save)
+  if (file) {
+    const save = make("button", { type: "button", className: "save", textContent: "Download" })
+    save.setAttribute("aria-label", "Download this picture as a PNG")
+    save.addEventListener("click", async (event) => {
+      event.stopPropagation()
+      const blob = await toPngInBrowser(scene)
+      const link = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `${state.name}-${file}.png` })
+      link.click()
+      setTimeout(() => URL.revokeObjectURL(link.href), 1000)
+    })
+    parts.push(save)
+  }
   holder.replaceChildren(...parts)
 }
 
@@ -744,46 +794,65 @@ addEventListener("resize", () => {
   resizing = setTimeout(fitAll, 120)
 })
 
-// The directions a studio would show, judged with this brand's colour: the
-// brand's own pick first. "Something else" goes to the next.
-let shownDirections = []
+// The chosen style every way it can be drawn: the link preview with the
+// headline over it, then its feels, shapes, colours and sizes, each a click
+// from being the brand's.
+function drawVariations(brand) {
+  const flat = flatOf(brand)
+  const face = faceOf(brand)
+  const title = titleOf()
+  $("#title").value = state.title
+  frame("#lead", flat.og({ title, id: idOf(title) }), title, face, "og")
+  const look = brand.look
+  const tile = (caption, change, scene) => {
+    const holder = make("div", { className: "frame" })
+    const figure = make("figure", { tabIndex: 0 }, holder, make("figcaption", { textContent: caption }))
+    frame(holder, scene, "", face)
+    const current = Object.keys(change).length && Object.entries(change).every(([key, value]) => (look[key] ?? undefined) === value)
+    if (current) figure.setAttribute("aria-current", "true")
+    const pick = () => choose(change)
+    figure.addEventListener("click", pick)
+    figure.addEventListener("keydown", (event) => (event.key === "Enter" || event.key === " ") && (event.preventDefault(), pick()))
+    return figure
+  }
+  const as = (change) => flatOf(createBrand({ ...choices(), ...change }))
+  $("#feel").replaceChildren(
+    ...[
+      ["Calm, light", { mood: "calm", theme: "light" }],
+      ["Bold, light", { mood: "bold", theme: "light" }],
+      ["Calm, dark", { mood: "calm", theme: "dark" }],
+      ["Bold, dark, heavy grain", { mood: "bold", theme: "dark", grain: "heavy" }],
+    ].map(([caption, change]) => tile(caption, change, as(change).og({ title, id: idOf(title) })))
+  )
+  const shapes = catalog.find((entry) => entry.style === look.style)?.shapes ?? []
+  $("#shapeAxis").hidden = !shapes.length
+  $("#shapes").replaceChildren(...shapes.map((shape) => tile(shape[0].toUpperCase() + shape.slice(1), { shape }, as({ shape }).og({ title, id: idOf(title) }))))
+  const own = ownColours(brand)
+  const colours = [...own, ...SAMPLES.map((sample) => sample.color).filter((color) => !own.includes(color))].slice(0, 4)
+  $("#colours").replaceChildren(...colours.map((color) => tile(color, { color }, as({ color }).og({ title, id: idOf(title) }))))
+  const input = flat.input("card", { id: idOf(title) })
+  $("#sizes").replaceChildren(
+    ...[
+      ["Link preview", 1200, 630],
+      ["Square", 1000, 1000],
+      ["Story", 900, 1600],
+      ["Header", 1500, 500],
+    ].map(([caption, width, height]) => tile(caption, {}, generate({ ...input, width, height })))
+  )
+}
+
+// The link preview as X shows it, with the headline over the art.
 function drawFeature(brand) {
   const flat = flatOf(brand)
   const face = faceOf(brand)
   const title = titleOf()
   $("#postName").textContent = handle(brand.name).replace(/^./, (first) => first.toUpperCase())
   $("#postHandle").textContent = `@${handle(brand.name)} · 2h`
-  $("#postText").textContent = "Something new on the blog."
   $("#ogFrom").textContent = `From ${brand.name}`
-  $("#title").value = state.title
-  const avatar = document.createElement("div")
+  const avatar = make("div")
   avatar.innerHTML = toHtml(flat.avatar(brand.name), { fill: true })
   $("#postFace").replaceChildren(avatar)
   frame("#og", flat.og({ title, id: idOf(title) }), title, face, "og")
-
-  const { style: _style, shape: _shape, ...rest } = choices()
-  shownDirections = directions(rest, { count: 4 })
-  $("#dirs").replaceChildren(
-    ...shownDirections.map((option, index) => {
-      const button = document.createElement("button")
-      button.type = "button"
-      button.setAttribute("aria-pressed", String(option.look.style === brand.look.style))
-      const thumb = document.createElement("span")
-      thumb.className = "thumb"
-      const art = document.createElement("div")
-      const look = option.look.theme === "auto" ? createBrand({ ...choices(), ...option.look, theme: darkMode.matches ? "dark" : "light" }) : option
-      art.innerHTML = toHtml(look.og({ title, id: idOf(title) }), { fill: true })
-      thumb.append(art)
-      const name = document.createElement("span")
-      name.textContent = index === 0 ? `${NAMES[option.look.style]}, our pick` : NAMES[option.look.style]
-      button.append(thumb, name)
-      button.addEventListener("click", () => step(() => {
-        state.chosen = { ...state.chosen, style: option.look.style }
-        delete state.chosen.shape
-      }))
-      return button
-    })
-  )
 }
 
 const POSTS = [
@@ -794,9 +863,8 @@ function drawSet(brand) {
   const flat = flatOf(brand)
   const face = faceOf(brand)
   const name = handle(brand.name).replace(/^./, (first) => first.toUpperCase())
-  $("#setNote").textContent = `${NAMES[brand.look.style]}: ${catalog.find((entry) => entry.style === brand.look.style)?.looks ?? ""}`
   const faceArt = (person, target) => {
-    const art = document.createElement("div")
+    const art = make("div")
     art.innerHTML = toHtml(flat.avatar(person), { fill: true })
     target.replaceChildren(art)
   }
@@ -808,24 +876,16 @@ function drawSet(brand) {
   faceArt(brand.name, $("#inFace"))
   $("#inName").textContent = name
   frame("#email", flat.banner({ for: "email", id: idOf("email") }), "", face, "email-header")
-
   const posts = [[titleOf(), "Today"], ...POSTS]
   $("#blog").replaceChildren(
     ...posts.map(([title, when]) => {
-      const article = document.createElement("article")
-      const pic = document.createElement("div")
-      pic.className = "frame"
+      const pic = make("div", { className: "frame" })
       frame(pic, flat.cover({ title, id: idOf(title) }), "", face, "cover")
-      const heading = document.createElement("h3")
-      heading.textContent = title
+      const heading = make("h3", { textContent: title })
       heading.style.fontFamily = face.stack
-      const time = document.createElement("time")
-      time.textContent = when
-      article.append(pic, heading, time)
-      return article
+      return make("article", {}, pic, heading, make("time", { textContent: when }))
     })
   )
-
   const said = [
     ["Ada", "This is exactly what we needed for the launch."],
     ["Grace", "The new caching guide saved me an afternoon."],
@@ -833,76 +893,29 @@ function drawSet(brand) {
   ]
   $("#people").replaceChildren(
     ...said.map(([person, words]) => {
-      const row = document.createElement("div")
-      row.className = "say"
-      const holder = document.createElement("div")
-      holder.className = "face"
+      const holder = make("div", { className: "face" })
       faceArt(person.toLowerCase(), holder)
-      const text = document.createElement("div")
-      const who = document.createElement("b")
-      who.textContent = person
-      const line = document.createElement("span")
-      line.textContent = words
-      text.append(who, line)
-      row.append(holder, text)
-      return row
+      return make("div", { className: "say" }, holder, make("div", {}, make("b", { textContent: person }), make("span", { textContent: words })))
     })
   )
-
-  const parts = Object.entries({ name: brand.name, ...brand.look }).map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
-  const logo = state.logo ? `,\n  logo: await readFile("public/logo.${typeof state.logo === "string" ? "svg" : "png"}"${typeof state.logo === "string" ? `, "utf8"` : ""})` : ""
-  $("#code").textContent = `import { createBrand } from "@pogrobert/surfaces"\n\nexport const brand = createBrand({\n  ${parts.join(",\n  ")}${logo},\n})\n\n// On a page: the art, with the title set in your own font\n<Cover brand={brand} title={post.title} />\n\n// A link preview file, with its title drawn in\ntoJpeg(brand.og({ title: post.title, drawTitle: true }))`
 }
 
-function drawTune(brand) {
+function drawSide(brand) {
   $("#why").replaceChildren(
-    ...brand.why.map((line) => {
-      const item = document.createElement("li")
-      item.textContent = line.replace(/^(\w+) /, (_, key) => `${{ color: "Colour", theme: "Ground", style: "Style", mood: "Feel", grain: "Grain", font: "Type", shape: "Mark" }[key] ?? key} `)
-      return item
-    })
+    ...brand.why.map((line) =>
+      make("li", { textContent: line.replace(/^(\w+) /, (_, key) => `${{ color: "Colour", theme: "Ground", style: "Style", mood: "Feel", grain: "Grain", font: "Type", shape: "Mark" }[key] ?? key} `) })
+    )
   )
   $("#name").value = state.name
-  const title = titleOf()
-  $("#styles").replaceChildren(
-    ...STYLES.map((style) => {
-      const tile = document.createElement("button")
-      tile.type = "button"
-      tile.className = "tile"
-      tile.setAttribute("aria-pressed", String(style === brand.look.style))
-      const thumb = document.createElement("span")
-      thumb.className = "thumb"
-      if ($("#tune").open) {
-        const art = document.createElement("div")
-        const look = flatOf(createBrand({ ...choices(), style, shape: undefined }))
-        art.innerHTML = toHtml(look.card({ id: idOf(title) }), { fill: true })
-        thumb.append(art)
-      }
-      const label = document.createElement("span")
-      label.textContent = NAMES[style]
-      tile.append(thumb, label)
-      tile.addEventListener("click", () => step(() => {
-        state.chosen = { ...state.chosen, style }
-        delete state.chosen.shape
-      }))
-      return tile
-    })
-  )
-  $("#color").value = HEX.test(brand.look.color ?? "") ? brand.look.color : "#0078bf"
-  $("#hex").value = brand.look.color ?? ""
-  segmented("#mood", [["calm", "Calm"], [undefined, "As drawn"], ["bold", "Bold"]], brand.look.mood, (mood) => choose({ mood }))
-  segmented("#grain", [["smooth", "Smooth"], ["natural", "Natural grain"], ["heavy", "Heavy grain"]], brand.look.grain ?? "natural", (grain) => choose({ grain }))
-  const shapes = catalog.find((entry) => entry.style === brand.look.style)?.shapes ?? []
-  $("#markGroup").hidden = !shapes.length
-  segmented("#shape", [[undefined, "Each title its own"], ...shapes.map((shape) => [shape, shape[0].toUpperCase() + shape.slice(1)])], brand.look.shape, (shape) => choose({ shape }))
+  const parts = Object.entries({ name: brand.name, ...brand.look }).map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
+  const logo = state.logo ? `,\n  logo: await readFile("public/logo.${typeof state.logo === "string" ? "svg" : "png"}"${typeof state.logo === "string" ? `, "utf8"` : ""})` : ""
+  $("#code").textContent = `import { createBrand } from "@pogrobert/surfaces"\n\nexport const brand = createBrand({\n  ${parts.join(",\n  ")}${logo},\n})\n\n// On a page: the art, the title in your font\n<Cover brand={brand} title={post.title} />\n\n// A link preview file, its title drawn in\ntoJpeg(brand.og({ title, drawTitle: true }))`
 }
 
 function segmented(selector, options, current, pick) {
   $(selector).replaceChildren(
     ...options.map(([value, label]) => {
-      const button = document.createElement("button")
-      button.type = "button"
-      button.textContent = label
+      const button = make("button", { type: "button", textContent: label })
       button.setAttribute("aria-pressed", String(value === current))
       button.addEventListener("click", () => pick(value))
       return button
@@ -920,19 +933,9 @@ function choose(change) {
 
 // ---- Wiring ----
 
-// More like this: the same look, each picture drawn afresh. Something else:
-// the next direction. Space and shift+space do the same, outside a field.
+// More like this: the same look, each picture drawn afresh. Space does the
+// same, outside a field; cmd+z takes a step back.
 const more = () => step(() => (state.variant += 1))
-function somethingElse() {
-  const current = createBrand(choices()).look.style
-  const at = shownDirections.findIndex((option) => option.look.style === current)
-  const next = shownDirections[(at + 1) % shownDirections.length]
-  if (!next) return
-  step(() => {
-    state.chosen = { ...state.chosen, style: next.look.style }
-    delete state.chosen.shape
-  })
-}
 function undo() {
   const last = history.pop()
   if (!last) return
@@ -941,21 +944,23 @@ function undo() {
   draw()
 }
 $("#more").addEventListener("click", more)
-$("#else").addEventListener("click", somethingElse)
 $("#undo").addEventListener("click", undo)
 addEventListener("keydown", (event) => {
-  if ($("#work").hidden || event.target.closest?.("input, textarea, select, [contenteditable]")) return
+  if ($("#work").hidden || event.target.closest?.("input, textarea, select, [contenteditable], figure, button")) return
   if (event.key === " ") {
     event.preventDefault()
-    event.shiftKey ? somethingElse() : more()
+    more()
   } else if ((event.metaKey || event.ctrlKey) && event.key === "z") {
     event.preventDefault()
     undo()
   }
 })
-$("#tune").addEventListener("toggle", () => {
-  if ($("#tune").open) drawTune(createBrand(choices()))
-})
+for (const [tab, name] of [["#tabVariations", "variations"], ["#tabUse", "inuse"]]) {
+  $(tab).addEventListener("click", () => {
+    view = name
+    draw()
+  })
+}
 $("#reset").addEventListener("click", () => step(() => {
   state.chosen = {}
   state.variant = 0
@@ -964,21 +969,11 @@ $("#name").addEventListener("change", () => {
   state.name = $("#name").value
   draw()
 })
-$("#color").addEventListener("change", () => choose({ color: $("#color").value }))
-$("#hex").addEventListener("change", () => {
-  const value = $("#hex").value.trim()
-  if (HEX.test(value)) choose({ color: value.toLowerCase() })
-})
 let typing
 $("#title").addEventListener("input", () => {
   state.title = $("#title").value
   clearTimeout(typing)
-  typing = setTimeout(() => {
-    const brand = createBrand(choices())
-    drawFeature(brand)
-    drawSet(brand)
-    fitAll()
-  }, 200)
+  typing = setTimeout(draw, 250)
 })
 $("#logoFile").addEventListener("change", async () => {
   const file = $("#logoFile").files[0]
@@ -994,7 +989,7 @@ $("#copy").addEventListener("click", () => navigator.clipboard?.writeText($("#co
 $("#copyAgent").addEventListener("click", () => {
   const look = createBrand(choices()).look
   navigator.clipboard?.writeText(
-    `Add Surfaces to this site for its covers, link previews and headers. Run \`npx @pogrobert/surfaces init\`, then set the brand it writes to ${JSON.stringify({ name: state.name, ...look })}. The pictures are art: set titles in the site's own font over them, with <Cover brand title /> from @pogrobert/surfaces/react, and use \`toJpeg(brand.og({ title, drawTitle: true }))\` only for link preview files. Then run \`npx @pogrobert/surfaces kit\` for the site's preview and headers.`
+    `Add Surfaces to this site for its covers, link previews, headers and any other picture it repeats. Run \`npx @pogrobert/surfaces init\`, then set the brand it writes to ${JSON.stringify({ name: state.name, ...look })}. The pictures are art: set titles in the site's own font over them, with <Cover brand title /> from @pogrobert/surfaces/react, and use \`toJpeg(brand.og({ title, drawTitle: true }))\` only for link preview files. Then run \`npx @pogrobert/surfaces kit\` for the site's preview and headers.`
   )
 })
 

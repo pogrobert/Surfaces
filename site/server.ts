@@ -1,4 +1,4 @@
-// The Surfaces page: the page itself at /, with its first marks drawn in,
+// The Surfaces page: the page itself at /, with its wall's first rows drawn in,
 // the library from /dist, Atkinson Hyperlegible Next for the page's own
 // type, /read, which fetches a public site for the page to read in the
 // browser, /suggest, sites whose names start with what is typed, and /icon,
@@ -8,9 +8,9 @@ import { createReadStream, existsSync, readFileSync, statSync } from "node:fs"
 import { createServer } from "node:http"
 import { extname, join, normalize } from "node:path"
 import { gzipSync } from "node:zlib"
-import { createBrand } from "../src/brand.ts"
 import { toHtml } from "../src/render/layers.ts"
-import { marks, SAMPLES } from "./marks.js"
+import { generate } from "../src/core/generate.ts"
+import { tiles, wall } from "./wall.js"
 import { readSite } from "./read.ts"
 
 const ROOT = new URL("..", import.meta.url).pathname
@@ -24,10 +24,10 @@ const TYPES: Record<string, string> = {
 }
 const FONTS = join(ROOT, "node_modules/@fontsource-variable/atkinson-hyperlegible-next/files")
 
-// The page with its first marks in it, so they show on the first paint
+// The page with its wall's first rows in it, so they show on the first paint
 // instead of after the library loads in the browser. Drawn once: they are
 // the same every time.
-const FIRST_MARKS = marks(SAMPLES, createBrand, toHtml)
+const FIRST_WALL = wall(tiles(0), generate, toHtml)
 // Each site's favicon, from DuckDuckGo's icon service, fetched here so the
 // reader's browser tells no one else what was typed. Kept a while; a site
 // with none is a 404, and the page shows its first letter instead.
@@ -53,7 +53,7 @@ function icon(domain: string) {
 }
 
 const page = () =>
-  readFileSync(join(ROOT, "site/index.html"), "utf8").replace(`<div class="marks" id="marks" aria-hidden="true"></div>`, `<div class="marks" id="marks" aria-hidden="true">${FIRST_MARKS}</div>`)
+  readFileSync(join(ROOT, "site/index.html"), "utf8").replace(`<div class="wall" id="wall" aria-hidden="true"></div>`, `<div class="wall" id="wall" aria-hidden="true">${FIRST_WALL}</div>`)
 
 // Sites for what is typed, from Clearbit's free company search, kept a while
 // so typing back over a word asks nothing twice. The search knows companies,
@@ -106,7 +106,7 @@ async function suggest(typed: string) {
 createServer(async (request, response) => {
   const url = new URL(request.url!, "http://localhost")
   if (url.pathname === "/") {
-    // The marks' grain is most of the page, and compresses to a fifth.
+    // The wall's grain is most of the page, and compresses to a fifth.
     const gzip = /\bgzip\b/.test(String(request.headers["accept-encoding"] ?? ""))
     response.writeHead(200, { "content-type": TYPES[".html"]!, ...(gzip ? { "content-encoding": "gzip" } : null) }).end(gzip ? gzipSync(page()) : page())
     return
@@ -136,10 +136,11 @@ createServer(async (request, response) => {
     path === "/mockups" ? join(ROOT, "site/mockups.html")
     : path === "/next" ? join(ROOT, "site/next.html")
     : path === "/marks.js" ? join(ROOT, "site/marks.js")
+    : path === "/wall.js" ? join(ROOT, "site/wall.js")
     : path.startsWith("/dist/") ? join(ROOT, path)
     : path.startsWith("/fonts/") ? join(FONTS, path.slice(7))
     : ""
-  if (!file || !(file.startsWith(join(ROOT, "dist")) || file.startsWith(FONTS) || file === join(ROOT, "site/mockups.html") || file === join(ROOT, "site/next.html") || file === join(ROOT, "site/marks.js")) || !existsSync(file) || statSync(file).isDirectory()) {
+  if (!file || !(file.startsWith(join(ROOT, "dist")) || file.startsWith(FONTS) || file === join(ROOT, "site/mockups.html") || file === join(ROOT, "site/next.html") || file === join(ROOT, "site/marks.js") || file === join(ROOT, "site/wall.js")) || !existsSync(file) || statSync(file).isDirectory()) {
     response.writeHead(404).end("Not found")
     return
   }
