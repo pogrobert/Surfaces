@@ -273,6 +273,12 @@ export const tiles: FigurePart = {
     // beside a title: it is drawn large instead, as a poster's would be.
     let placed = fit(0, start)
     if (placed.side < Math.min(w, h) * 0.52) placed = fit(0.4, Math.min(w, h) * 0.7)
+    // Beside a title at an edge, the mark is drawn large too, running off the
+    // far edges, as long as it comes no nearer the title than a whole one.
+    if (context.titled && !context.fill && !context.calm.length) {
+      const large = fit(0.35, Math.min(w, h) * 1.12)
+      if (large.side > placed.side * 1.15) placed = large
+    }
     // With nothing to keep clear, the whole frame is the mark's. Most covers
     // draw it large, seated on a third and running off the edges, as a
     // poster crops its subject; the rest whole in the middle. Each title
