@@ -22,11 +22,11 @@ after them follows from the content. A brand does the same:
 ```ts
 const brand = createBrand({ name: "acme.dev", color: "#635bff" })
 
-brand.cover({ title: post.title })      // a post's cover, title at the bottom left
-brand.card({ title: post.title })       // a card in a list, title beside it: art only
-brand.hero({ title: "Pricing" })        // title in the middle; the one cover that moves
-brand.og({ title: post.title })         // a link preview, 1200x630, in the brand's own layout
-brand.banner({ for: "x", title })       // a header: "x" 1500x500, "linkedin" 1584x396, "email" 1200x400
+brand.cover({ title: post.title })      // a post's cover: the art, its title set by the page
+brand.card({ title: post.title })       // a card in a list, title beside it
+brand.hero({ title: "Pricing" })        // room for the title in the middle; the one cover that moves
+brand.og({ title: post.title })         // a link preview, 1200x630, room for the title at the brand's edge
+brand.banner({ for: "x" })              // a header: "x" 1500x500, "linkedin" 1584x396, "email" 1200x400
 brand.avatar(user.id)                   // a person's mark
 brand.input("post", { title })          // the input any of those draws, for components
 ```
@@ -34,8 +34,15 @@ brand.input("post", { title })          // the input any of those draws, for com
 - `name`, such as the domain, is the one thing a brand must have. It is in
   every seed, so the same title in one brand is always the same art and two
   brands never share a drawing. There is no seed to choose.
-- A banner's title is its own choice: with one it is set in, without one
-  the banner is art alone. An X header puts nothing that must be seen at
+- The pictures are art; the words are the site's, in its own type. Nothing
+  is written into an image unless it is asked for (see "Titles in images").
+  `text` says where words will go over the art, any place or `"none"`, and
+  the art keeps a calm place there: by default a link preview keeps one at
+  the brand's edge and a hero in the middle, and a post's cover, a card and
+  a header keep none, their words sitting beside them on the page. The
+  scene's first area is that place, with its box and the `ink` that reads
+  there. React's `<Cover>` sets the title there in the page's own font.
+- A banner is art alone. An X header puts nothing that must be seen at
   its bottom left, where X lays the profile's photo; the art runs on under
   it. There is no icon: an icon is a brand's
   identity, and a site keeps its own.
@@ -234,11 +241,14 @@ for it never moves the art.
 
 ### Titles in images
 
-A link preview, an image file or an email has nowhere else to show a title,
-so the input can carry one: `title`, set into the largest area the art goes
-around, and `font`, `"sans"` (Inter Bold, the default) or `"serif"`
-(Fraunces SemiBold). `brand.og({ title })` does this by itself, in the
-brand's face; any other brand cover takes `drawTitle: true`.
+The best place for a title is the page, in the site's own type: over the
+art in `scene.areas[0]`, in its `ink`, as `<Cover>` does, or in an image
+renderer such as Satori or `@vercel/og` loading the site's font, with the
+art as its background. Where neither can, an image can carry its title
+itself: `title`, set into the largest area the art goes around, and `font`,
+`"sans"` (Inter Bold, the default) or `"serif"` (Fraunces SemiBold). A
+brand's cover takes `drawTitle: true`, as in
+`toJpeg(brand.og({ title, drawTitle: true }))`, in the brand's face.
 
 - It is set as a designer would: large on one or two lines when short, down
   to four balanced lines when long, kerned, and against the side its area

@@ -1,10 +1,10 @@
 ## @pogrobert/surfaces
 
-For pictures a site repeats: covers, link previews, headers, avatars. A picture of one thing (a product) is a photo's job.
-- Set up: `npx @pogrobert/surfaces init`, then `kit` (preview, headers, logo); `preview`, `check` verify.
-- `brand = createBrand({ name: domain, color, logo? })`, or spread `readPage(html, css, designMd?)` in. Then `brand.cover|card|hero|og({ title })`, `brand.banner({ for: "x"|"linkedin"|"email" })`, `brand.avatar(id)`; React `<Cover brand title />`. No seeds; `id: slug` keeps art when a title changes; `tag` makes a category one family.
-- `brand.look` keeps choices, `brand.why` explains. A person picks: `directions(choices)`, keep its `look`.
-- One exact cover: `generate({ style, seed, color?, areas? })`, values from `catalog`.
+For pictures a site repeats: covers, link previews, headers, avatars, not a product's photo.
+- Set up: `npx @pogrobert/surfaces init`, then `kit` (preview, headers); `preview`, `check` verify.
+- `brand = createBrand({ name: domain, color, logo? })`, or spread `readPage(html, css, designMd?)` in. Then `brand.cover|card|hero|og({ title })`, `brand.banner({ for: "x"|"linkedin"|"email" })`, `brand.avatar(id)`. `id: slug` keeps art when titles change; `tag` groups a category.
+- `brand.look` keeps choices, `brand.why` explains; `directions(choices)` lets a person pick.
+- One exact cover: `generate({ style, seed, color?, areas? })`, from `catalog`.
+- Images are art: set titles in the site's font, as `<Cover brand title />` does. `text: place` keeps room (`scene.areas[0]` box, `ink`). OG file: `toJpeg(brand.og({ title, drawTitle: true }))` (`/png`); edge `{ wasm }`.
 - Alt: none under a heading; `label={title}` if it is the link.
-- OG: `toJpeg(brand.og({ title }))` (`/png`), title drawn in; alt `describe(scene, { title })`. Edge: `{ wasm }`.
 - Errors name the fix; `validate` checks. More: docs/api.md.

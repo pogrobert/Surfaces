@@ -6,7 +6,7 @@ import type { SurfaceInput } from "./core/generate.ts"
 import { readLogo } from "./core/image.ts"
 import type { ImageInput } from "./core/image.ts"
 import type { Place } from "./core/intent.ts"
-import { GRAINS, MOODS, THEMES } from "./core/intent.ts"
+import { GRAINS, MOODS, PLACES, THEMES } from "./core/intent.ts"
 import { FONTS } from "./core/type.ts"
 import type { Font } from "./core/type.ts"
 import type { Grain, Mood, Theme } from "./core/intent.ts"
@@ -60,10 +60,17 @@ const LOGO_AT: Partial<Record<Use, Place>> = { og: "top-left", x: "right", linke
 // What a cover is about: its title, or an id that names it, such as the
 // post's slug, so its art stays when the title is edited. `tag` is the
 // post's category: every cover with one tag makes one mark, so a category
-// reads as a family while each title still draws its own. `drawTitle` sets
-// the title into the image itself, for a cover that goes out as a file; a
-// link preview always does, since nothing else can show it there.
-export type Content = { title?: string; id?: string; tag?: string; drawTitle?: boolean }
+// reads as a family while each title still draws its own.
+//
+// The art is the picture; the words are the site's, set in its own type.
+// `text` says where they go over the art, so the art keeps a calm place for
+// them and the scene's first area gives its box and ink: a link preview's at
+// the brand's edge and a hero's in the middle unless told, nowhere on a
+// post's cover, a card or a header, whose words sit beside them. "none"
+// gives the art the whole frame. `drawTitle` sets the title into the image
+// in the library's own face instead, for a file that has to carry it and a
+// site that can't set its own.
+export type Content = { title?: string; id?: string; tag?: string; text?: Place | "none"; drawTitle?: boolean }
 
 export type Brand = {
   name: string
@@ -71,16 +78,17 @@ export type Brand = {
   look: { style: StyleName; color?: string; theme: Theme | "auto"; mood?: Mood; grain?: Grain; shape?: string; font?: Font }
   // Why each decision that wasn't given was made, one sentence each.
   why: string[]
-  // A post's cover, with its title at the bottom left.
+  // A post's cover, the art alone, its title set by the page.
   cover(content: Content): Scene
-  // A cover for a card in a list, its title beside it: art only.
+  // A cover for a card in a list, its title beside it.
   card(content: Content): Scene
-  // The page's hero: its title in the middle, and the one cover that moves.
+  // The page's hero: room for its title in the middle, and the one cover
+  // that moves.
   hero(content: Content): Scene
-  // A link preview, 1200x630.
+  // A link preview, 1200x630, with room for the title at the brand's edge.
   og(content: Content): Scene
   // A profile's or a newsletter's header: X (1500x500), LinkedIn (1584x396)
-  // or email (1200x400). With a title it is set in; without, art alone.
+  // or email (1200x400), the art alone.
   banner(content: Content & { for: "x" | "linkedin" | "email" }): Scene
   // A person's mark, from their id or handle.
   avatar(person: string | number, options?: { size?: number; square?: boolean }): Scene
@@ -232,6 +240,19 @@ function logoFor(logo: Logo | undefined, use: Use, name: string, title?: string)
   return { image: both.light, ...(both.dark ? { dark: both.dark } : null), place }
 }
 
+// Where a use keeps room for words unless told: a link preview and a hero
+// carry their title over the art; a post's cover, a card and a header have
+// theirs beside them on the page.
+const TEXT_AT: Partial<Record<Use, true>> = { og: true, hero: true }
+
+// Where a use's title goes when it is set over the art, by the page or drawn
+// in: the use's own place, and a link preview's at the brand's edge.
+export function titleAt(name: string, use: Use): Place | undefined {
+  const area = PLACING[use].areas[0]
+  if (!area) return undefined
+  return use === "og" ? ogLayout(name).title : area.place
+}
+
 function build(name: string, look: Brand["look"], why: string[], logo?: Logo): Brand {
   const input = (use: Use, content: Content = {}): SurfaceInput => {
     const placing = PLACING[use]
@@ -240,22 +261,31 @@ function build(name: string, look: Brand["look"], why: string[], logo?: Logo): B
     if (typeof about !== "string" || !about.trim()) {
       throw new Error(`Give the ${use} a "title", or an "id" that names it, such as the post's slug`)
     }
-    const drawn = content.drawTitle ?? (use === "og" || (placing.optional === true && Boolean(content.title?.trim())))
+    const drawn = content.drawTitle === true
     if (drawn && !content.title?.trim()) throw new Error(`A ${use} drawn with its title needs a "title"`)
-    if (drawn && !placing.areas.length) throw new Error(`A ${use} has no area for a title; draw it as a "post" or "og" instead`)
+    if (content.text !== undefined && content.text !== "none" && !(PLACES as readonly string[]).includes(content.text)) {
+      throw new Error(`Unknown text place "${String(content.text)}". Use one of ${PLACES.map((place) => `"${place}"`).join(", ")}, or "none".${nearest(String(content.text), PLACES)}`)
+    }
+    if (drawn && content.text === "none") throw new Error(`A title drawn in needs room: leave "text" out, or give it a place`)
+    if (drawn && content.text === undefined && !placing.areas.length) throw new Error(`A ${use} has no area for a title; draw it as a "post" or "og" instead, or give "text" a place`)
+    // Where the words go: as asked, or the use's own place when it carries
+    // words over the art or has them drawn in.
+    const at = content.text === "none" ? undefined : content.text ?? (drawn || TEXT_AT[use] ? titleAt(name, use) ?? "bottom-left" : undefined)
+    const size = use === "og" ? (drawn ? ogSize(content.title) : "md") : placing.areas[0]?.size ?? "md"
+    const areas = [...(at ? [{ place: at, size }] : []), ...(placing.keep ?? [])]
     return {
       style: look.style,
       seed: `${name}/${about.trim()}`,
       ...(look.color ? { color: look.color } : null),
       ...placing.size,
-      ...areasOf(use === "og" ? { ...placing, areas: placing.areas.map((area) => ({ ...area, place: ogLayout(name).title, size: ogSize(content.title) })) } : placing, drawn),
+      ...(areas.length ? { areas } : null),
       theme: look.theme,
       ...(look.mood ? { mood: look.mood } : null),
       ...(look.grain ? { grain: look.grain } : null),
       ...(look.shape ? { shape: look.shape } : content.tag?.trim() ? familyShape(look.style, name, content.tag.trim()) : null),
       ...(drawn ? { title: content.title!.trim(), ...(look.font ? { font: look.font } : null) } : null),
       ...(placing.motion && !drawn ? { motion: placing.motion } : null),
-      ...(logoFor(logo, use, name, content.title) ? { logo: logoFor(logo, use, name, content.title) } : null),
+      ...(logoFor(logo, use, name, drawn ? content.title : undefined) ? { logo: logoFor(logo, use, name, drawn ? content.title : undefined) } : null),
     }
   }
   const draw = (use: Use) => (content: Content) => generate(input(use, content))
@@ -284,13 +314,6 @@ function build(name: string, look: Brand["look"], why: string[], logo?: Logo): B
       }),
     input,
   }
-}
-
-// A use's areas: its title's when it has one or always does, and any it
-// always keeps clear, such as the photo over an X header.
-function areasOf(placing: (typeof PLACING)[Use], drawn: boolean) {
-  const areas = [...(placing.areas.length && (!placing.optional || drawn) ? placing.areas : []), ...(placing.keep ?? [])]
-  return areas.length ? { areas } : null
 }
 
 // The mark every cover with a tag makes, picked by the tag so it stays when

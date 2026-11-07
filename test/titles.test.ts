@@ -96,10 +96,11 @@ test("the paper's fold runs only over clear paper, never a title or the figure",
   }
 })
 
-test("a link preview carries its title, set in the brand's face", () => {
+test("a link preview drawn with its title sets it in the brand's face", () => {
   const brand = createBrand({ name: "acme.dev", ...readPage("", "h1 { font-family: Georgia, serif; } a { color: #b91c1c; }") })
   assert.equal(brand.look.font, "serif")
-  const og = brand.og({ title: "Notes on shipping" })
+  assert.equal(titleOf(brand.og({ title: "Notes on shipping" })), undefined)
+  const og = brand.og({ title: "Notes on shipping", drawTitle: true })
   assert.equal(titleOf(og)?.font, "serif")
   assert.equal(titleOf(brand.cover({ title: "Notes on shipping" })), undefined)
   assert.ok(titleOf(brand.cover({ title: "Notes on shipping", drawTitle: true })))

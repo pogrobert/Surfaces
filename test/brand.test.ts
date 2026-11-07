@@ -19,8 +19,18 @@ test("a brand draws every kind of cover from a title alone", () => {
   const cover = brand.cover({ title: "Notes on shipping every day" })
   assert.equal(cover.style, "riso")
   assert.deepEqual(cover.output, { w: 1600, h: 900 })
-  assert.equal(cover.areas[0]?.place, "bottom-left")
-  assert.deepEqual(brand.og({ title: "Notes" }).output, { w: 1200, h: 630 })
+  // The art alone: the page sets the title, in its own type.
+  assert.equal(cover.areas.length, 0)
+  assert.ok(!cover.layers.some((layer) => layer.kind === "text"))
+  // Words over the art get room, and the scene says where and in what ink.
+  const room = brand.cover({ title: "Notes on shipping every day", text: "bottom-left" }).areas[0]!
+  assert.equal(room.place, "bottom-left")
+  assert.match(room.ink, /^#[0-9a-f]{6}$/)
+  const og = brand.og({ title: "Notes" })
+  assert.deepEqual(og.output, { w: 1200, h: 630 })
+  assert.equal(og.areas.length, 1)
+  assert.ok(!og.layers.some((layer) => layer.kind === "text"))
+  assert.match(errorOf(() => brand.cover({ title: "Notes", text: "middle" as never })), /Unknown text place "middle"/)
   assert.equal(brand.card({ title: "Notes" }).areas.length, 0)
   assert.equal(brand.hero({ title: "Notes" }).areas[0]?.place, "center")
   assert.ok(brand.avatar("user-42").layers.length > 0)
@@ -151,7 +161,8 @@ test("a brand makes the rest of the kit: banners for X, LinkedIn and email", () 
   const brand = createBrand({ name: "acme.dev", color: "#f59e0b", style: "stencil", theme: "light" })
   const x = brand.banner({ for: "x", title: "Bots for every business" })
   assert.deepEqual(x.output, { w: 1500, h: 500 })
-  assert.ok(x.layers.some((layer) => layer.kind === "text"))
+  assert.ok(!x.layers.some((layer) => layer.kind === "text"))
+  assert.ok(brand.banner({ for: "x", title: "Bots for every business", drawTitle: true }).layers.some((layer) => layer.kind === "text"))
   // X lays the profile's photo over the bottom left: nothing that must be
   // seen goes there, and the art runs on under it, with no patch cut out.
   assert.ok(x.areas.some((area) => area.place === "bottom-left" && area.art === "behind" && !area.clear))

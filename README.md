@@ -42,9 +42,9 @@ import { createBrand, readPage } from "@pogrobert/surfaces"
 const brand = createBrand({ name: "acme.dev", color: "#635bff", logo: logoSvg })
 // or let the site decide: createBrand({ name: "acme.dev", ...readPage(html, css, designMd) })
 
-brand.cover({ title: post.title })   // a post's cover
+brand.cover({ title: post.title })   // a post's cover: the art, its title set by the page
 brand.cover({ title, tag: post.category })  // a category's posts make one mark
-brand.og({ title: post.title })      // its link preview
+brand.og({ title: post.title })      // its link preview, with room for the title
 brand.hero({ title: "Pricing" })
 brand.banner({ for: "x" })           // and "linkedin", "email"
 brand.avatar(user.id)
@@ -111,11 +111,16 @@ An opaque card over the art:
 ```ts
 import { toJpeg } from "@pogrobert/surfaces/png"
 
-const jpeg = await toJpeg(brand.og({ title: post.title }))   // 1200x630, the title set in
+const scene = brand.og({ title: post.title })   // 1200x630, room for the title in scene.areas[0]
+const jpeg = await toJpeg(brand.og({ title: post.title, drawTitle: true }))
 ```
 
-A link preview carries its own title, set in the brand's face (a bundled
-sans or serif, drawn from its outlines, so no font is needed anywhere). A
+The pictures are art, and the words are the site's: set the title in the
+site's own font over `scene.areas[0]`, in its `ink`, with Satori or
+`@vercel/og` taking the art as their background. Where that can't be done,
+`drawTitle: true` sets the title into the image in the brand's face (a
+bundled sans or serif, drawn from its outlines, so no font is needed
+anywhere). A
 JPEG keeps a grainy cover to about 50–170 KB, under what chat apps show;
 `toPng` gives the same picture losslessly, at around a megabyte.
 

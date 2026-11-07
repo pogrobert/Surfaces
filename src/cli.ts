@@ -237,8 +237,8 @@ function agentBlock(module: string) {
 
 - For pictures the site repeats: covers, link previews, headers, avatars. A picture of one particular thing (a product, a person) is a photo or an image model's job.
 - The brand is \`brand\`, exported from \`${module}\`. Change its look there; \`npx @pogrobert/surfaces directions\` draws others to choose from.
-- A cover is \`brand.cover({ title })\`, \`brand.card\`, \`brand.hero\`; a person's mark \`brand.avatar(user.id)\`. React: \`<Cover brand={brand} title={title} />\` from \`@pogrobert/surfaces/react\`.
-- A link preview is \`toJpeg(brand.og({ title }))\` from \`@pogrobert/surfaces/png\`, the title drawn in; alt \`describe(scene, { title })\`.
+- The pictures are art; the words are the site's, in its own type. A cover is \`brand.cover({ title })\`, \`brand.card\`, \`brand.hero\`; a person's mark \`brand.avatar(user.id)\`. React: \`<Cover brand={brand} title={title} />\` from \`@pogrobert/surfaces/react\` sets the title in the page's font where the art keeps room.
+- Words over the art: \`text: "bottom-left"\` (or any place) keeps them room; \`scene.areas[0]\` is its box and \`ink\`. A link preview file is \`toJpeg(brand.og({ title, drawTitle: true }))\` from \`@pogrobert/surfaces/png\`; alt \`describe(scene, { title })\`.
 - \`id: post.slug\` keeps a cover's art when its title is edited. There are no seeds to choose.
 - Look before shipping: \`npx @pogrobert/surfaces preview --title "..."\` writes images to .surfaces/; \`check\` says whether they hold. \`kit\` writes the preview and headers, with the site's logo.
 - Everything else: node_modules/@pogrobert/surfaces/docs/api.md.
@@ -264,7 +264,7 @@ export const contentType = "image/jpeg"
 export const alt = ${JSON.stringify(title)}
 
 export default async function Image() {
-  const jpeg = await toJpeg(brand.og({ title: alt }))
+  const jpeg = await toJpeg(brand.og({ title: alt, drawTitle: true }))
   return new Response(jpeg as BodyInit, { headers: { "content-type": contentType } })
 }
 `
@@ -273,22 +273,22 @@ export default async function Image() {
 const RECIPES: Record<string, string> = {
   "react-router": `A route module that returns the image, e.g. app/routes/og.$slug.ts:
   export async function loader({ params }) {
-    const jpeg = await toJpeg(brand.og({ title: titleOf(params.slug) }))
+    const jpeg = await toJpeg(brand.og({ title: titleOf(params.slug), drawTitle: true }))
     return new Response(jpeg, { headers: { "content-type": "image/jpeg", "cache-control": "public, max-age=31536000, immutable" } })
   }`,
   astro: `A static endpoint, e.g. src/pages/og/[slug].jpg.ts, with getStaticPaths from your collection:
   export async function GET({ props }) {
-    return new Response(await toJpeg(brand.og({ title: props.title })), { headers: { "content-type": "image/jpeg" } })
+    return new Response(await toJpeg(brand.og({ title: props.title, drawTitle: true })), { headers: { "content-type": "image/jpeg" } })
   }`,
   sveltekit: `A server route, e.g. src/routes/og/[slug].jpg/+server.ts, prerendered:
   export const prerender = true
   export async function GET({ params }) {
-    return new Response(await toJpeg(brand.og({ title: titleOf(params.slug) })), { headers: { "content-type": "image/jpeg" } })
+    return new Response(await toJpeg(brand.og({ title: titleOf(params.slug), drawTitle: true })), { headers: { "content-type": "image/jpeg" } })
   }`,
   nuxt: `A server route, e.g. server/routes/og/[slug].jpg.ts:
   export default defineEventHandler(async (event) => {
     setHeader(event, "content-type", "image/jpeg")
-    return await toJpeg(brand.og({ title: titleOf(getRouterParam(event, "slug")) }))
+    return await toJpeg(brand.og({ title: titleOf(getRouterParam(event, "slug")), drawTitle: true }))
   })`,
 }
 
@@ -398,19 +398,9 @@ async function kitCommand(root: string, args: Args, log: (line: string) => void)
   const project = readProject(root)
   const brand = createBrand(readLook(brandFile(project, args)))
   const publicDir = one(args, "out") ?? (project.framework === "sveltekit" ? "static" : "public")
-  const facts = factsOf(project)
-  // The site's own first line of a fair length, not its name alone, as
-  // "Meerlume" is beside "Describe your business", nor its name as a home,
-  // "BBC Homepage", nor a note that the page needs scripts to run.
-  const own = brand.name.replace(/^www\./, "").split(".")[0]!.toLowerCase()
-  const phrase = facts.words
-    ?.split(/\s+[-–—|·:\\•/]\s+|:\s|[.!?]\s|[|·•–—]/)
-    .map((part) => part.trim())
-    .find((part) => {
-      const bare = part.toLowerCase().replace(/\b(?:home\s*page|home|official\s+(?:web)?site|welcome)\b/g, "").replace(/[^\p{L}\p{N}]/gu, "")
-      return part.length >= 8 && part.length <= 70 && bare !== own && bare !== "" && !/\b(?:javascript|cookies|browser)\b/i.test(part)
-    })
-  const title = one(args, "title") ?? phrase ?? brand.name
+  // The site's pictures are art with its logo; its words are its own, in its
+  // own type. A title asked for is drawn in, for a preview that has to carry it.
+  const title = one(args, "title")
   const pointed = previewOf(project)
   // The site's own pictures all carry one mark, as a studio's would; a
   // post's covers each draw their own.
@@ -428,10 +418,10 @@ async function kitCommand(root: string, args: Args, log: (line: string) => void)
 
   const og = served(publicDir, pointed, brand.name) ?? join(publicDir, "og.jpg")
   const assets: { path: string; what: string; make: () => Promise<Uint8Array> }[] = [
-    { path: og, what: `link preview, "${title}"`, make: () => (/\.png$/i.test(og) ? png(flat.og({ title })) : jpeg(flat.og({ title }))) },
+    { path: og, what: title ? `link preview, "${title}"` : "link preview", make: () => { const scene = title ? flat.og({ title, drawTitle: true }) : flat.og({ id: "home", text: "none" }); return /\.png$/i.test(og) ? png(scene) : jpeg(scene) } },
     { path: join(publicDir, "x-header.jpg"), what: "X header", make: () => jpeg(flat.banner({ for: "x" })) },
     { path: join(publicDir, "linkedin-banner.jpg"), what: "LinkedIn banner", make: () => jpeg(flat.banner({ for: "linkedin" })) },
-    { path: join(publicDir, "email-header.jpg"), what: "email header", make: () => jpeg(flat.banner({ for: "email", title })) },
+    { path: join(publicDir, "email-header.jpg"), what: "email header", make: () => jpeg(flat.banner({ for: "email" })) },
   ]
   let drewPng = false
   for (const asset of assets) {

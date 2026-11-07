@@ -1,6 +1,7 @@
 import { createElement, useEffect, useMemo, useRef } from "react"
 import type { CSSProperties, ReactElement, ReactNode } from "react"
 import { avatar } from "./avatar.ts"
+import { titleAt } from "./brand.ts"
 import type { Brand, Content } from "./brand.ts"
 import type { AvatarInput } from "./avatar.ts"
 import { describe } from "./core/describe.ts"
@@ -131,13 +132,17 @@ export type CoverProps = Content & {
   label?: string | true
 }
 
-export function Cover({ brand, use = "post", title, id, tag, children, ...rest }: CoverProps): ReactElement {
-  const { areas, ...input } = brand.input(use, { ...(title !== undefined ? { title } : null), ...(id !== undefined ? { id } : null), ...(tag !== undefined ? { tag } : null) })
+export function Cover({ brand, use = "post", title, id, tag, text, children, ...rest }: CoverProps): ReactElement {
+  // Its words are the page's, in the page's own type, so the cover keeps room
+  // for them where the use carries a title, as a post's cover does at its
+  // foot; a card's and a header's have none.
+  const at = text ?? titleAt(brand.name, use) ?? "none"
+  const { areas, ...input } = brand.input(use, { ...(title !== undefined ? { title } : null), ...(id !== undefined ? { id } : null), ...(tag !== undefined ? { tag } : null), text: at })
   const content = children ?? title
   return createElement(Surface, {
     ...input,
     ...rest,
-    ...(areas ? { areas: areas.map((area, index) => (index === 0 ? { ...area, content } : area)) } : null),
+    ...(areas ? { areas: areas.map((area, index) => (index === 0 && at !== "none" ? { ...area, content } : area)) } : null),
   })
 }
 
