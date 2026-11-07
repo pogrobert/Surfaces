@@ -637,7 +637,7 @@ function drawSheet(brand) {
   $("#sheetHeading").textContent = `${NAMES[brand.look.style]} for ${brand.name}`
   $("#sheetNote").textContent = catalog.find((entry) => entry.style === brand.look.style)?.looks ?? ""
   picture("#og", flat.og({ title }), "Link preview", "what a shared link shows, 1200 × 630, its title drawn in", "og")
-  picture("#x", flat.banner({ for: "x" }), "X header", "1500 × 500, clear where X puts the profile photo", "x-header")
+  picture("#x", flat.banner({ for: "x" }), "X header", "1500 × 500, nothing to see where X lays the profile photo", "x-header")
   picture("#linkedin", flat.banner({ for: "linkedin" }), "LinkedIn banner", "1584 × 396", "linkedin-banner")
   picture("#email", flat.banner({ for: "email", title }), "Email header", "1200 × 400", "email-header")
   picture("#cover", flat.cover({ title, drawTitle: true }), "Post cover", "each post's title draws its own", "cover")
