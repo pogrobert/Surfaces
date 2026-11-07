@@ -22,21 +22,19 @@ export const KINDS = [
 ]
 const ORDER = KINDS.flatMap(([, styles]) => styles)
 
-// The shapes a wall tile takes, as the places a site shows pictures do, and
-// how many of the grid's rows each spans.
-const SIZES = [
-  { w: 1600, h: 900, rows: 15 },
-  { w: 1000, h: 1000, rows: 26 },
-  { w: 960, h: 1200, rows: 32 },
-  { w: 1500, h: 500, rows: 9 },
-  { w: 900, h: 1600, rows: 44 },
-  { w: 1200, h: 630, rows: 14 },
-  { w: 1000, h: 1000, rows: 26 },
-  { w: 1600, h: 800, rows: 13 },
-]
-export const TILES = 42
+// What a wall tile is, in the shapes a site's pictures take: a page's wide
+// hero, a post's cover card, and squares, small and large. Each spans its
+// columns of the grid and as many of its rows as its shape needs.
+const KINDS_OF_TILE = {
+  hero: { w: 2400, h: 1200, cols: 3, rows: 18 },
+  card: { w: 1600, h: 900, cols: 2, rows: 14 },
+  square: { w: 1000, h: 1000, cols: 1, rows: 12 },
+  large: { w: 1200, h: 1200, cols: 2, rows: 24 },
+}
+const RUN = ["hero", "square", "card", "square", "large", "square", "card", "square", "hero", "square", "card", "large", "square", "card", "square"]
+export const TILES = 36
 // How many the server draws: the wall's first rows, all a wide window shows.
-export const FIRST = 18
+export const FIRST = 16
 
 // The wall's tiles, the same for one shuffle wherever they are worked out:
 // each a style, a size, a feel and a ground, and a sample brand until a site
@@ -48,7 +46,8 @@ export function tiles(shuffle = 0) {
     sample: SAMPLES[(i + shuffle) % SAMPLES.length],
     mood: [undefined, "calm", "bold"][i % 3],
     theme: i % 4 === 1 ? "dark" : "light",
-    ...SIZES[(i * 3 + shuffle) % SIZES.length],
+    kind: RUN[(i + shuffle * 2) % RUN.length],
+    ...KINDS_OF_TILE[RUN[(i + shuffle * 2) % RUN.length]],
     id: `wall-${i}-${shuffle}`,
   }))
 }
@@ -76,7 +75,7 @@ export function wall(list, generate, toHtml, { drawn = FIRST, brand } = {}) {
   return list
     .map((tile) => {
       const art = tile.i < drawn ? toHtml(scene(tile, generate, brand), { fill: true }) : ""
-      return `<figure class="tile" data-i="${tile.i}" style="grid-row:span ${tile.rows}"><div class="art"><div>${art}</div></div><figcaption>${label(tile, brand?.name)}</figcaption></figure>`
+      return `<figure class="tile" data-i="${tile.i}" data-kind="${tile.kind}" style="grid-row:span ${tile.rows}"><div class="art"><div>${art}</div></div><figcaption>${label(tile, brand?.name)}</figcaption></figure>`
     })
     .join("")
 }
