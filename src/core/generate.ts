@@ -275,7 +275,14 @@ function draw(input: SurfaceInput, fill = false, recipe: Recipe = STYLES[input.s
       warned.add(lost)
       console.warn(`surfaces: ${lost}`)
     }
-    layers.push({ kind: "logo", id: "logo", href: readLogo(image), x: box.x + edge, y: box.y + box.h * 0.15, w: box.w, h: box.h * 0.7, align })
+    // Drawn at its own shape: a mark about half the area's height, a wordmark
+    // as tall as the area's width allows, never more than a cap's height
+    // above the title.
+    const { href, aspect } = readLogo(image)
+    const tall = Math.min(box.h * (aspect < 1.6 ? 0.5 : 0.4), box.w / aspect)
+    const wide = tall * aspect
+    const left = align === "start" ? box.x + edge : align === "end" ? box.x + box.w + edge - wide : box.x + (box.w - wide) / 2
+    layers.push({ kind: "logo", id: "logo", href, x: left, y: box.y + (box.h - tall) / 2, w: wide, h: tall, align })
   }
 
   // A layout says how its art arrives and how it then moves; a cover asked

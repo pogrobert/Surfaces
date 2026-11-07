@@ -52,9 +52,10 @@ export type BrandChoices = PageFacts & {
 
 export type Logo = string | ImageInput | { light: string | ImageInput; dark?: string | ImageInput }
 
-// Where the logo sits on each picture that carries it: clear of the title,
-// and of the photo X and LinkedIn lay over a header's left.
-const LOGO_AT: Partial<Record<Use, Place>> = { og: "top-left", x: "right", linkedin: "right", email: "right" }
+// Where the logo sits on each picture that carries it: over the title, as a
+// letterhead's does, on a link preview and an email's header; clear of the
+// photo X and LinkedIn lay over a profile header's left.
+const LOGO_AT: Partial<Record<Use, Place>> = { og: "top-left", x: "right", linkedin: "right", email: "top-left" }
 
 // What a cover is about: its title, or an id that names it, such as the
 // post's slug, so its art stays when the title is edited. `tag` is the

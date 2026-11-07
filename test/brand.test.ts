@@ -150,8 +150,9 @@ test("a brand makes the rest of the kit: banners for X, LinkedIn and email", () 
   const x = brand.banner({ for: "x", title: "Bots for every business" })
   assert.deepEqual(x.output, { w: 1500, h: 500 })
   assert.ok(x.layers.some((layer) => layer.kind === "text"))
-  // X lays the profile's photo over the bottom left: the art keeps clear of it.
-  assert.ok(x.areas.some((area) => area.place === "bottom-left" && area.clear))
+  // X lays the profile's photo over the bottom left: nothing that must be
+  // seen goes there, and the art runs on under it, with no patch cut out.
+  assert.ok(x.areas.some((area) => area.place === "bottom-left" && area.art === "behind" && !area.clear))
   assert.ok(brand.banner({ for: "x" }).areas.every((area) => area.place === "bottom-left"))
   assert.deepEqual(brand.banner({ for: "linkedin" }).output, { w: 1584, h: 396 })
   assert.equal(brand.banner({ for: "linkedin" }).areas.length, 0)

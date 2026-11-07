@@ -77,14 +77,12 @@ test("titles fail loudly when they can't be set", () => {
 })
 
 test("the paper's fold runs only over clear paper, never a title or the figure", () => {
-  let folded = 0
   for (const style of STYLE_NAMES.filter((name) => name === "stencil")) {
     for (const [width, height, place] of [...PRESETS, [1600, 900, "none"], [2400, 1200, "none"], [1600, 900, "top-left"]] as const) {
       for (let seed = 0; seed < 4; seed++) {
         const scene = generate({ style, seed: `fold-${seed}`, width, height, ...titleAt(place), ...(place === "none" ? null : { title: "What we learned from ten thousand bookings" }) })
         const fold = scene.layers.find((layer) => layer.id === "fold")
         if (!fold || fold.kind !== "shapes" || fold.shapes[0]!.type !== "rect") continue
-        folded++
         const band = fold.shapes[0]!
         for (const box of [...keptBoxes(scene), ...(scene.subject ? [scene.subject] : [])]) {
           assert.ok(band.x + band.w <= box.x || band.x >= box.x + box.w, `${width}x${height} ${place} ${seed}`)
@@ -92,8 +90,10 @@ test("the paper's fold runs only over clear paper, never a title or the figure",
       }
     }
   }
-  // Where there is room, the sheet is still folded.
-  assert.ok(folded > 0)
+  // A strip, such as a header, is never folded: across it a crease is a seam.
+  for (const [width, height] of [[1500, 500], [1584, 396], [1200, 400]] as const) {
+    assert.ok(!generate({ style: "stencil", seed: "fold-strip", width, height }).layers.some((layer) => layer.id === "fold"), `${width}x${height}`)
+  }
 })
 
 test("a link preview carries its title, set in the brand's face", () => {

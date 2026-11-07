@@ -392,7 +392,7 @@ $("#ask").addEventListener("submit", async (event) => {
     say(found.length ? `Read ${list(found)} from ${site.name}.` : `${site.name} shows little before its scripts run, so the choices below are ours.`)
     open()
   } catch (error) {
-    say(`${error.message}. Check the address, or browse the styles instead.`)
+    say(/doesn't let tools/.test(error.message) ? `${error.message}.` : `${error.message}. Check the address, or browse the styles instead.`)
   } finally {
     $("#go").disabled = false
   }
@@ -417,7 +417,9 @@ function open() {
 
 const bytes = (base64) => Uint8Array.from(atob(base64), (char) => char.charCodeAt(0))
 const list = (parts) => (parts.length < 3 ? parts.join(" and ") : `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`)
-const firstTitle = (words) => words?.split(/[.|·–—:]/).map((part) => part.trim()).find((part) => part.length >= 8 && part.length <= 70)
+// A line of the site's own to try titles with: its first phrase of a fair
+// length, with a " - Brand" or " | Brand" ending left off.
+const firstTitle = (words) => words?.split(/\s+[-–—|·:]\s+|[.|·–—]/).map((part) => part.trim()).find((part) => part.length >= 8 && part.length <= 70)
 
 function setLogo(logo) {
   state.logo = logo

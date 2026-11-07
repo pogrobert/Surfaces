@@ -1,5 +1,6 @@
 import { lookup } from "node:dns/promises"
 import { isIP } from "node:net"
+import { toOklch } from "../src/core/color.ts"
 
 // A public site as text, for the page's "read my site": its HTML, the
 // stylesheets it links, and its logo, fetched once each and passed to
@@ -68,6 +69,10 @@ async function get(start: URL, most: number, accept: string) {
       url = new URL(response.headers.get("location")!, url)
       continue
     }
+    // A site that turns away tools reads as one that isn't there; say which.
+    if (response.status === 401 || response.status === 403 || response.status === 429) {
+      throw new Error(`${url.hostname} doesn't let tools read it (it answered ${response.status}). Browse the styles and give its colour instead`)
+    }
     if (!response.ok) throw new Error(`${url.hostname} answered ${response.status}`)
     const reader = response.body?.getReader()
     const chunks: Uint8Array[] = []
@@ -99,7 +104,7 @@ const attribute = (tag: string, name: string) => tag.match(new RegExp(String.raw
 // The site's logo: an image or inline SVG named for one, else the link home's
 // SVG, else an SVG icon, else the touch icon. The first that loads is kept.
 function logoCandidates(html: string, base: URL) {
-  const found: ({ inline: string } | { href: URL })[] = []
+  const found: { candidate: { inline: string } | { href: URL }; score: number; place: number }[] = []
   const at = (href: string | undefined) => {
     try {
       return href ? new URL(href, base) : undefined
@@ -107,35 +112,71 @@ function logoCandidates(html: string, base: URL) {
       return undefined
     }
   }
+  // Said to be the site's logo: "logo" or "wordmark" as a word of its own,
+  // not inside a class such as Primer_Brand__Testimonial, or a label or alt
+  // that names the site. A page shows other companies' logos too, its
+  // customers' and partners', so one that names the site outranks one merely
+  // called a logo, and that only counts in the page's header.
+  const brand = base.hostname.replace(/^(?:www|open|app|web)\./, "").split(".")[0]!.toLowerCase()
+  const word = /(?:^|[^a-z])(?:logo|logotype|wordmark|site-?mark)(?:[^a-z]|$)/i
+  const names = (text: string | undefined) => Boolean(text && text.toLowerCase().includes(brand))
+  const headerEnd = (() => {
+    const close = html.search(/<\/header>/i)
+    if (close >= 0) return close
+    const main = html.search(/<main\b/i)
+    return main >= 0 ? main : html.length * 0.2
+  })()
+  const scored = (named: boolean, called: boolean, place: number) => (named ? 3 : called && place <= headerEnd ? 1 : 0)
   for (const match of html.matchAll(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi)) {
     const open = match[0].slice(0, match[0].indexOf(">"))
-    if (/logo|brand|wordmark/i.test(open)) found.push({ inline: match[0] })
+    const label = attribute(open, "aria-label") ?? match[0].match(/<title>([\s\S]*?)<\/title>/i)?.[1]
+    const score = scored(names(label), word.test(attribute(open, "class") ?? "") || word.test(attribute(open, "id") ?? ""), match.index!)
+    if (score) found.push({ candidate: { inline: match[0] }, score, place: match.index! })
   }
-  for (const tag of html.match(/<img\b[^>]*>/gi) ?? []) {
+  for (const match of html.matchAll(/<img\b[^>]*>/gi)) {
+    const tag = match[0]
     const src = attribute(tag, "src")
-    if (/logo|brand|wordmark/i.test(tag) && src) {
-      const href = at(src)
-      if (href) found.push({ href })
+    const file = src?.split(/[?#]/)[0]?.split("/").pop()
+    const href = at(src)
+    const score = scored(names(attribute(tag, "alt")), word.test(file ?? "") || word.test(attribute(tag, "class") ?? "") || word.test(attribute(tag, "id") ?? ""), match.index!)
+    if (href && score) found.push({ candidate: { href }, score, place: match.index! })
+  }
+  // An SVG inside a link home, as a header's logo usually is: one that says
+  // it is the site's, by its label, class or title, so a nav's home icon, a
+  // house, is passed over.
+  for (const match of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)) {
+    const link = at(attribute(match[1]!, "href"))
+    if (!link || link.host !== base.host || link.pathname !== "/" || !/<svg\b/i.test(match[2]!)) continue
+    // The link's attributes, and what is inside it without its drawing's paths.
+    const said = `${match[1]} ${match[2]!.replace(/\s(?:d|points)="[^"]*"/g, "")}`.toLowerCase()
+    const score = said.includes(brand) ? 3 : /logo|wordmark/.test(said) ? 2 : 0
+    const svg = match[2]!.match(/<svg\b[\s\S]*?<\/svg>/i)?.[0]
+    if (svg && score) {
+      found.push({ candidate: { inline: svg }, score, place: match.index! })
+      break
     }
   }
-  // An SVG inside the first link home, as a header's logo usually is.
-  const home = [...html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)].find((match) => {
-    const link = at(attribute(match[1]!, "href"))
-    return link && link.host === base.host && link.pathname === "/" && /<svg\b/i.test(match[2]!)
-  })
-  const svg = home?.[2]!.match(/<svg\b[\s\S]*?<\/svg>/i)?.[0]
-  if (svg) found.push({ inline: svg })
-  for (const tag of html.match(/<link\b[^>]*>/gi) ?? []) {
-    const rel = attribute(tag, "rel") ?? ""
+  for (const match of html.matchAll(/<link\b[^>]*>/gi)) {
+    const tag = match[0]
     const href = at(attribute(tag, "href"))
-    if (!href) continue
-    if (/\bicon\b/i.test(rel) && (/svg/i.test(attribute(tag, "type") ?? "") || /\.svg(\?|$)/i.test(href.pathname))) found.push({ href })
+    if (href && /\bicon\b/i.test(attribute(tag, "rel") ?? "") && (/svg/i.test(attribute(tag, "type") ?? "") || /\.svg(\?|$)/i.test(href.pathname))) {
+      found.push({ candidate: { href }, score: 0.5, place: match.index! })
+    }
   }
-  for (const tag of html.match(/<link\b[^>]*>/gi) ?? []) {
-    const href = at(attribute(tag, "href"))
-    if (href && /apple-touch-icon/i.test(attribute(tag, "rel") ?? "")) found.push({ href })
+  return found.sort((a, b) => b.score - a.score || a.place - b.place).map((entry) => entry.candidate)
+}
+
+// A logo's own colour: the one its SVG fills most with, leaving out black,
+// white and greys, which a logo uses for type and outlines. Named for the
+// brand, so readPage() ranks it first, as the command line does.
+function logoColour(svg: string) {
+  const counts = new Map<string, number>()
+  for (const match of svg.matchAll(/#([0-9a-f]{6}|[0-9a-f]{3})\b/gi)) {
+    const hex = match[1]!.length === 3 ? `#${[...match[1]!].map((digit) => digit + digit).join("")}`.toLowerCase() : `#${match[1]!}`.toLowerCase()
+    if (toOklch(hex).c < 0.06) continue
+    counts.set(hex, (counts.get(hex) ?? 0) + 1)
   }
-  return found
+  return [...counts].sort((a, b) => b[1] - a[1])[0]?.[0]
 }
 
 // An inline SVG that leans on the page for its size or colour, given both.
@@ -192,5 +233,7 @@ export async function readSite(address: string): Promise<Read> {
     }
   }
 
-  return { name: page.url.hostname.replace(/^www\./, ""), url: page.url.href, html, css: css.join("\n"), ...(logo ? { logo } : null), read }
+  const mark = logo && "svg" in logo ? logoColour(logo.svg) : undefined
+  // Named as typed: a redirect to open.spotify.com is still spotify.com.
+  return { name: url.hostname.replace(/^www\./, ""), url: page.url.href, html, css: [mark ? `:root { --brand-logo: ${mark}; }` : "", ...css].join("\n"), ...(logo ? { logo } : null), read }
 }

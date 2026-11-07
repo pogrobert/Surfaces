@@ -57,14 +57,35 @@ export const MOST_LOGO_BYTES = 200 * 1024
 
 // A logo as a data URL: an SVG file's own text, or a PNG, JPEG or WebP's
 // bytes. Either way it is shown as an image, so nothing in it runs.
+// A logo as a data URL, and its shape, width over height. An SVG keeps its
+// drawing and loses the size it was written at, so every renderer fits it to
+// the box it is given, edge to edge, rather than some centring it at its own
+// size inside.
 export function readLogo(logo: string | ImageInput) {
-  if (typeof logo !== "string") return readImage(logo).href
+  if (typeof logo !== "string") return { href: readImage(logo).href, aspect: pixelAspect(logo) }
   if (!/^\s*(?:<\?xml[^>]*>\s*)?(?:<!--[\s\S]*?-->\s*)*(?:<!DOCTYPE[^>]*>\s*)?<svg[\s>]/i.test(logo)) {
     throw new Error(`Expected the logo as an SVG file's text, starting <svg, or { data, type } for a PNG, JPEG or WebP`)
   }
-  const data = new TextEncoder().encode(logo)
+  const root = logo.match(/<svg\b[^>]*>/i)![0]
+  const number = (name: string) => Number(root.match(new RegExp(String.raw`\s${name}\s*=\s*["']?\s*([\d.]+)`, "i"))?.[1])
+  const box = root.match(/viewBox\s*=\s*["']\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)/i)
+  const [w, h] = box ? [Number(box[1]), Number(box[2])] : [number("width"), number("height")]
+  const sized = root
+    .replace(/\s(?:width|height)\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/<svg\b/i, (open) => (box || !(w > 0 && h > 0) ? open : `${open} viewBox="0 0 ${w} ${h}"`))
+  const data = new TextEncoder().encode(logo.replace(root, sized))
   if (data.length > MOST_LOGO_BYTES) throw new Error(`Expected a logo under ${MOST_LOGO_BYTES / 1024} KB; simplify the SVG first`)
-  return `data:image/svg+xml;base64,${base64(data)}`
+  return { href: `data:image/svg+xml;base64,${base64(data)}`, aspect: w > 0 && h > 0 ? w / h : 1 }
+}
+
+// A PNG's width over height from its header; 1 for anything else.
+function pixelAspect(image: ImageInput) {
+  const d = image.data
+  if (image.type !== "image/png" || d.length < 24) return 1
+  const read = (at: number) => ((d[at]! << 24) | (d[at + 1]! << 16) | (d[at + 2]! << 8) | d[at + 3]!) >>> 0
+  const w = read(16)
+  const h = read(20)
+  return w > 0 && h > 0 ? w / h : 1
 }
 
 export function readImage(image: ImageInput) {

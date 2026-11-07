@@ -53,8 +53,8 @@ type Face = "serif" | "mono" | "rounded" | "grotesk"
 const FACES: readonly [Face, RegExp][] = [
   ["mono", /mono|code|courier|consolas|menlo|monaco|iosevka|^hack$/],
   ["rounded", /rounded|nunito|quicksand|comfortaa|varela|poppins|fredoka|baloo|rubik|manrope|dm sans|outfit|lexend|figtree|jakarta|sora/],
-  ["grotesk", /sans|inter|helvetica|arial|geist|system-ui|roboto|segoe|-apple-system|blinkmacsystemfont|grotesk|neue/],
-  ["serif", /serif|garamond|caslon|baskerville|georgia|times|playfair|lora|merriweather|fraunces|newsreader|tiempos|ivar|crimson|spectral|cormorant|bodoni|didot|literata|recoleta|canela|freight|charter/],
+  ["grotesk", /sans|inter|helvetica|arial|geist|system-ui|roboto|segoe|-apple-system|blinkmacsystemfont|grotesk|neue|proxima|circular|cereal|s[oö]hne|graphik|gt america|walsheim|aeonik|satoshi|switzer|montreal|suisse|haas|akzidenz|univers|futura|avenir|gotham|sf pro|figmasans|ibm plex|work sans|mona|hubot|tatami/],
+  ["serif", /serif|garamond|caslon|baskerville|georgia|times|playfair|lora|merriweather|fraunces|newsreader|tiempos|ivar|crimson|spectral|cormorant|bodoni|didot|literata|recoleta|canela|freight|charter|kazimir|sectra|gt super|domaine|reckless|editorial|ogg\b|lyon|publico|roboto slab|zilla|bitter|alegreya|sentient|gambetta|erode|young serif|instrument serif|lusitana|tobias|financier|feature display|signifier/],
 ]
 
 // A family the lists don't know is read by the generic it falls back to, and
@@ -91,13 +91,13 @@ const TONES: Record<Tone, RegExp> = {
 // amber comes out brown. It leans toward styles that show the colour as it is.
 const LEANS: Record<Face | Tone | "dark" | "bright", Partial<Record<StyleName, number>>> = {
   serif: { engraving: 3, mezzotint: 2, aquatint: 2, marbling: 2, halftone: 1 },
-  mono: { linework: 3, dither: 3, halftone: 1, photocopy: 1 },
-  rounded: { stencil: 3, riso: 3, screenprint: 2, underpaint: 2, strata: 1 },
-  grotesk: { underpaint: 2, halftone: 2, fluted: 1, sfumato: 1, riso: 1 },
-  technical: { linework: 3, dither: 2, engraving: 1, moire: 1 },
+  mono: { dither: 3, halftone: 2, linework: 2, photocopy: 1 },
+  rounded: { stencil: 3, riso: 3, screenprint: 2, underpaint: 1, strata: 1 },
+  grotesk: { halftone: 2, screenprint: 1, underpaint: 1, fluted: 1, riso: 1 },
+  technical: { halftone: 3, dither: 3, screenprint: 1, linework: 1, engraving: 1 },
   editorial: { halftone: 2, engraving: 2, mezzotint: 2, marbling: 1, photocopy: 1 },
   playful: { riso: 3, screenprint: 3, photocopy: 2, stencil: 2, endpaper: 1 },
-  warm: { stencil: 3, underpaint: 2, marbling: 1, strata: 1 },
+  warm: { stencil: 3, screenprint: 1, underpaint: 1, marbling: 1, strata: 1 },
   glossy: { chrome: 3, glass: 3, fluted: 2, sfumato: 1 },
   calm: { underpaint: 3, sfumato: 2, aquatint: 2 },
   dark: { mezzotint: 1, moire: 1, sfumato: 1, chrome: 1 },
@@ -124,13 +124,16 @@ export const PLACING: Record<Use, { size: { width: number; height: number }; are
   post: { size: { width: 1600, height: 900 }, areas: [{ place: "bottom-left", size: "lg" }], said: "a post's cover carries its title at the bottom left" },
   card: { size: { width: 1600, height: 900 }, areas: [], said: "a card's title sits beside the cover, so the art fills it" },
   hero: { size: { width: 2400, height: 1200 }, areas: [{ place: "center", size: "lg" }], motion: "loop", said: "a hero carries its title in the middle and is the one cover on the page that moves" },
-  og: { size: formats.og, areas: [{ place: "left", size: "lg" }], said: "a link preview carries its title on the left" },
+  // A link preview's title sits at its foot, so the art has the top and the
+  // right to be seen at the size a feed shows it.
+  og: { size: formats.og, areas: [{ place: "bottom-left", size: "md" }], said: "a link preview carries its title at the bottom left" },
   // A profile's header. X lays the profile's photo over its bottom left, so
-  // the art always keeps clear of it.
-  x: { size: { width: 1500, height: 500 }, areas: [{ place: "center", size: "md" }], optional: true, keep: [{ place: "bottom-left", size: "sm" }], said: "an X header" },
+  // nothing that must be seen goes there; the art runs on under the photo,
+  // with no patch of ground cut out for it.
+  x: { size: { width: 1500, height: 500 }, areas: [{ place: "center", size: "md" }], optional: true, keep: [{ place: "bottom-left", size: "sm", art: "behind" }], said: "an X header" },
   linkedin: { size: { width: 1584, height: 396 }, areas: [{ place: "center", size: "md" }], optional: true, said: "a LinkedIn banner" },
   // A newsletter's header, at twice the 600 by 200 an email shows it at.
-  email: { size: { width: 1200, height: 400 }, areas: [{ place: "left", size: "lg" }], optional: true, said: "an email header" },
+  email: { size: { width: 1200, height: 400 }, areas: [{ place: "left", size: "md" }], optional: true, said: "an email header" },
 }
 
 // Every problem with the facts given, each with its fix.
@@ -328,16 +331,38 @@ function readStyles(html: string, css: string): Omit<PageFacts, "covers"> {
   const rule = (selector: string, property: string, value = COLOR) =>
     source.match(new RegExp(String.raw`(?:^|[}\s,;])(?:${selector})\s*(?:,[^{]*)?\{[^}]*?(?<![-\w])${property}\s*:\s*${value}`, "i"))?.[1]
 
-  const background = hex(variable("background|bg|surface") ?? rule("html|body|:root", "background(?:-color)?"))
-  if (background) facts.background = background
-  const text = hex(variable("foreground|fg|text") ?? rule("body|html|:root", "color"))
+  // Every custom property declared, at the first value it takes, so a value
+  // built from others, as design systems build theirs, such as
+  // hsl(var(--brand-default)), can be followed to the colour it is.
+  const declared = new Map<string, string>()
+  for (const match of source.matchAll(/--([\w-]+)\s*:\s*([^;}"<>{]{1,200})/g)) {
+    const name = match[1]!.toLowerCase()
+    if (!declared.has(name)) declared.set(name, match[2]!.trim())
+  }
+  const follow = (value: string, depth = 0): string =>
+    depth > 6 ? value : value.replace(/var\(\s*--([\w-]+)\s*(?:,([^()]*))?\)/g, (_, name: string, fallback?: string) => follow(declared.get(name.toLowerCase()) ?? fallback?.trim() ?? "", depth + 1))
+  const colorOf = (name: string) => hex(follow(declared.get(name) ?? "").trim())
+  // The page's own ground and ink, by the names design systems give them.
+  const declaredAs = (pattern: RegExp) => [...declared.keys()].filter((name) => pattern.test(name)).map(colorOf).find(Boolean)
+
+  const background =
+    hex(variable("background|bg|surface")) ??
+    declaredAs(/^(?:color-)?(?:bg|background|bgcolor|canvas|page)(?:-(?:color|default|base|primary|page|body|canvas))*$/) ??
+    hex(rule("html|body|:root", "background(?:-color)?"))
+  const text =
+    hex(variable("foreground|fg|text")) ??
+    declaredAs(/^(?:color-)?(?:fg|foreground|fgcolor|text)(?:-(?:color|default|base|primary|body))*$/) ??
+    hex(rule("body|html|:root", "color"))
+  // A ground its own text can't be read on is the wrong one, such as a dark
+  // theme's read as the page's.
+  if (background && !(text && contrast(background, text) < 3)) facts.background = background
   if (text) facts.text = text
 
   // Every colour, most used first, with colours named for the brand ahead:
   // "brand" before "primary" before "accent", a plain name before a specific
-  // one, and from a ramp of shades the one nearest its middle. A framework's
-  // own palette, declared whole whether the site uses it or not, isn't
-  // counted.
+  // one, a name with no shade, such as --brand-default, before any shade of
+  // a ramp, and from a ramp the shade nearest its middle. A framework's own
+  // palette, declared whole whether the site uses it or not, isn't counted.
   const used = source.replace(/--color-(?:red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|slate|gray|zinc|neutral|stone)-\d{2,3}\s*:[^;}]*/gi, "")
   const counts = new Map<string, number>()
   for (const match of used.matchAll(new RegExp(String.raw`(?<![&\w])${COLOR}`, "g"))) {
@@ -346,16 +371,27 @@ function readStyles(html: string, css: string): Omit<PageFacts, "covers"> {
   }
   const rank = (name: string) => {
     const kind = ["brand", "primary", "accent"].findIndex((word) => name.includes(word))
-    const shade = Number(name.match(/-(\d{2,3})$/)?.[1] ?? 500)
-    return kind * 1e6 + Math.abs(shade - 500) * 1000 + name.length
+    const shade = name.match(/-(\d{2,4})$/)?.[1]
+    return kind * 1e7 + (shade === undefined ? 0 : Math.abs(Number(shade) - 500) + 1) * 1000 + name.length
   }
-  // Named in a CSS variable, an SCSS variable, or a key of a config such as
-  // Tailwind's.
-  const named = [...source.matchAll(new RegExp(String.raw`(?:--|\$|\b)([\w-]*(?:brand|primary|accent)[\w-]*)["']?\s*:\s*["']?(?:${COLOR}|${BARE})`, "gi"))]
-    // Bare channels only from a CSS variable.
-    .filter((match) => match[2] || match[0].startsWith("--"))
-    .map((match) => ({ name: match[1]!.toLowerCase(), color: hex(match[2] ?? match[3]) }))
-    .filter((entry): entry is { name: string; color: string } => Boolean(entry.color))
+  // Named in a CSS variable, followed through any it is built from, or in an
+  // SCSS variable or a key of a config such as Tailwind's. A name for the
+  // text, border or a muted state set on the brand isn't the brand, and nor
+  // is a ground, as --bg-primary is, unless it is a button's.
+  const SET_ON = /(?:^|-)(?:(?:fg|foreground|text|border)(?:color)?|muted|subtle|disabled|shadow|ring|outline|placeholder|on|contrast|elevation|glow|effects?)(?:-|$)/
+  const GROUND = /(?:^|-)(?:(?:bg|background)(?:color)?|surface|canvas)(?:-|$)/
+  // A widget's own variables, such as a date picker's accent, are the
+  // widget's, not the site's.
+  const WIDGET = /^(?:rdp|swiper|toastify|tippy|plyr|vjs|video-js|mapbox|leaflet|splide|glide|slick|fc|ck|tox|pswp|flatpickr|choices|select2|intercom|hs|onetrust|ot)-/
+  const NOT_BRAND = { test: (name: string) => WIDGET.test(name) || SET_ON.test(name) || (GROUND.test(name) && !/button|btn|cta|action/.test(name)) }
+  const fromVariables = [...declared.keys()]
+    .filter((name) => /brand|primary|accent/.test(name) && !NOT_BRAND.test(name))
+    .map((name) => ({ name, color: colorOf(name) }))
+  const fromKeys = [...source.matchAll(new RegExp(String.raw`(?:\$|\b)([\w-]*(?:brand|primary|accent)[\w-]*)["']?\s*:\s*["']?${COLOR}`, "gi"))]
+    .filter((match) => !match[0].startsWith("-"))
+    .map((match) => ({ name: match[1]!.toLowerCase(), color: hex(match[2]) }))
+  const named = [...fromVariables, ...fromKeys]
+    .filter((entry): entry is { name: string; color: string } => Boolean(entry.color) && !NOT_BRAND.test(entry.name))
     .sort((a, b) => rank(a.name) - rank(b.name))
     .map((entry) => entry.color)
   const colors = [...new Set([...named, ...[...counts].sort((a, b) => b[1] - a[1]).map(([color]) => color)])]
@@ -372,7 +408,7 @@ function readStyles(html: string, css: string): Omit<PageFacts, "covers"> {
   const body = fontVariable("sans|body|text") ?? rule("body|html|:root", "font-family", FAMILY)?.trim() ?? google[1] ?? google[0]
   if (heading || body) facts.fonts = { ...(heading ? { heading } : null), ...(body ? { body } : null) }
 
-  const plain = (text: string) => text.replace(/<[^>]+>/g, " ").replace(/&\w+;/g, " ").replace(/\s+/g, " ").trim()
+  const plain = (text: string) => decode(text.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim()
   const words = [
     html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1],
     html.match(/<meta[^>]+name=["']description["'][^>]*content=["']([^"']*)/i)?.[1],
@@ -384,6 +420,15 @@ function readStyles(html: string, css: string): Omit<PageFacts, "covers"> {
   if (words.length) facts.words = [...new Set(words)].join(". ")
   return facts
 }
+
+// Text with its character references written out, as a reader sees it.
+const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", mdash: "—", ndash: "–", hellip: "…", rsquo: "’", lsquo: "‘", rdquo: "”", ldquo: "“", middot: "·" }
+const decode = (text: string) =>
+  text.replace(/&(#x[0-9a-f]+|#\d+|\w+);/gi, (_, code: string) =>
+    code[0] === "#"
+      ? String.fromCodePoint(code[1] === "x" || code[1] === "X" ? parseInt(code.slice(2), 16) : Number(code.slice(1)))
+      : ENTITIES[code.toLowerCase()] ?? " "
+  )
 
 // A CSS colour as hex, or nothing for one this can't read.
 function hex(color: string | undefined): string | undefined {

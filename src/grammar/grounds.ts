@@ -26,6 +26,9 @@ export const paper: GroundPart = {
   }),
   under: () => [{ kind: "fill", id: "ground", tone: "ground" }],
   over({ w, h, keep, calm }, p, avoid) {
+    // A strip, such as a header, isn't a sheet that folds: across it a
+    // crease reads as a seam.
+    if (w / h >= 2.4) return []
     const width = w * 0.03
     const margin = w * 0.03
     // What the sheet carries, as spans across it, joined where they meet.

@@ -35,13 +35,14 @@ brand.input("post", { title })          // the input any of those draws, for com
   every seed, so the same title in one brand is always the same art and two
   brands never share a drawing. There is no seed to choose.
 - A banner's title is its own choice: with one it is set in, without one
-  the banner is art alone. An X header always keeps its bottom left clear,
-  where X lays the profile's photo. There is no icon: an icon is a brand's
+  the banner is art alone. An X header puts nothing that must be seen at
+  its bottom left, where X lays the profile's photo; the art runs on under
+  it. There is no icon: an icon is a brand's
   identity, and a site keeps its own.
 - `logo` is that identity, set as it is on the pictures a site shows of
-  itself elsewhere: the link preview (top left, on the title's edge) and the
-  headers (at the right, clear of the photo X and LinkedIn lay over the
-  left). A post's cover goes on the site itself, which shows its logo
+  itself elsewhere: the link preview and the email header (top left, over the
+  title, on its edge, as a letterhead's) and the profile headers (at the
+  right, clear of the photo X and LinkedIn lay over the left). A post's cover goes on the site itself, which shows its logo
   already, so it has none. An SVG file's text, or `{ data, type }` for a PNG,
   JPEG or WebP; `{ light, dark }` gives one for each ground, and a logo whose
   colours all fall under 3:1 on its ground says so. It is drawn as an image,

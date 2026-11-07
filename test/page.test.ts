@@ -43,8 +43,8 @@ test("readPage finds a page's colours, ground, type and words", () => {
 
 test("a developer tool gets a technical style in its own colour, dark", () => {
   const brand = lookOf("basin.dev", DEVTOOL)
-  assert.deepEqual(brand.look, { style: "linework", color: "#635bff", theme: "dark" })
-  assert.match(brand.why.join("\n"), /style linework: the page .*talks about building software/)
+  assert.deepEqual(brand.look, { style: "halftone", color: "#635bff", theme: "dark" })
+  assert.match(brand.why.join("\n"), /style halftone: the page .*talks about building software/)
 })
 
 test("a warm community site gets paint through a stencil", () => {
@@ -102,8 +102,8 @@ test("readPage reads a brand the way real stylesheets give it", () => {
   const framework = readPage("", ":root { --color-red-500: #fb2c36; --color-blue-500: #2b7fff; } .logo { color: #38bdf8; }")
   assert.deepEqual(framework.colors, ["#38bdf8"])
   // A font the lists don't know is read by its fallback, or not at all.
-  assert.equal(createBrand({ name: "a", fonts: { heading: `"Kazimir Text", serif` } }).look.style, "engraving")
-  assert.equal(createBrand({ name: "a", fonts: { heading: "Kazimir Text" } }).look.style, "riso")
+  assert.equal(createBrand({ name: "a", fonts: { heading: `"Brightwood Text", serif` } }).look.style, "engraving")
+  assert.equal(createBrand({ name: "a", fonts: { heading: "Brightwood Text" } }).look.style, "riso")
 })
 
 test("the brand colour is an ink, never a pale wash", () => {
@@ -164,4 +164,29 @@ test("readPage reads shadcn's bare HSL channels and hsl()", () => {
   assert.equal(facts.text, "#020817")
   assert.equal(facts.colors?.[0], "#7c3aed")
   assert.equal(readPage("", "a { color: hsl(0deg 72.2% 50.6%); }").colors?.[0], "#dc2626")
+})
+
+test("readPage follows variables to the colours they are built from", () => {
+  // As Supabase's: a ramp whose 500 is dark, and the brand named plainly.
+  const built = readPage("", `:root { --brand-500: 154.9deg 100% 19.2%; --brand-default: 153.1deg 60.2% 52.7%; --color-brand-500: hsl(var(--brand-500)); --color-brand: hsl(var(--brand-default)); }`)
+  assert.equal(built.colors?.[0], "#3ecf8e")
+  // As GitHub's: ground and text named by the design system, the text set on
+  // the brand left out of it.
+  const named = readPage("", `:root { --bgColor-default: #ffffff; --fgColor-default: #1f2328; --button-primary-fgColor-rest: #ffffff; --button-primary-bgColor-rest: #1f883d; }`)
+  assert.deepEqual([named.background, named.text, named.colors?.[0]], ["#ffffff", "#1f2328", "#1f883d"])
+  // A ground its own text can't be read on is dropped.
+  assert.equal(readPage("", `:root { --bg: #282c35; --text: #222222; }`).background, undefined)
+  // Character references read as the characters they are.
+  assert.match(readPage(`<title>We&#x27;ll build it &amp; ship it</title>`).words ?? "", /We'll build it & ship it/)
+})
+
+test("a widget's own variables don't stand in for the brand", () => {
+  // As Spotify's: a date picker's accent, and the brand only used, not named.
+  const facts = readPage("", `.rdp { --rdp-accent-color: #009948; } a:hover { color: #1ed760; } .x { color: #1ed760; } .y { background: #1ed760; }`)
+  assert.equal(facts.colors?.[0], "#1ed760")
+})
+
+test("the faces real sites set their headings in are known", () => {
+  assert.equal(createBrand({ name: "a", fonts: { heading: "Kazimir Text", body: "Proxima Nova" } }).look.font, "serif")
+  assert.notEqual(createBrand({ name: "a", fonts: { heading: "Airbnb Cereal VF" } }).look.font, "serif")
 })
