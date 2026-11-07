@@ -214,14 +214,19 @@ const OG_LAYOUTS: readonly { title: Place; logo: Place }[] = [
   { title: "bottom-left", logo: "top-left" },
   { title: "top-left", logo: "bottom-left" },
   { title: "bottom-right", logo: "top-right" },
+  // A lockup: the logo just over the title, read as one.
+  { title: "bottom-left", logo: "left" },
 ]
 const ogLayout = (name: string) => OG_LAYOUTS[hash(`${name}/og`) % OG_LAYOUTS.length]!
 // A long title gets the large area, so it is set at a size a feed can read,
 // and the art gives up a little room; a short one keeps the art large.
 const ogSize = (title: string | undefined) => ((title?.trim().length ?? 0) > 30 ? "lg" : "md")
 
-function logoFor(logo: Logo | undefined, use: Use, name: string): SurfaceInput["logo"] {
-  const place = use === "og" ? ogLayout(name).logo : LOGO_AT[use]
+function logoFor(logo: Logo | undefined, use: Use, name: string, title?: string): SurfaceInput["logo"] {
+  // A lockup's logo has no room over a long title's large area, so it goes
+  // to the head of the card instead, as a letterhead's does.
+  const layout = ogLayout(name)
+  const place = use === "og" ? (layout.logo === "left" && ogSize(title) === "lg" ? "top-left" : layout.logo) : LOGO_AT[use]
   if (!logo || !place) return undefined
   const both = typeof logo === "object" && "light" in logo ? logo : { light: logo as string | ImageInput }
   return { image: both.light, ...(both.dark ? { dark: both.dark } : null), place }
@@ -250,7 +255,7 @@ function build(name: string, look: Brand["look"], why: string[], logo?: Logo): B
       ...(look.shape ? { shape: look.shape } : content.tag?.trim() ? familyShape(look.style, name, content.tag.trim()) : null),
       ...(drawn ? { title: content.title!.trim(), ...(look.font ? { font: look.font } : null) } : null),
       ...(placing.motion && !drawn ? { motion: placing.motion } : null),
-      ...(logoFor(logo, use, name) ? { logo: logoFor(logo, use, name) } : null),
+      ...(logoFor(logo, use, name, content.title) ? { logo: logoFor(logo, use, name, content.title) } : null),
     }
   }
   const draw = (use: Use) => (content: Content) => generate(input(use, content))

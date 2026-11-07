@@ -282,7 +282,10 @@ function draw(input: SurfaceInput, fill = false, recipe: Recipe = STYLES[input.s
     const tall = Math.min(box.h * (aspect < 1.6 ? 0.5 : 0.4), box.w / aspect)
     const wide = tall * aspect
     const left = align === "start" ? box.x + edge : align === "end" ? box.x + box.w + edge - wide : box.x + (box.w - wide) / 2
-    layers.push({ kind: "logo", id: "logo", href, x: left, y: box.y + (box.h - tall) / 2, w: wide, h: tall, align })
+    // Just over a title below it in the same column, as a lockup's logo
+    // sits; otherwise in the middle of its area.
+    const below = title && safe.y >= box.y + box.h && safe.y - (box.y + box.h) < h * 0.12 && edge !== 0
+    layers.push({ kind: "logo", id: "logo", href, x: left, y: below ? box.y + box.h - tall : box.y + (box.h - tall) / 2, w: wide, h: tall, align })
   }
 
   // A layout says how its art arrives and how it then moves; a cover asked
