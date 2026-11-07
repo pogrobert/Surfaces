@@ -387,7 +387,7 @@ function readStyles(html: string, css: string): Omit<PageFacts, "covers"> {
   // SCSS variable or a key of a config such as Tailwind's. A name for the
   // text, border or a muted state set on the brand isn't the brand, and nor
   // is a ground, as --bg-primary is, unless it is a button's.
-  const SET_ON = /(?:^|-)(?:(?:fg|foreground|text|border)(?:color)?|muted|subtle|disabled|shadow|ring|outline|placeholder|on|contrast|elevation|glow|effects?)(?:-|$)/
+  const SET_ON = /(?:^|-)(?:(?:fg|foreground|text|border)(?:color)?|muted|subtle|disabled|shadow|ring|outline|focus|placeholder|on|contrast|elevation|glow|effects?)(?:-|$)/
   const GROUND = /(?:^|-)(?:(?:bg|background)(?:color)?|surface|canvas)(?:-|$)/
   // A widget's own variables, such as a date picker's accent, are the
   // widget's, not the site's.
@@ -399,20 +399,30 @@ function readStyles(html: string, css: string): Omit<PageFacts, "covers"> {
   const fromKeys = [...source.matchAll(new RegExp(String.raw`(?:\$|\b)([\w-]*(?:brand|primary|accent)[\w-]*)["']?\s*:\s*["']?${COLOR}`, "gi"))]
     .filter((match) => !match[0].startsWith("-"))
     .map((match) => ({ name: match[1]!.toLowerCase(), color: hex(match[2]) }))
-  const named = [...fromVariables, ...fromKeys]
+  const sorted = [...fromVariables, ...fromKeys]
     .filter((entry): entry is { name: string; color: string } => Boolean(entry.color) && !NOT_BRAND.test(entry.name))
     .sort((a, b) => rank(a.name) - rank(b.name))
-    .map((entry) => entry.color)
+  // A name for the brand or its primary says so; one only for an accent says
+  // less than a strong colour the page uses most, which goes before it.
+  const named = sorted.filter((entry) => /brand|primary/.test(entry.name)).map((entry) => entry.color)
+  const accents = sorted.filter((entry) => !/brand|primary/.test(entry.name)).map((entry) => entry.color)
+  const byUse = [...counts].sort((a, b) => b[1] - a[1]).map(([color]) => color)
+  const mostUsed = byUse.find((color) => {
+    const { l, c } = toOklch(color)
+    return c >= 0.06 && l >= 0.3 && (l <= 0.86 || c >= 0.12)
+  })
   // Colours the page declares for itself in its head: the one Safari draws
   // its pinned tab in, chosen as the brand's mark colour, first of all; and
-  // the browser's theme colour after the named ones, as it is as often the
-  // page's ground as its brand. A ground among them is passed over later.
+  // the browser's theme colour. A ground among them is passed over later.
   const tags = html.match(/<(?:meta|link)\b[^>]*>/gi) ?? []
   const tagged = (test: RegExp, key: string) =>
     tags.filter((tag) => test.test(tag) && !/prefers-color-scheme:\s*dark/i.test(tag)).map((tag) => hex(tag.match(new RegExp(String.raw`\b${key}\s*=\s*["']\s*([^"']+?)\s*["']`, "i"))?.[1]?.trim())).filter((color): color is string => Boolean(color))
   const pinned = tagged(/rel\s*=\s*["'][^"']*mask-icon/i, "color")
   const themed = tagged(/name\s*=\s*["']theme-color["']/i, "content")
-  const colors = [...new Set([...pinned, ...named, ...themed, ...[...counts].sort((a, b) => b[1] - a[1]).map(([color]) => color)])]
+  // A strong theme colour is one chosen as the brand's, and goes before the
+  // names; a neutral one, as often the page's ground, after them.
+  const strongTheme = themed.filter((color) => toOklch(color).c >= 0.08)
+  const colors = [...new Set([...pinned, ...strongTheme, ...named, ...(mostUsed ? [mostUsed] : []), ...accents, ...themed, ...byUse])]
   if (colors.length) facts.colors = colors
 
   if (/prefers-color-scheme\s*:\s*dark|\.dark\b|data-theme=["']?dark/i.test(source)) facts.darkMode = true

@@ -204,3 +204,13 @@ test("the colours a page declares in its head are read", () => {
   const themed = readPage(`<meta name="theme-color" media="(prefers-color-scheme: light)" content="#3139FB"><meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000">`, `a { color: #fb3a4d; }`)
   assert.equal(themed.colors?.[0], "#3139fb")
 })
+
+test("a focus ring or a mere accent doesn't outrank the colour a page is built in", () => {
+  // As Asana's: a focus colour named "primary", accents in pale tints, and its
+  // coral used throughout.
+  const used = Array.from({ length: 6 }, (_, i) => `.c${i} { color: #f06a6a; }`).join(" ")
+  const facts = readPage("", `:root { --a11y-focus-primary: #879fc8; --accent-soft: #c3e5f8; } ${used}`)
+  assert.equal(createBrand({ name: "asana.test", ...facts }).look.color, "#f06a6a")
+  // A strong theme colour is the brand's, ahead of names.
+  assert.equal(readPage(`<meta name="theme-color" content="#3139FB">`, `:root { --accent: #fb3a4d; }`).colors?.[0], "#3139fb")
+})
