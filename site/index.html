@@ -49,7 +49,7 @@
   .wall .tile:hover figcaption { opacity: 1; }
   /* The wall fades into the page under the card. */
   .hero::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 34%; background: linear-gradient(transparent, var(--paper)); pointer-events: none; }
-  .pitch { position: absolute; z-index: 2; left: 50%; bottom: max(28px, 6vh); transform: translateX(-50%); width: min(620px, calc(100% - 32px)); background: var(--sheet); border-radius: 26px; padding: 26px 26px 18px; box-shadow: 0 0 0 1px var(--rule), 0 50px 90px -40px rgb(0 0 0 / 0.55); display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .pitch { position: absolute; z-index: 2; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(620px, calc(100% - 32px)); background: var(--sheet); border-radius: 26px; padding: 26px 26px 18px; box-shadow: 0 0 0 1px var(--rule), 0 50px 90px -40px rgb(0 0 0 / 0.55); display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .pitch h1 { margin: 0; font-size: clamp(40px, 5vw, 58px); line-height: 0.95; letter-spacing: -0.05em; font-weight: 800; }
   .pitch p { margin: 0; font-size: 18px; line-height: 1.45; color: var(--quiet); text-wrap: pretty; }
   .pitch .row { display: flex; gap: 8px; align-items: center; }
@@ -204,7 +204,7 @@
   <div class="wall" id="wall" aria-hidden="true"></div>
   <div class="pitch" id="pitch">
     <h1>Surfaces</h1>
-    <p>Generative art for every picture your site shows: posts, docs, link previews, headers and the people on it. Nineteen styles, drawn in your own colours.</p>
+    <p>Generative art for every picture your site shows: posts, docs, link previews, headers, empty states and slides. Nineteen styles, drawn in your own colours.</p>
     <div class="row">
       <form class="ask" id="ask">
         <span class="pre" aria-hidden="true">https://</span>
