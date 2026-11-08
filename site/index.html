@@ -59,7 +59,7 @@
   .wall .label { position: absolute; left: 8px; bottom: 8px; font-size: 12px; line-height: 1.2; padding: 4px 9px; border-radius: 999px; background: rgb(255 255 255 / 0.92); color: #111; opacity: 0; transition: opacity 0.15s ease; pointer-events: none; }
   .wall .tile:hover .label { opacity: 1; }
   /* The wall fades into the page under the card. */
-  .hero::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 34%; background: linear-gradient(transparent, var(--paper)); pointer-events: none; }
+  .hero::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 12%; background: linear-gradient(transparent, color-mix(in srgb, var(--paper) 80%, transparent)); pointer-events: none; }
   .pitch { position: absolute; z-index: 2; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(620px, calc(100% - 32px)); background: var(--sheet); border-radius: 26px; padding: 26px 26px 18px; box-shadow: 0 0 0 1px var(--rule), 0 50px 90px -40px rgb(0 0 0 / 0.55); display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .pitch h1 { margin: 0; font-size: clamp(40px, 5vw, 58px); line-height: 1; letter-spacing: -0.02em; font-weight: 600; }
   .pitch p { margin: 0; font-size: 18px; line-height: 1.5; color: var(--body); text-wrap: pretty; }
@@ -199,6 +199,31 @@
   .side pre { white-space: pre-wrap; overflow-wrap: anywhere; }
   .side code { font: 13px var(--mono); }
   .buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+  /* Feedback in place of a pointer, as on the portfolio: whatever can be
+     pressed lifts its ground or ring under the pointer, and gives a little
+     when pressed. */
+  .go, .shuffle, .plain, .soft, .choice button, .tabs button, .list button, .colours button, .colours label, .swatches button, .frame .save, .read .home {
+    transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, opacity 150ms ease, scale 160ms var(--ease-out);
+  }
+  .wall .art, .grid .frame { transition: scale 300ms var(--ease-out), box-shadow 150ms ease; }
+  @media (hover: hover) {
+    .go:hover { background: color-mix(in srgb, var(--ink) 82%, var(--paper)); }
+    .shuffle:hover, .plain:hover, .soft:not(:disabled):hover, .choice button[aria-pressed="false"]:hover, .choice button:not([aria-pressed]):hover { background: color-mix(in srgb, var(--ink) 5%, var(--sheet)); border-color: color-mix(in srgb, var(--ink) 22%, var(--sheet)); }
+    .tabs button:not([aria-selected="true"]):hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 6%, transparent); }
+    .list button:not([aria-pressed="true"]):hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+    .colours button:hover, .colours label:hover, .swatches button:hover { scale: 1.12; }
+    .wall .tile:hover .art { scale: 1.04; }
+    .grid figure:hover .frame { box-shadow: 0 0 0 2px color-mix(in srgb, var(--ink) 30%, transparent); }
+    .grid figure[aria-current="true"]:hover .frame { box-shadow: 0 0 0 2px var(--ink); }
+    .frame .save:hover { background: #fff; }
+    .read .home:hover { opacity: 0.7; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .go:active, .shuffle:active, .plain:active, .soft:not(:disabled):active, .choice button:active, .tabs button:active, .list button:active, .frame .save:active { scale: 0.97; }
+    .colours button:active, .colours label:active, .swatches button:active { scale: 0.94; }
+  }
+  @media (prefers-reduced-motion: reduce) { .wall .tile:hover .art { scale: 1; } }
 </style>
 </head>
 <body>
