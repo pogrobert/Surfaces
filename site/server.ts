@@ -1,6 +1,6 @@
 // The Surfaces page: the page itself at /, with its wall drawn in, /wall for
-// a shuffle of it, the library from /dist, and Atkinson Hyperlegible Next for
-// the page's own type. Nothing here fetches anything from anywhere else.
+// a shuffle of it, the library from /dist, and Atkinson Hyperlegible Next and
+// Mono for the page's own type, as on pogrobert.com. Nothing here fetches anything from anywhere else.
 import { createReadStream, existsSync, readFileSync, statSync } from "node:fs"
 import { createServer } from "node:http"
 import { extname, join, normalize } from "node:path"
@@ -18,7 +18,8 @@ const TYPES: Record<string, string> = {
   ".svg": "image/svg+xml",
   ".woff2": "font/woff2",
 }
-const FONTS = join(ROOT, "node_modules/@fontsource-variable/atkinson-hyperlegible-next/files")
+const FONTS = join(ROOT, "node_modules/@fontsource-variable")
+const FACES = ["atkinson-hyperlegible-next", "atkinson-hyperlegible-mono"]
 
 // The page with its wall in it, so it shows on the first paint
 // instead of after the library loads in the browser. Drawn once: it is the
@@ -69,7 +70,7 @@ createServer(async (request, response) => {
     path === "/next" ? join(ROOT, "site/next.html")
     : path === "/wall.js" ? join(ROOT, "site/wall.js")
     : path.startsWith("/dist/") ? join(ROOT, path)
-    : path.startsWith("/fonts/") ? join(FONTS, path.slice(7))
+    : path.startsWith("/fonts/") ? join(FONTS, FACES.find((face) => path.slice(7).startsWith(`${face}-`)) ?? "none", "files", path.slice(7))
     : ""
   if (!file || !(file.startsWith(join(ROOT, "dist")) || file.startsWith(FONTS) || file === join(ROOT, "site/next.html") || file === join(ROOT, "site/wall.js")) || !existsSync(file) || statSync(file).isDirectory()) {
     response.writeHead(404).end("Not found")
