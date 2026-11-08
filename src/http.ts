@@ -65,6 +65,7 @@ function readBrand(url: URL, brand: Brand, font?: TitleFont): SurfaceInput {
     if (!BRAND_PARAMETERS.includes(key)) {
       throw new BadRequest(`Unknown parameter "${key}".${nearest(key, BRAND_PARAMETERS) || ` A brand's URL takes ${BRAND_PARAMETERS.join(", ")}.`}`)
     }
+    if (query.getAll(key).length > 1) throw new BadRequest(`"${key}" is given more than once; give it once`)
   }
   const use = (query.get("use") ?? "og") as Use
   if (!(USES as readonly string[]).includes(use)) throw new BadRequest(`Unknown use "${use}". Use ${USES.join(", ")}.`)
@@ -103,10 +104,18 @@ export async function signUrl(url: string, secret: string) {
   return /^https?:\/\//.test(url) ? parsed.toString() : `${parsed.pathname}${parsed.search}`
 }
 
+// Compared in the same time however much matches, so timing says nothing
+// about the right signature.
+function same(a: string, b: string) {
+  let differ = a.length ^ b.length
+  for (let i = 0; i < b.length; i++) differ |= (a.charCodeAt(i) || 0) ^ b.charCodeAt(i)
+  return differ === 0
+}
+
 async function verify(url: URL, secret: string) {
-  const given = url.searchParams.get("sig")
-  if (!given) throw new Forbidden(`This endpoint draws only signed URLs: sign it with signUrl(url, secret)`)
-  if (given !== (await signature(canonical(url), secret))) throw new Forbidden(`The URL's signature doesn't match: sign it again with signUrl(url, secret)`)
+  const given = url.searchParams.getAll("sig")
+  if (!given.length) throw new Forbidden(`This endpoint draws only signed URLs: sign it with signUrl(url, secret)`)
+  if (given.length > 1 || !same(given[0]!, await signature(canonical(url), secret))) throw new Forbidden(`The URL's signature doesn't match: sign it again with signUrl(url, secret)`)
 }
 
 // Only what a URL can't say as the input does is checked here: everything
@@ -118,11 +127,12 @@ function read(url: URL, defaults: Partial<SurfaceInput>): SurfaceInput {
       const hint = key === "w" ? ' Use "width".' : key === "h" ? ' Use "height".' : nearest(key, PARAMETERS)
       throw new BadRequest(`Unknown parameter "${key}".${hint || ` Parameters are ${PARAMETERS.join(", ")}.`}`)
     }
+    if (key !== "area" && query.getAll(key).length > 1) throw new BadRequest(`"${key}" is given more than once; give it once`)
   }
   const size = (key: "width" | "height") => {
     const value = query.get(key)
     if (value === null) return undefined
-    const number = Number(value)
+    const number = /^\d{1,5}$/.test(value) ? Number(value) : NaN
     if (!Number.isInteger(number) || number < 16 || number > MOST_SIDE) {
       throw new BadRequest(`"${key}" must be a whole number of pixels from 16 to ${MOST_SIDE}, got "${value}".`)
     }

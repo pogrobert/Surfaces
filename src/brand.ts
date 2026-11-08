@@ -14,7 +14,7 @@ import type { TitleFont } from "./type/fontfile.ts"
 import { nearest } from "./core/validate.ts"
 import { STYLES } from "./styles/index.ts"
 import type { StyleName } from "./styles/index.ts"
-import { checkFacts, choose, FACTS, leansOf, PLACING, styleReason } from "./page.ts"
+import { checkFacts, choose, FACTS, leansOf, PLACING, styleReason, USES } from "./page.ts"
 import type { PageFacts, Use } from "./page.ts"
 
 // A brand: the decisions a design studio makes once, its style, colour, light
@@ -220,19 +220,39 @@ const TEXT_AT: Partial<Record<Use, true>> = { og: true, hero: true }
 
 // Where a use's title goes when it is set over the art, by the page or drawn
 // in: the use's own place, and a link preview's at the brand's edge.
+// A use's placing, or what the uses are.
+function placingOf(use: Use) {
+  if (!Object.hasOwn(PLACING, use)) throw new Error(`Unknown use "${String(use)}". Use ${USES.join(", ")}.${nearest(String(use), USES)}`)
+  return PLACING[use]
+}
+
 export function titleAt(name: string, use: Use): Place | undefined {
-  const area = PLACING[use].areas[0]
+  const area = placingOf(use).areas[0]
   if (!area) return undefined
   return use === "og" ? ogLayout(name).title : area.place
 }
 
+// What each use is called, for saying what it needs.
+const CALLED: Record<Use, string> = { post: "cover", card: "card", hero: "hero", og: "link preview", x: "X header", linkedin: "LinkedIn banner", email: "email header" }
+
+// The longest title drawn in, as generate takes it. A longer one is cut at a
+// word and ends in an ellipsis, so one long post doesn't stop a site's build.
+const MOST_TITLE = 160
+function clipped(title: string) {
+  const text = title.replace(/\s+/g, " ").trim()
+  if (text.length <= MOST_TITLE) return text
+  const cut = text.slice(0, MOST_TITLE - 1)
+  const word = cut.lastIndexOf(" ")
+  return `${(word > MOST_TITLE / 2 ? cut.slice(0, word) : cut).replace(/[\s,.;:–—-]+$/, "")}…`
+}
+
 function build(name: string, look: Brand["look"], why: string[], logo?: Logo): Brand {
   const input = (use: Use, content: Content = {}): SurfaceInput => {
-    const placing = PLACING[use]
+    const placing = placingOf(use)
     // A banner is one of a kind, so it needs no name of its own.
     const about = content?.id ?? content?.title ?? (placing.optional ? use : undefined)
     if (typeof about !== "string" || !about.trim()) {
-      throw new Error(`Give the ${use} a "title", or an "id" that names it, such as the post's slug`)
+      throw new Error(`Give the ${CALLED[use]} a "title", or an "id" that names it, such as the post's slug`)
     }
     // Drawn in the brand's face, or in a site's own font given with it.
     const drawn = content.drawTitle === true || (typeof content.drawTitle === "object" && content.drawTitle !== null)
@@ -240,12 +260,12 @@ function build(name: string, look: Brand["look"], why: string[], logo?: Logo): B
     if (typeof content.drawTitle === "object" && content.drawTitle !== null && (typeof own !== "object" || own === null || own.kind !== "font")) {
       throw new Error(`drawTitle's "font" is a font read by loadFont(): drawTitle: { font: await loadFont(await readFile("public/fonts/Brand.woff2")) }`)
     }
-    if (drawn && !content.title?.trim()) throw new Error(`A ${use} drawn with its title needs a "title"`)
+    if (drawn && (typeof content.title !== "string" || !content.title.trim())) throw new Error(`A ${CALLED[use]} drawn with its title needs a "title"`)
     if (content.text !== undefined && content.text !== "none" && !(PLACES as readonly string[]).includes(content.text)) {
       throw new Error(`Unknown text place "${String(content.text)}". Use one of ${PLACES.map((place) => `"${place}"`).join(", ")}, or "none".${nearest(String(content.text), PLACES)}`)
     }
     if (drawn && content.text === "none") throw new Error(`A title drawn in needs room: leave "text" out, or give it a place`)
-    if (drawn && content.text === undefined && !placing.areas.length) throw new Error(`A ${use} has no area for a title; draw it as a "post" or "og" instead, or give "text" a place`)
+    if (drawn && content.text === undefined && !placing.areas.length) throw new Error(`A ${CALLED[use]} has no area for a title; draw it as a cover or a link preview instead, or give "text" a place`)
     // Where the words go: as asked, or the use's own place when it carries
     // words over the art or has them drawn in.
     const at = content.text === "none" ? undefined : content.text ?? (drawn || TEXT_AT[use] ? titleAt(name, use) ?? "bottom-left" : undefined)
@@ -261,7 +281,7 @@ function build(name: string, look: Brand["look"], why: string[], logo?: Logo): B
       ...(look.mood ? { mood: look.mood } : null),
       ...(look.grain ? { grain: look.grain } : null),
       ...(look.shape ? { shape: look.shape } : content.tag?.trim() ? familyShape(look.style, name, content.tag.trim()) : null),
-      ...(drawn ? { title: content.title!.trim(), ...(own ? { font: own } : look.font ? { font: look.font } : null) } : null),
+      ...(drawn ? { title: clipped(content.title!), ...(own ? { font: own } : look.font ? { font: look.font } : null) } : null),
       ...(placing.motion && !drawn ? { motion: placing.motion } : null),
       ...(logoFor(logo, use, name, drawn ? content.title : undefined) ? { logo: logoFor(logo, use, name, drawn ? content.title : undefined) } : null),
     }

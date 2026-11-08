@@ -561,6 +561,17 @@ export async function loadFont(data: Uint8Array | ArrayBuffer): Promise<TitleFon
   const bytes = bytesOf(data)
   if (bytes.length < 12) throw new Error("That isn't a font file: it is too short to be one")
   if (bytes.length > MOST_FONT_BYTES) throw new Error(`Expected a font file under ${MOST_FONT_BYTES / 1024 / 1024} MB; give one face, not a whole family`)
+  try {
+    return await readFont(bytes)
+  } catch (error) {
+    // What this file says itself; anything else is a read past what the file
+    // holds, from a file cut short or damaged.
+    if (error instanceof Error && error.constructor === Error) throw error
+    throw new Error(`This font file is damaged or cut short, so it can't be read; give the file as the site serves it, a TTF, WOFF or WOFF2`)
+  }
+}
+
+async function readFont(bytes: Uint8Array): Promise<TitleFont> {
   const signature = text(bytes, 0, 4)
   let tables: Map<string, Uint8Array>
   let transformed = new Set<string>()
@@ -578,6 +589,7 @@ export async function loadFont(data: Uint8Array | ArrayBuffer): Promise<TitleFon
   const head = at(tables.get("head")!)
   head.at = 18
   const units = head.u16()
+  if (units < 16 || units > 16384) throw new Error(`This font file is damaged: its em is ${units} units, where a font's is 16 to 16384`)
   head.at = 50
   const long = head.i16() === 1
   const hhea = at(tables.get("hhea")!)
@@ -585,6 +597,7 @@ export async function loadFont(data: Uint8Array | ArrayBuffer): Promise<TitleFon
   const descender = hhea.i16()
   hhea.at = 34
   const metrics = hhea.u16()
+  if (!metrics) throw new Error("This font file is damaged: it gives no glyph a width")
   const glyphCount = tables.has("maxp") ? at(tables.get("maxp")!, 4).u16() : 0
 
   // Advances: plain, or from WOFF2's transformed hmtx, whose advances come
@@ -615,10 +628,16 @@ export async function loadFont(data: Uint8Array | ArrayBuffer): Promise<TitleFon
         return (id: number) => all[id] ?? { kind: "empty" }
       })()
     : (id: number) => glyfGlyph(tables.get("glyf")!, tables.get("loca")!, long, id)
+  // A glyph built of others, as an accented letter is of its letter and
+  // mark, to so many parts at most: a real one has a handful.
+  let parts = 0
   const resolve = (id: number, depth = 0): Contour[] => {
     const glyph = glyphOf(id)
+    if (depth === 0) parts = 0
     if (glyph.kind === "simple") return glyph.contours
     if (glyph.kind === "empty" || depth > 8) return []
+    parts += glyph.parts.length
+    if (parts > 512) throw new Error("This font file is damaged: a glyph is built of too many others")
     return glyph.parts.flatMap((part) =>
       resolve(part.glyph, depth + 1).map((contour) =>
         contour.map((p) => ({ x: Math.round(p.x * part.a + p.y * part.c + part.dx), y: Math.round(p.x * part.b + p.y * part.d + part.dy), on: p.on }))
@@ -659,7 +678,7 @@ export async function loadFont(data: Uint8Array | ArrayBuffer): Promise<TitleFon
   const family = familyOf(tables.get("name")) || "Title"
   // A key from the file itself, so one font always names itself the same.
   let digest = 0x811c9dc5
-  for (let i = 0; i < bytes.length; i += Math.max(1, Math.floor(bytes.length / 4096))) digest = Math.imul(digest ^ bytes[i]!, 0x01000193)
+  for (let i = 0; i < bytes.length; i++) digest = Math.imul(digest ^ bytes[i]!, 0x01000193)
   const font: TitleFont = {
     kind: "font",
     key: `font:${hash(`${family}/${weight}/${bytes.length}/${digest >>> 0}`).toString(36)}`,
@@ -674,11 +693,26 @@ export async function loadFont(data: Uint8Array | ArrayBuffer): Promise<TitleFon
       let found = outlines.get(code)
       if (!found) {
         const glyph = cmap.get(code)
-        found = glyph === undefined ? [] : resolve(glyph).map((contour) => contour.map((p) => ({ x: q(p.x), y: q(p.y), on: p.on })))
+        try {
+          found = glyph === undefined ? [] : resolve(glyph).map((contour) => contour.map((p) => ({ x: q(p.x), y: q(p.y), on: p.on })))
+        } catch {
+          // A damaged glyph past the ones checked below is left blank.
+          found = []
+        }
         outlines.set(code, found)
       }
       return found
     },
+  }
+  // Every character a title is likely to use is read now, so a damaged file
+  // says so here, not halfway through drawing.
+  for (const codes of codesOf.values()) {
+    for (const code of codes) {
+      const glyph = cmap.get(code)!
+      const contours = resolve(glyph)
+      if (contours.some((contour) => contour.some((p) => !Number.isFinite(p.x) || !Number.isFinite(p.y)))) throw new Error("This font file is damaged: a letter's outline isn't readable")
+      outlines.set(code, contours.map((contour) => contour.map((p) => ({ x: q(p.x), y: q(p.y), on: p.on }))))
+    }
   }
   return font
 }

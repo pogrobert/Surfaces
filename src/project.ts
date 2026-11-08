@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
+import { existsSync, lstatSync, readdirSync, readFileSync, statSync } from "node:fs"
 import { dirname, join, relative } from "node:path"
 import { toOklch } from "./core/color.ts"
 
@@ -104,7 +104,14 @@ function walk(root: string, dir: string, found: string[], depth = 0) {
   for (const name of readdirSync(dir)) {
     if (SKIP.has(name) || name.startsWith(".")) continue
     const path = join(dir, name)
-    const stat = statSync(path)
+    // A link is left alone: it can lead back up the tree, or out of it.
+    let stat
+    try {
+      stat = lstatSync(path)
+    } catch {
+      continue
+    }
+    if (stat.isSymbolicLink()) continue
     if (stat.isDirectory()) walk(root, path, found, depth + 1)
     else if (stat.size < 1_000_000 && (STYLES.test(name) || CONFIG.test(name) || SHELL.test(name) || FONT_MODULE.test(name))) found.push(path)
   }
@@ -165,8 +172,18 @@ function logoColour(files: string[]) {
   return [...counts].sort((a, b) => b[1] - a[1])[0]?.[0]
 }
 
+function packageOf(root: string): Record<string, any> {
+  if (!existsSync(join(root, "package.json"))) return {}
+  try {
+    const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"))
+    return pkg && typeof pkg === "object" && !Array.isArray(pkg) ? pkg : {}
+  } catch (error) {
+    throw new Error(`package.json isn't valid JSON (${(error as Error).message}); fix it, then run this again`)
+  }
+}
+
 export function readProject(root: string): Project {
-  const pkg = existsSync(join(root, "package.json")) ? (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as Record<string, any>) : {}
+  const pkg = packageOf(root)
   const deps = { ...pkg.dependencies, ...pkg.devDependencies }
   const files: string[] = []
   walk(root, root, files)
@@ -185,7 +202,13 @@ export function readProject(root: string): Project {
   const ORDER = ["root", "layout", "_document", "_app", "app", "+layout", "Layout", "BaseLayout", "Base", "index", "landing", "home", "page", "+page"]
   const rank = (file: string) => (STYLES.test(file) ? 100 : ORDER.indexOf(file.split("/").pop()!.split(".")[0]!)) + file.split("/").length / 100
   for (const file of files.sort((a, b) => rank(a) - rank(b))) {
-    const text = readFileSync(file, "utf8")
+    let text: string
+    try {
+      text = readFileSync(file, "utf8")
+    } catch {
+      // A file this user can't read says nothing of the site.
+      continue
+    }
     if (total + text.length > MOST_BYTES) continue
     total += text.length
     read.push(relative(root, file))

@@ -10,8 +10,8 @@ import { generate } from "./core/generate.ts"
 import { judge } from "./core/judge.ts"
 import type { Scene, TextLayer } from "./core/scene.ts"
 import { measure } from "./core/type.ts"
-import { validate } from "./core/validate.ts"
-import { readPage } from "./page.ts"
+import { nearest, validate } from "./core/validate.ts"
+import { readPage, USES } from "./page.ts"
 import type { PageFacts, Use } from "./page.ts"
 import { readProject } from "./project.ts"
 import type { FontFile, Project } from "./project.ts"
@@ -54,6 +54,8 @@ Options
 
 type Args = { command: string; flags: Map<string, string[]> }
 
+const OPTIONS = ["name", "pick", "title", "use", "brand", "out", "logo", "force", "dry-run"]
+
 function parse(argv: string[]): Args {
   const [command = "help", ...rest] = argv
   const flags = new Map<string, string[]>()
@@ -61,6 +63,7 @@ function parse(argv: string[]): Args {
     const arg = rest[i]!
     if (!arg.startsWith("--")) throw new Error(`Unexpected "${arg}". ${HELP}`)
     const name = arg.slice(2)
+    if (!OPTIONS.includes(name)) throw new Error(`Unknown option "--${name}".${nearest(name, OPTIONS) || ` Options are ${OPTIONS.map((option) => `--${option}`).join(", ")}.`}`)
     const value = name === "dry-run" || name === "force" ? "true" : rest[++i]
     if (value === undefined) throw new Error(`"--${name}" needs a value`)
     flags.set(name, [...(flags.get(name) ?? []), value])
@@ -69,6 +72,12 @@ function parse(argv: string[]): Args {
 }
 
 const one = (args: Args, name: string) => args.flags.get(name)?.at(-1)
+
+// A use named on the command line, checked.
+function useOf(value: string): Use {
+  if (!(USES as readonly string[]).includes(value)) throw new Error(`Unknown use "${value}". Use ${USES.join(", ")}.${nearest(value, USES)}`)
+  return value as Use
+}
 const OUT = ".surfaces"
 const SAMPLES = ["How the new search works", "What we learned from ten thousand bookings", "Notes on shipping every day"]
 
@@ -82,7 +91,11 @@ function readLook(file: string): BrandChoices {
     return JSON.parse(literal)
   } catch {
     // Hand-edited: unquoted keys, single quotes, a trailing comma.
-    return JSON.parse(literal.replace(/([{,]\s*)([A-Za-z_]\w*)\s*:/g, '$1"$2":').replace(/'/g, '"').replace(/,\s*\}/g, "}"))
+    try {
+      return JSON.parse(literal.replace(/([{,]\s*)([A-Za-z_]\w*)\s*:/g, '$1"$2":').replace(/'/g, '"').replace(/,\s*\}/g, "}"))
+    } catch {
+      throw new Error(`The look in ${file} isn't plain data; write it as JSON, or run "surfaces init --pick 1" to write it again`)
+    }
   }
 }
 
@@ -91,12 +104,19 @@ async function readTitleFont(root: string, file: string) {
   const path = readFileSync(file, "utf8").match(/export const titleFont\s*=\s*["'`]([^"'`]+)["'`]/)?.[1]
   if (!path) return undefined
   if (!existsSync(join(root, path))) throw new Error(`${relative(root, file)} names titleFont "${path}", which isn't there; point it at the font file, or remove it for the bundled faces`)
-  return loadFont(readFileSync(join(root, path)))
+  try {
+    return await loadFont(readFileSync(join(root, path)))
+  } catch (error) {
+    throw new Error(`titleFont "${path}": ${(error as Error).message}`)
+  }
 }
 
 function brandFile(project: Project, args: Args) {
   const given = one(args, "brand")
-  if (given) return join(project.root, given)
+  if (given) {
+    if (!existsSync(join(project.root, given))) throw new Error(`No brand module at ${given}; pass --brand <file> with the file init wrote, such as src/surfaces.ts`)
+    return join(project.root, given)
+  }
   const candidates = [join(project.source, "surfaces.ts"), "surfaces.ts", join(project.source, "surfaces.js"), "surfaces.js"]
   const found = candidates.map((file) => join(project.root, file)).find(existsSync)
   if (!found) throw new Error(`No brand module here; run "surfaces init" first, or pass --brand <file>`)
@@ -237,7 +257,7 @@ async function previewCommand(root: string, args: Args, log: (line: string) => v
   const file = brandFile(project, args)
   const brand = createBrand(readLook(file))
   const font = await readTitleFont(root, file)
-  const use = (one(args, "use") ?? "og") as Use
+  const use = useOf(one(args, "use") ?? "og")
   const titles = args.flags.get("title") ?? SAMPLES
   const out = join(root, one(args, "out") ?? OUT)
   mkdirSync(out, { recursive: true })
@@ -254,7 +274,7 @@ async function checkCommand(root: string, args: Args, log: (line: string) => voi
   const file = brandFile(project, args)
   const brand = createBrand(readLook(file))
   const font = await readTitleFont(root, file)
-  const uses = (args.flags.get("use") ?? ["post", "og", "hero", "card"]) as Use[]
+  const uses = (args.flags.get("use") ?? ["post", "og", "hero", "card"]).map(useOf)
   const titles = args.flags.get("title") ?? SAMPLES
   const themes = brand.look.theme === "auto" ? (["light", "dark"] as const) : [brand.look.theme]
   let failed = 0

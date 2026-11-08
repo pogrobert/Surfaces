@@ -133,6 +133,7 @@ export function Cover({ brand, use = "post", title, id, tag, text, children, ...
   // Its words are the page's, in the page's own type, so the cover keeps room
   // for them where the use carries a title, as a post's cover does at its
   // foot; a card's and a header's have none.
+  if (typeof brand?.input !== "function") throw new Error(`<Cover> takes "brand", made by createBrand(): <Cover brand={brand} title={post.title} />`)
   const at = text ?? titleAt(brand.name, use) ?? "none"
   const { areas, ...input } = brand.input(use, { ...(title !== undefined ? { title } : null), ...(id !== undefined ? { id } : null), ...(tag !== undefined ? { tag } : null), text: at })
   const content = children ?? title

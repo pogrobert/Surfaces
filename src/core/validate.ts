@@ -1,4 +1,4 @@
-import { AREA_ART, AREA_SIZES, DETAILS, GRAINS, MAX_RATIO, MOODS, MOTIONS, PLACES, THEMES, areaShare } from "./intent.ts"
+import { AREA_ART, AREA_SIZES, DETAILS, GRAINS, MAX_RATIO, MOODS, MOST_SIDE, MOTIONS, PLACES, THEMES, areaShare } from "./intent.ts"
 import type { Box } from "./scene.ts"
 import { FONTS, missing, useFont } from "./type.ts"
 import type { TitleFont } from "../type/fontfile.ts"
@@ -143,10 +143,12 @@ export function validate(input: unknown): Problems {
   } else if (width !== undefined) {
     if (typeof width !== "number" || typeof height !== "number" || !(width > 0) || !(height > 0)) {
       errors.push(`"width" and "height" must be positive numbers of pixels.`)
+    } else if (width > MOST_SIDE || height > MOST_SIDE) {
+      errors.push(`${width} by ${height} is larger than any picture needs; keep each side to ${MOST_SIDE} pixels or less.`)
     } else {
       aspect = width / height
       if (aspect > MAX_RATIO || 1 / aspect > MAX_RATIO) {
-        errors.push(`${width} by ${height} is longer than ${MAX_RATIO}:1; no style has been judged that narrow.`)
+        errors.push(`${width} by ${height} is longer than ${MAX_RATIO}:1; no style has been judged that narrow. Keep it to ${MAX_RATIO}:1 or squarer, such as ${Math.round(Math.max(width, height))} by ${Math.round(Math.max(width, height) / MAX_RATIO)}.`)
       }
     }
   }

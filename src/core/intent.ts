@@ -68,6 +68,9 @@ export const DEFAULT_SIZE = { w: 1600, h: 900 }
 
 // Beyond this a cover is a strip, and no recipe has been judged there.
 export const MAX_RATIO = 4
+// The longest side a scene is drawn at; a larger file is the same scene
+// rasterised wider.
+export const MOST_SIDE = 8192
 
 // Every canvas has the area of a 1600x900 cover, so sizes in a recipe keep
 // their proportion on any canvas.

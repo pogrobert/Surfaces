@@ -28,14 +28,25 @@ export type PngOptions = {
   wasm?: WasmSource
 }
 
-async function render(scene: Scene, { width, wasm }: PngOptions) {
-  oneTheme(scene)
-  return rasterize(toSvg(scene, { target: "resvg", outlines: outlinePath }), Math.round(width ?? scene.output.w), wasm)
+// The most pixels a picture is drawn with: 4096 by 4096, or a 3000 square
+// podcast cover, in about 70 MB. More would run a server out of memory.
+const MOST_PIXELS = 4096 * 4096
+
+async function render(scene: Scene, { width, wasm }: PngOptions, format: "PNG" | "JPEG") {
+  if (!scene || typeof scene !== "object" || !scene.output || !Array.isArray(scene.layers)) {
+    throw new Error(`Expected a scene, as generate() or brand.og() return: to${format === "PNG" ? "Png" : "Jpeg"}(brand.og({ title }))`)
+  }
+  oneTheme(scene, format)
+  const w = Math.round(width ?? scene.output.w)
+  const h = Math.round((w * scene.output.h) / scene.output.w)
+  if (!Number.isFinite(w) || w < 16) throw new Error(`"width" is how many pixels across, 16 or more; got ${width}`)
+  if (w * h > MOST_PIXELS) throw new Error(`A ${format} ${w} by ${h} is more than a picture needs, and more memory than a server has to spare; keep it to ${Math.floor(MOST_PIXELS / 1e6)} megapixels, such as ${Math.floor(Math.sqrt(MOST_PIXELS * (w / h)))} wide`)
+  return rasterize(toSvg(scene, { target: "resvg", outlines: outlinePath }), w, wasm)
 }
 
 // Drawn at the size the scene was asked for, or `width` pixels wide.
 export async function toPng(scene: Scene, options: PngOptions = {}) {
-  return (await render(scene, options)).asPng()
+  return (await render(scene, options, "PNG")).asPng()
 }
 
 // The same picture as a JPEG, for link previews: grain is noise, which a PNG
@@ -43,15 +54,16 @@ export async function toPng(scene: Scene, options: PngOptions = {}) {
 // that as a JPEG, under what chat apps will show as a preview. `quality`
 // runs from 1 to 100; the default keeps a title's edges clean.
 export async function toJpeg(scene: Scene, { quality = 86, ...options }: PngOptions & { quality?: number } = {}) {
-  const image = await render(scene, options)
+  if (!Number.isInteger(quality) || quality < 1 || quality > 100) throw new Error(`"quality" runs from 1 to 100; got ${quality}`)
+  const image = await render(scene, options, "JPEG")
   return encodeJpeg(image.pixels, image.width, image.height, quality)
 }
 
 // In a browser the page draws the SVG itself, every filter included, so a PNG
 // needs nothing installed.
 // A picture has one theme; a cover drawn for both has to say which.
-function oneTheme(scene: Scene) {
-  if (scene.dark) throw new Error('A PNG has one theme: generate with theme "light" or "dark", not "auto"')
+function oneTheme(scene: Scene, format: "PNG" | "JPEG" = "PNG") {
+  if (scene.dark) throw new Error(`A ${format} has one theme: draw it with theme "light" or "dark", not "auto"`)
 }
 
 export async function toPngInBrowser(

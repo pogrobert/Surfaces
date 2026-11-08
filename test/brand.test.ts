@@ -79,7 +79,7 @@ test("wrong choices fail, naming the fix", () => {
   assert.match(errorOf(() => createBrand({ name: "a", seed: "x" } as never)), /A brand has no seed/)
   assert.match(errorOf(() => createBrand({ name: "a", style: "rizo" } as never)), /Did you mean "riso"\?/)
   assert.match(errorOf(() => createBrand({ name: "a", mood: "loud" } as never)), /Unknown mood "loud"/)
-  assert.match(errorOf(() => createBrand({ name: "a" }).cover({})), /Give the post a "title"/)
+  assert.match(errorOf(() => createBrand({ name: "a" }).cover({})), /Give the cover a "title"/)
 })
 
 test("<Cover> shows a brand's cover with its title where the art leaves room", async () => {
