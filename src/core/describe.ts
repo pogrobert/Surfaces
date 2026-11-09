@@ -80,6 +80,13 @@ const a = (words: string) => `${/^[aeiou]/.test(words) ? "an" : "a"} ${words}`
 const pick = (table: Record<string, string>, shape: string | undefined, otherwise: string) =>
   table[shape ?? ""] ?? otherwise
 
+// A mark of tiles, as stencil and screenprint cut it.
+const TILES = { grid: "four rounded tiles round a round gap", corner: "three rounded tiles and a quarter circle", halves: "two tall tiles, one rounded at the top and one at the foot", pair: "two tall tiles around a round gap", arch: "an arch", bars: "three stacked bars", steps: "three columns rising like steps" }
+
+// One form, as the grammar draws it whole.
+const FORM = { orb: "circle", pill: "pill", slab: "rounded square", arch: "arch", dome: "dome", quarter: "quarter circle" }
+const form = (shape: string | undefined) => pick(FORM, shape, "circle")
+
 const ART: Record<string, Phrase> = {
   underpaint: (_, inks) => `soft pools of ${both(inks)} light`,
   halftone: (shape, inks) =>
@@ -195,16 +202,23 @@ const ART: Record<string, Phrase> = {
     ),
   screenprint: (shape, inks) =>
     `${pick(
-      { grid: "four rounded tiles round a round gap", star: "four rounded tiles pointing outward like a star", pinwheel: "four rounded tiles turning like a pinwheel", pair: "two tall tiles around a round gap", arch: "an arch", petals: "four petals", bars: "three stacked bars", steps: "three columns rising like steps" },
+      TILES,
       shape,
       "a bold mark"
     )}, printed in ${both(inks)} ink that doesn't quite line up`,
   stencil: (shape, inks) =>
     `${pick(
-      { grid: "four rounded tiles round a round gap", star: "four rounded tiles pointing outward like a star", pinwheel: "four rounded tiles turning like a pinwheel", pair: "two tall tiles around a round gap", arch: "an arch", petals: "four petals", bars: "three stacked bars", steps: "three columns rising like steps" },
+      TILES,
       shape,
       "a stencilled shape"
     )}, filled with loose ${both(inks)} paint, on folded paper`,
+  papercut: (shape, inks) =>
+    `${pick({ rainbow: "arches", ripples: "rings", frames: "rounded squares", hills: "hills under a sun" }, shape, "arches")} of cut ${both(inks)} paper, layered with soft shadows`,
+  linocut: (shape, inks) => `a ${form(shape)} printed from a carved block in ${both(inks)} ink`,
+  typewriter: (shape, inks) => `a ${form(shape)} drawn in rows of typed ${both(inks)} characters`,
+  currents: (shape, inks) => `a ${form(shape)} of fine ${both(inks)} lines flowing like a current`,
+  weave: (shape, inks) => `a ${form(shape)} of woven ${both(inks)} cloth`,
+  terrazzo: (shape, inks) => `a ${form(shape)} of terrazzo, ${both(inks)} chips set in stone`,
   chrome: (shape, inks) =>
     `a shiny chrome ${pick({ ring: "ring", capsule: "capsule", arch: "arch" }, shape, "sphere")} reflecting ${both(inks)}`,
   glass: (shape, inks) =>

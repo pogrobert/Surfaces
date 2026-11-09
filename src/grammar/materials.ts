@@ -437,7 +437,7 @@ export const stone: FillPart = {
       solid("matrix", "soft", [rect(region)]),
       // A little of the colour's body in it, so a pale brand's ground still
       // stands off the paper.
-      solid("tint", "body", [rect(region)], 0.14),
+      solid("tint", "body", [rect(region)], 0.22),
       ...byTone("chips", items),
       ...byTone("specks", specks, 0.75),
     ]

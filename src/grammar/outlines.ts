@@ -40,35 +40,13 @@ function archOf(left: number, right: number, top: number, bottom = 1): Points {
   return [left, bottom, ...arc(cx, top + r, r, PI, TAU, 48), right, bottom]
 }
 
-// A crescent: the first circle with the second bitten out of it. The outer
-// edge runs the long way round, away from the bite; the inner edge comes
-// back along the part of the bite that lies inside the first circle.
-function crescent(cx: number, cy: number, r: number, ix: number, iy: number, ir: number): Points {
-  const dx = ix - cx
-  const dy = iy - cy
-  const d = Math.sqrt(dx * dx + dy * dy)
-  const along = (d * d + r * r - ir * ir) / (2 * d)
-  const toward = atan2(dy, dx)
-  const spread = atan2(Math.sqrt(Math.max(r * r - along * along, 0)), along)
-  const outer = arc(cx, cy, r, toward + spread, toward + TAU - spread, 96)
-  // The crossing points as angles round the bite: where the outer edge ends,
-  // and where it began.
-  const angleOn = (a: number) => atan2(cy + sin(a) * r - iy, cx + cos(a) * r - ix)
-  const from = angleOn(toward - spread)
-  let to = angleOn(toward + spread)
-  while (to < from) to += TAU
-  // Of the two ways round between them, the one whose middle is inside the
-  // first circle.
-  const middle = (from + to) / 2
-  const mx = ix + cos(middle) * ir - cx
-  const my = iy + sin(middle) * ir - cy
-  if (mx * mx + my * my > r * r) to -= TAU
-  return [...outer, ...arc(ix, iy, ir, from, to, 64).slice(2, -2)]
-}
-
-// The outlines of one form, in a unit square.
+// The outlines of one form, in a unit square: the primitives a designer's
+// shape kit is made of, drawn true, with nothing in them that reads as a
+// sign of any one people or faith.
 const FORMS: Record<string, () => Points> = {
   orb: () => circle(0.5, 0.5, 0.5),
+  // A capsule a little under twice as long as it is wide.
+  pill: () => [...arc(0.7, 0.5, 0.3, -PI / 2, PI / 2, 48), ...arc(0.3, 0.5, 0.3, PI / 2, (3 * PI) / 2, 48)],
   // A square with its corners worn round, as a superellipse is.
   slab: () =>
     curve((t) => {
@@ -76,35 +54,18 @@ const FORMS: Record<string, () => Points> = {
       const s = sin(t * TAU)
       return [0.5 + Math.sign(c) * Math.sqrt(Math.abs(c)) * 0.46, 0.5 + Math.sign(s) * Math.sqrt(Math.abs(s)) * 0.46]
     }),
-  arch: () => archOf(0.12, 0.88, 0),
-  half: () => [...arc(0.5, 0.75, 0.5, PI, TAU, 96)],
-  // Two arcs meeting at a point each end, a little lopsided.
-  leaf: () => {
-    // Fullest a little below the middle, as a leaf is, and pointed at both ends.
-    const side = (t: number, way: number) => [0.5 + way * sin(PI * t) * (0.33 + 0.06 * sin(PI * t)) * (1 - 0.22 * (1 - t)), t] as [number, number]
-    const points: Points = []
-    for (let i = 0; i <= 72; i++) points.push(...side(i / 72, 1))
-    for (let i = 71; i > 0; i--) points.push(...side(i / 72, -1))
-    return points
-  },
-  // A point at the top, round at the foot.
-  drop: () =>
-    curve((t) => {
-      const a = t * TAU
-      return [0.5 + 0.42 * sin(a) * sin(a / 2), (1 - cos(a)) / 2]
-    }),
-  moon: () => crescent(0.5, 0.5, 0.5, 0.86, 0.36, 0.38),
+  arch: () => archOf(0.15, 0.85, 0),
+  // Half a disc standing on its flat side.
+  dome: () => arc(0.5, 0.75, 0.5, PI, TAU, 96),
+  // A quarter of a disc, its corner at the square's.
+  quarter: () => [0, 1, ...arc(0, 1, 1, -PI / 2, 0, 72)],
 }
 
-// How far a form may turn, in degrees either way, and whether by quarters.
-const TURNS: Record<string, { by?: number; quarter?: boolean }> = {
-  orb: {},
-  slab: { by: 8 },
-  arch: {},
-  half: { quarter: true },
-  leaf: { by: 45 },
-  drop: { by: 14 },
-  moon: { by: 180 },
+// How a form may turn: a pill lies, stands or leans; a quarter faces any of
+// its four ways; the rest stand as they are drawn.
+const TURNS: Record<string, readonly number[]> = {
+  pill: [0, PI / 2, PI / 4, -PI / 4],
+  quarter: [0, PI / 2, PI, (3 * PI) / 2],
 }
 
 // A knife's edge: each point moved in or out along its way from the middle by
@@ -212,24 +173,21 @@ function behind({ calm, w, h }: Context, side: number, reach: number) {
 }
 
 function turnOf(shape: string, rng: Rng) {
-  const turn = TURNS[shape] ?? {}
-  if (turn.quarter) return (rng.int(0, 3) * PI) / 2
-  return turn.by ? radians((rng.next() * 2 - 1) * turn.by) : 0
+  const turns = TURNS[shape]
+  return turns ? rng.pick(turns) : 0
 }
 
-// One form, whole: a disc, a slab, a doorway, a half disc, a leaf, a drop or
-// a new moon. A fill is seen through it.
+// One form, whole, drawn true: a disc, a pill, a rounded square, a doorway,
+// a dome or a quarter disc. A fill is seen through it.
 export const form: FigurePart = {
   name: "form",
   ranges: {
     size: [0.8, 0.94],
-    edge: [0.002, 0.007],
   },
   moods: {
-    calm: { edge: [0.002, 0.004] },
     bold: { size: [0.88, 0.94] },
   },
-  shapes: ["orb", "slab", "arch", "half", "leaf", "drop", "moon"],
+  shapes: ["orb", "pill", "slab", "arch", "dome", "quarter"],
   // A form is seen through, not punched out of a slab: a slab cut to the
   // form's own box leaves only a rim of it.
   avoid: ["cutout"],
@@ -240,8 +198,8 @@ export const form: FigurePart = {
     const { x, y } = seat
     // Behind a title in the middle, one solid form the size of the clearing
     // would hide under it: it is drawn larger, to show all round it.
-    const side = behind(context, seat.side, 0.7)
-    const outline = cutEdge((FORMS[shape] ?? FORMS.orb!)(), rng, p.edge!)
+    const side = behind(context, seat.side, 0.85)
+    const outline = (FORMS[shape] ?? FORMS.orb!)()
     const [points] = keptClear(context, [placeIn(outline, x, y, side, turnOf(shape, rng))], stage.away) as [Points]
     return { shapes: [{ type: "polygon", points }], voids: [], subject: boundsOf(points) }
   },
@@ -272,18 +230,23 @@ const STACKS: Record<string, (count: number, rng: Rng) => Points[]> = {
       })
     })
   },
-  // A flower in layers, each smaller and turned half a petal from the last.
-  petals: (count, rng) => {
-    const petals = rng.int(5, 8)
-    const depth = rng.between([0.12, 0.2])
+  // Rounded squares inside rounded squares, each drawn toward one corner, so
+  // they lie close on that side and step wide apart on the other.
+  frames: (count, rng) => {
+    const corner = rng.int(0, 3)
+    const toward = [[-1, -1], [1, -1], [1, 1], [-1, 1]][corner]!
     return Array.from({ length: count }, (_, k) => {
-      const r = 0.5 * (1 - k / (count + 0.3)) / (1 + depth)
-      const turn = (k * PI) / petals
-      return curve((t) => {
-        const a = t * TAU
-        const rr = r * (1 + depth * cos(petals * (a + turn)))
-        return [0.5 + cos(a) * rr, 0.5 + sin(a) * rr]
-      }, 240)
+      const half = 0.5 * (1 - k / (count + 0.5))
+      const cx = 0.5 + toward[0]! * (0.5 - half) * 0.7
+      const cy = 0.5 + toward[1]! * (0.5 - half) * 0.7
+      const round = half * 0.42
+      const box = (x: number, y: number, w: number, h: number, r: number): Points => [
+        ...arc(x + w - r, y + r, r, -PI / 2, 0, 16),
+        ...arc(x + w - r, y + h - r, r, 0, PI / 2, 16),
+        ...arc(x + r, y + h - r, r, PI / 2, PI, 16),
+        ...arc(x + r, y + r, r, PI, (3 * PI) / 2, 16),
+      ]
+      return box(cx - half, cy - half, half * 2, half * 2, round)
     })
   },
   // A disc of sky, a sun low in it, and hills before it, each lower and
@@ -324,19 +287,19 @@ const STACKS: Record<string, (count: number, rng: Rng) => Points[]> = {
 }
 
 // A paper cut: layers of one outline stacked back to front, rainbows,
-// ripples, petals or hills under a sun. A relation lays each on the last.
+// ripples, frames or hills under a sun. A relation lays each on the last.
 export const cut: FigurePart = {
   name: "cut",
   ranges: {
     size: [0.82, 0.96],
     layers: [4, 6.99],
-    edge: [0.001, 0.004],
+    edge: [0.0004, 0.0012],
   },
   moods: {
     calm: { layers: [4, 4.99] },
     bold: { layers: [5, 6.99], size: [0.9, 0.96] },
   },
-  shapes: ["rainbow", "ripples", "petals", "hills"],
+  shapes: ["rainbow", "ripples", "frames", "hills"],
   // Its layers are laid one on another, not seen through, printed in two
   // inks, laid as grain or washed together.
   avoid: ["inside", "cutout", "press", "plate", "block", "wash"],
@@ -345,7 +308,11 @@ export const cut: FigurePart = {
     const rng = context.rng.fork("figure")
     const seat = seated(context, stage, p.size!, rng)
     const { x, y } = seat
-    const side = behind(context, seat.side, 0.45)
+    // Framed large with nothing to keep clear, a stack of solid paper would
+    // fill the canvas, where a mark of tiles has its gaps: it reaches a little
+    // past the short side at most.
+    const framed = !context.titled && !context.fill ? Math.min(seat.side, Math.min(context.w, context.h) * 1.08) : seat.side
+    const side = behind(context, framed, 0.45)
     const stack = (STACKS[shape] ?? STACKS.rainbow!)(Math.floor(p.layers!), rng)
     const angle = shape === "rainbow" ? 0 : (rng.next() * 2 - 1) * radians(12)
     const layers = keptClear(context, stack.map((outline) => placeIn(cutEdge(outline, rng, p.edge!), x, y, side, angle)), stage.away)

@@ -141,58 +141,23 @@ function assemble(shape: string, p: Record<string, number>): { units: Unit[]; vo
       const void_ = b + g / 2
       return { units: cut(quarters(), [[0.5, 0.5, void_]]), voids: [{ cx: 0.5, cy: 0.5, r: void_ }] }
     }
-    case "star": {
-      // Bitten at the four outer corners, so the tiles point outward.
-      const corners: [number, number, number][] = [
-        [0, 0, b * 1.3],
-        [1, 0, b * 1.3],
-        [1, 1, b * 1.3],
-        [0, 1, b * 1.3],
-      ]
-      return { units: cut(quarters(), corners), voids: [] }
+    case "corner": {
+      // Three tiles and a quarter round where the fourth would be: a block
+      // with one corner swung round, as a sign painter's alphabet has it.
+      // The quarter's arc takes both its edges, so the corners beside it are
+      // square, where it meets them.
+      const units = [tile(0, 0, a, a), tile(1 - a, 0, a, a, [0, a, 0, r]), tile(1 - a, 1 - a, a, a), tile(0, 1 - a, a, a)]
+      return { units: units.map((points) => ({ points })), voids: [] }
     }
-    case "pinwheel": {
-      // Each tile bitten at the corner a quarter turn on from the last.
-      const corners: [number, number][] = [
-        [a, 0],
-        [1, a],
-        [1 - a, 1],
-        [0, 1 - a],
-      ]
-      const units = quarters().map((points, index) => {
-        const [x, y] = corners[index]!
-        return { points: bite(points, x, y, b * 1.1) }
-      })
-      return { units, voids: [] }
+    case "halves": {
+      // Two tall tiles, one rounded whole at its top and the other at its
+      // foot, so the pair reads as one form turned half round.
+      return { units: [{ points: tile(0, 0, a, 1, [a / 2, a / 2, r, r]) }, { points: tile(1 - a, 0, a, 1, [r, r, a / 2, a / 2]) }], voids: [] }
     }
     case "pair": {
       // Two tall tiles facing over a round void.
       const void_ = b * 1.15
       return { units: cut([tile(0, 0, a, 1), tile(1 - a, 0, a, 1)], [[0.5, 0.5, void_]]), voids: [{ cx: 0.5, cy: 0.5, r: void_ }] }
-    }
-    case "petals": {
-      // Four petals reaching for the corners from a small open middle, each
-      // fuller as the tiles are rounder: points along a line, pushed out
-      // each side by a sine.
-      const units: Unit[] = []
-      const inner = g * 1.6
-      const reach = 0.5 * Math.SQRT2 * 0.96
-      const full = 0.3 + p.round! * 0.34
-      for (const [ux, uy] of [[1, -1], [1, 1], [-1, 1], [-1, -1]] as const) {
-        const [dx, dy] = [ux / Math.SQRT2, uy / Math.SQRT2]
-        const [nx, ny] = [-dy, dx]
-        const steps = 24
-        const at = (t: number, side: number) => {
-          const along = inner + t * (reach - inner)
-          const out = side * (full / 2) * sin(PI * t)
-          return [0.5 + dx * along + nx * out, 0.5 + dy * along + ny * out]
-        }
-        const points: number[] = []
-        for (let i = 0; i <= steps; i++) points.push(...at(i / steps, 1))
-        for (let i = steps - 1; i > 0; i--) points.push(...at(i / steps, -1))
-        units.push({ points })
-      }
-      return { units, voids: [] }
     }
     case "bars": {
       // Three pills stacked, of three lengths, flush to one side.
@@ -230,18 +195,20 @@ export const tiles: FigurePart = {
     calm: { round: [0.24, 0.32], gap: [0.045, 0.06] },
     bold: { size: [0.9, 0.96], round: [0.14, 0.22] },
   },
-  shapes: ["grid", "star", "pinwheel", "pair", "arch", "petals", "bars", "steps"],
+  // None makes a cross or turns about its middle in hooks: a mark of four
+  // arms reads as one sign or another somewhere in the world.
+  shapes: ["grid", "corner", "halves", "pair", "arch", "bars", "steps"],
 
   draw(context: Context, stage: FigureStage, shape: string, p): DrawnFigure {
     const rng = context.rng.fork("figure")
     const { x, y, side } = seated(context, stage, p.size!, rng)
     const { units, voids } = assemble(shape, p)
     // A quarter turn or a mirror, so one assembly faces several ways.
-    // A staircase stands on its line, so it only mirrors; a grid and a star
-    // look the same every way round.
-    const upright = shape === "grid" || shape === "star" || shape === "steps" || shape === "petals"
+    // A staircase stands on its line, so it only mirrors, and a grid looks the
+    // same every way round; the halves both turn and mirror.
+    const upright = shape === "grid" || shape === "steps"
     const turns = upright ? 0 : rng.int(0, 4)
-    const mirror = (shape === "pinwheel" || shape === "steps") && rng.next() < 0.5
+    const mirror = (shape === "halves" || shape === "steps") && rng.next() < 0.5
     const left = x - side / 2
     const top = y - side / 2
     const place = (u: number, v: number): [number, number] => {

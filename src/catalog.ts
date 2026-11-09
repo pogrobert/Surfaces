@@ -23,7 +23,7 @@ const ABOUT: Record<StyleName, { looks: string; suits: string }> = {
   chrome: { looks: "A polished chrome object in a pool of the brand's light.", suits: "Bold, glossy heroes." },
   screenprint: { looks: "A bold mark of rounded tiles printed in two flat inks that don't quite line up, on folded paper.", suits: "Confident, graphic covers that read like a brand mark." },
   stencil: { looks: "Loose paint seen through a stencil of rounded tiles, on folded paper.", suits: "Warm, crafted covers with one bold mark." },
-  papercut: { looks: "Layers of cut paper, each casting a soft shadow on the one behind: rainbows, ripples, petals, or hills under a sun.", suits: "Warm, friendly covers: nonprofits, education, consumer apps." },
+  papercut: { looks: "Layers of cut paper, each casting a soft shadow on the one behind: rainbows, ripples, nested frames, or hills under a sun.", suits: "Warm, friendly covers: nonprofits, education, consumer apps." },
   linocut: { looks: "One bold form cut from a block, its gouge strokes printing as paper, in one deep ink.", suits: "Editorial, confident covers with a hand-made edge." },
   typewriter: { looks: "A form struck in rows of typewriter characters, heavier where it is darker.", suits: "Developer tools, writing, and anything about text." },
   currents: { looks: "Fine lines drawn along a current, evenly apart, like filings round a magnet, filling one form.", suits: "AI, infrastructure and data covers." },
