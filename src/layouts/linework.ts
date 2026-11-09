@@ -517,6 +517,9 @@ export function linework(frame: Frame, diagram: Diagram, p: LineworkParams): Art
         const half = shape.points[i + 2]!
         const box = { x: shape.points[i]! - half, y: shape.points[i + 1]! - half, w: half * 2, h: half * 2 }
         if (boxesTouch(box, zone)) return false
+        // A long straight line can cross the title between two points that
+        // are both clear of it.
+        if (i >= 3 && zone.some((area) => crosses(shape.points[i - 3]!, shape.points[i - 2]!, shape.points[i]!, shape.points[i + 1]!, inflate(area, half)))) return false
       }
       return true
     }
@@ -613,4 +616,24 @@ export function linework(frame: Frame, diagram: Diagram, p: LineworkParams): Art
     over: [],
     ...(subject ? { subject } : null),
   }
+}
+
+// Whether the segment from a to b passes through the box, by clipping it to
+// the box's sides in turn (Liang and Barsky's way).
+function crosses(ax: number, ay: number, bx: number, by: number, box: Box) {
+  let from = 0
+  let to = 1
+  const dx = bx - ax
+  const dy = by - ay
+  for (const [p, q] of [[-dx, ax - box.x], [dx, box.x + box.w - ax], [-dy, ay - box.y], [dy, box.y + box.h - ay]] as const) {
+    if (p === 0) {
+      if (q < 0) return false
+      continue
+    }
+    const t = q / p
+    if (p < 0) from = Math.max(from, t)
+    else to = Math.min(to, t)
+    if (from > to) return false
+  }
+  return true
 }

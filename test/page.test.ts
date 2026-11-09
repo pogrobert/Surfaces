@@ -52,9 +52,9 @@ test("a developer tool gets a technical style in its own colour, dark", () => {
   assert.ok(new Set(looks).size > 1, looks.join())
 })
 
-test("a warm community site gets paint through a stencil, or an aura", () => {
+test("a warm community site gets paint through a stencil, cut paper, or an aura", () => {
   const looks = ["commonground.org", "a.org", "b.org", "c.org"].map((name) => lookOf(name, NONPROFIT).look)
-  for (const look of looks) assert.deepEqual({ ...look, style: ["stencil", "underpaint"].includes(look.style) ? "-" : look.style }, { style: "-", color: "#f59e0b", theme: "light", font: "serif" })
+  for (const look of looks) assert.deepEqual({ ...look, style: ["stencil", "underpaint", "papercut"].includes(look.style) ? "-" : look.style }, { style: "-", color: "#f59e0b", theme: "light", font: "serif" })
   // Sites that read alike don't all get the same one.
   assert.ok(new Set(looks.map((look) => look.style)).size > 1)
 })

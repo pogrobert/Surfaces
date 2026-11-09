@@ -1,7 +1,7 @@
 import { cos, radians, sin } from "../core/math.ts"
 import type { Art, Piece } from "../core/recipe.ts"
 import { print } from "../finishes/index.ts"
-import type { Layer, Mark, Tone } from "../core/scene.ts"
+import type { Layer, Mark, Shape, Tone } from "../core/scene.ts"
 import type { ProcessPart } from "./parts.ts"
 
 // How the print was made: what happens to every mark on the way to paper. A
@@ -198,4 +198,103 @@ export const press: ProcessPart = {
   },
 }
 
-export const PROCESSES = { film, wash, plate, press }
+// A shape moved by dx, dy.
+function moved(shape: Shape, dx: number, dy: number): Shape {
+  switch (shape.type) {
+    case "polygon":
+      return { ...shape, points: shape.points.map((v, i) => v + (i % 2 ? dy : dx)) }
+    case "rect":
+      return { ...shape, x: shape.x + dx, y: shape.y + dy }
+    case "circle":
+    case "ring":
+    case "ellipse":
+      return { ...shape, cx: shape.cx + dx, cy: shape.cy + dy }
+    default:
+      return shape
+  }
+}
+
+// Cut paper, each piece lifted a little off the one behind it: a soft shadow
+// falls below it, down from a light overhead, and the piece lies on top.
+export const lift: ProcessPart = {
+  name: "lift",
+  ranges: { shadow: [0.16, 0.3], height: [4, 10], soft: [5, 9], ...GRAIN_RANGES },
+  moods: { calm: { shadow: [0.16, 0.21], height: [4, 6] }, bold: { shadow: [0.24, 0.3], height: [7, 10] } },
+  grain: GRAIN_LEVELS,
+  // Paper in colours of its own: a light step that still reads against the
+  // sheet, and a partner bright enough to be a colour.
+  palette: (spec) => ({
+    ...spec,
+    partnerFloor: 0.08,
+    light: { ...spec.light, partner: { l: [0.7, 0.8], c: [0.7, 0.9] } },
+    dark: { ...spec.dark, partner: { l: [0.56, 0.66], c: [0.7, 0.9] } },
+  }),
+  finish(art, { p, rng, theme }) {
+    // A shadow is the sheet's own darkness: ink on paper, the ground under
+    // lit paper on black.
+    const tone: Tone = theme === "dark" ? "ground" : "ink"
+    const opacity = theme === "dark" ? Math.min(p.shadow! * 2.4, 0.75) : p.shadow!
+    const layers: Layer[] = (art.pieces ?? []).flatMap((piece): Layer[] => [
+      {
+        kind: "soften",
+        id: `${piece.id}-shadow`,
+        radius: p.soft!,
+        layers: [{ kind: "shapes", id: `${piece.id}-shade`, paint: { type: "solid", tone, opacity }, shapes: [moved(piece.clip, p.height! * 0.3, p.height!)] }],
+        ...(piece.motion?.enter ? { motion: { enter: piece.motion.enter } } : null),
+      },
+      { kind: "clip", id: piece.id, shape: piece.clip, layers: piece.marks, ...(piece.motion ? { motion: piece.motion } : null) },
+    ])
+    return [...art.under, ...art.marks, ...layers, ...art.over, grainLayer(p.grain!, p.grainScale!, rng.fork("grain").int(1, 9999))]
+  },
+}
+
+// A mark in the paper's own tone: what a relief print leaves uninked.
+const paperOf = (mark: Mark) => mark.kind === "shapes" && mark.paint.type === "solid" && mark.paint.tone === "ground"
+
+// A relief print, as from a linocut or a woodblock: one ink rolled onto what
+// is left standing and pressed onto paper, solid but never quite even, its
+// cut lines clean. The deeper the tone, the more ink.
+export const block: ProcessPart = {
+  name: "block",
+  ranges: {
+    grainSize: [0.7, 0.86],
+    hardness: [3.2, 4.4],
+    wash: [0.62, 0.8],
+    film: [0.1, 0.18],
+  },
+  moods: {
+    calm: { wash: [0.72, 0.8], hardness: [3.2, 3.8] },
+    bold: { wash: [0.62, 0.7], hardness: [3.8, 4.4] },
+  },
+  grain: {
+    smooth: { grainSize: [0.86, 0.95], wash: [0.88, 0.94], film: [0.03, 0.06] },
+    heavy: { grainSize: [0.58, 0.68], wash: [0.48, 0.58], film: [0.24, 0.32] },
+  },
+  avoid: ["flat"],
+  // The brand's colour as a printing ink: deep, and full of colour, not an
+  // etcher's near-black.
+  palette: (spec) => ({
+    ...spec,
+    light: { ...spec.light, strong: { l: [0.34, 0.44], c: [0.85, 1] } },
+    dark: { ...spec.dark, strong: { l: [0.78, 0.86], c: [0.6, 0.8] } },
+  }),
+  finish(art, { p, rng }) {
+    const seeds = rng.fork("grain")
+    const seed = seeds.int(1, 9999)
+    return [
+      ...art.under,
+      ...art.marks,
+      // The block inked, then what was cut from it laid back over as the
+      // paper it prints as: a cut holds no ink, and taking ink away is not
+      // something a plate of grain can do.
+      ...cut(art, (piece) => [
+        { kind: "stipple", id: `${piece.id}-block`, tone: "strong", scale: p.grainSize!, hardness: p.hardness!, wash: p.wash!, seed, layers: asDensity(piece.marks.filter((mark) => !paperOf(mark))) },
+        ...piece.marks.filter(paperOf),
+      ]),
+      ...art.over,
+      grainLayer(p.film!, 0.74, seeds.int(1, 9999)),
+    ]
+  },
+}
+
+export const PROCESSES = { film, wash, plate, press, lift, block }

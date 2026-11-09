@@ -1,9 +1,8 @@
-import { atan2, clamp, cos, PI, sin, TAU } from "../core/math.ts"
+import { atan2, cos, PI, sin, TAU } from "../core/math.ts"
 import type { Box, Shape } from "../core/scene.ts"
-import { framing } from "../layouts/framing.ts"
-import { boxesTouch, inflate } from "../layouts/geometry.ts"
-import { seat } from "../shapes/subjects.ts"
 import type { Context, DrawnFigure, FigurePart, FigureStage } from "./parts.ts"
+import { cut, form } from "./outlines.ts"
+import { seated } from "./seated.ts"
 
 // A mark built from a few rounded tiles with round bites taken out of them,
 // the way a sign painter cuts a stencil. Every seed assembles its own: the
@@ -234,57 +233,8 @@ export const tiles: FigurePart = {
   shapes: ["grid", "star", "pinwheel", "pair", "arch", "petals", "bars", "steps"],
 
   draw(context: Context, stage: FigureStage, shape: string, p): DrawnFigure {
-    const { w, h, keep } = context
     const rng = context.rng.fork("figure")
-    const margin = Math.min(w, h) * 0.06
-    // Behind a large title in the middle, the mark is drawn large, so its
-    // tiles frame the title round the clearing instead of hiding under it.
-    const start = context.fill
-      ? Math.min(w, h) * 0.66
-      : context.calm.length
-        ? Math.min(w, h) * 1.06
-      : Math.min(Math.min(stage.area.w, stage.area.h) * p.size!, Math.min(w, h) * 0.78)
-    // Seated as a round subject would be, kept on the canvas by `bleed` of
-    // its side or more, and, shrinking if it must, off every area.
-    const fit = (bleed: number, from: number) => {
-      let side = from
-      let x = w / 2
-      let y = h / 2
-      for (let attempt = 0; attempt < 12; attempt++) {
-        // Behind a title in the middle, it is centred on the title, larger
-        // than the canvas is tall, so its ends show above and below it.
-        if (context.calm.length) break
-        if (!context.fill) {
-          const at = seat({ area: stage.area, safe: keep, w, h, away: stage.away }, side / 2)
-          const edge = side / 2 + margin - side * bleed
-          x = clamp(at.x, edge, w - edge)
-          y = clamp(at.y, edge, h - edge)
-        }
-        const box = { x: x - side / 2, y: y - side / 2, w: side, h: side }
-        if (context.fill || !context.titled || !boxesTouch(box, inflate(keep, margin / 2))) break
-        side *= 0.9
-      }
-      return { x, y, side }
-    }
-    // Whole on the canvas when there is room; where a title leaves only thin
-    // bands, large and running off the edge rather than small.
-    // That large mark starts from the canvas, not from the thin band, and the
-    // edge may take up to 40% of it.
-    // A mark that would come out under half the short side is a timid one
-    // beside a title: it is drawn large instead, as a poster's would be.
-    let placed = fit(0, start)
-    if (placed.side < Math.min(w, h) * 0.52) placed = fit(0.4, Math.min(w, h) * 0.7)
-    // Beside a title at an edge, the mark is drawn large too, running off the
-    // far edges, as long as it comes no nearer the title than a whole one.
-    if (context.titled && !context.fill && !context.calm.length) {
-      const large = fit(0.35, Math.min(w, h) * 1.12)
-      if (large.side > placed.side * 1.15) placed = large
-    }
-    // With nothing to keep clear, the whole frame is the mark's (see
-    // framing.ts).
-    const framed = framing(context, rng)
-    if (framed) placed = { x: framed.x, y: framed.y, side: Math.min(w, h) * framed.reach }
-    const { x, y, side } = placed
+    const { x, y, side } = seated(context, stage, p.size!, rng)
     const { units, voids } = assemble(shape, p)
     // A quarter turn or a mirror, so one assembly faces several ways.
     // A staircase stands on its line, so it only mirrors; a grid and a star
@@ -318,4 +268,4 @@ export const tiles: FigurePart = {
   },
 }
 
-export const FIGURES = { tiles }
+export const FIGURES = { tiles, form, cut }

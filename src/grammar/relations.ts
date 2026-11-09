@@ -1,4 +1,4 @@
-import type { Box, Mark, Shape } from "../core/scene.ts"
+import type { Box, Mark, Shape, Tone } from "../core/scene.ts"
 import { boxesTouch } from "../layouts/geometry.ts"
 import type { RelationPart } from "./parts.ts"
 
@@ -100,4 +100,39 @@ export const cutout: RelationPart = {
   },
 }
 
-export const RELATIONS = { inside, cutout }
+// Tones from the back of a stack to its front, deepening as layers of paper
+// in one colour do.
+const LADDER: readonly Tone[] = ["quiet", "soft", "body", "accent", "strong", "ink"]
+
+// The fill's marks in one tone, for a layer of paper that colour.
+const retoned = (marks: Mark[], tone: Tone): Mark[] =>
+  marks.map((mark) => (mark.kind === "shapes" && mark.paint.type === "solid" ? { ...mark, paint: { ...mark.paint, tone } } : mark))
+
+// Layers laid one on the next, back to front, each its own sheet of the fill
+// in a tone a step deeper than the one behind it, and now and then one in
+// the brand's partner colour. The process lays each on the last.
+export const stacked: RelationPart = {
+  name: "stacked",
+  ranges: {},
+  // Only a cut has layers to stack.
+  avoid: ["tiles", "form"],
+  join(context, figure, fill) {
+    const rng = context.rng.fork("stack")
+    const count = figure.shapes.length
+    // From a light step to a deep one, wherever the stack is short.
+    const from = count > 5 ? 0 : 1
+    const to = 4.6
+    const partner = rng.next() < 0.55 ? rng.int(1, Math.max(1, count - 2)) : -1
+    return {
+      marks: [],
+      pieces: figure.shapes.map((shape, index) => {
+        const id = `layer${index}`
+        const step = Math.round(from + ((to - from) * index) / Math.max(1, count - 1))
+        const tone = index === partner ? "partner" : LADDER[Math.min(step, LADDER.length - 1)]!
+        return { id, clip: shape, marks: retoned(within(fill, bounds(shape), id), tone) }
+      }),
+    }
+  },
+}
+
+export const RELATIONS = { inside, cutout, stacked }

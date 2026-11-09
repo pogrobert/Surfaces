@@ -1,5 +1,6 @@
 import { cos, lerp, sin, TAU } from "../core/math.ts"
 import type { Box, Mark, Shape, Tone } from "../core/scene.ts"
+import { flow, gouge, stone, type, weave } from "./materials.ts"
 import type { FillPart } from "./parts.ts"
 
 // What the ink is. A fill knows nothing of the figure it will end up inside:
@@ -96,4 +97,4 @@ export const flat: FillPart = {
   ],
 }
 
-export const FILLS = { paint, flat }
+export const FILLS = { paint, flat, gouge, type, flow, weave, stone }

@@ -59,7 +59,9 @@ export function overprint(
   // And drawn at least as large as the title is wide, so it reaches past it.
   // With nothing to keep clear, most covers frame it large and on a third
   // (see framing.ts); a motif spans about 0.9 of its unit.
-  const framed = motif === "rise" ? undefined : framing(frame, rng.fork("overprint"), most ? { most } : {})
+  // Arches are mostly ink, so framed at full reach they would leave no paper.
+  const reach = motif === "arches" ? Math.min(most ?? 1.4, 1.2) : most
+  const framed = motif === "rise" ? undefined : framing(frame, rng.fork("overprint"), reach ? { most: reach } : {})
   const unit = framed ? (Math.min(w, h) * framed.reach) / 0.9 : Math.max(Math.min(area.w, area.h), calm ? calm.w : 0)
   const seatIn = (radius: number) =>
     calm ? center(calm) : framed ? { x: framed.x, y: framed.y } : seat({ area, safe: keep, w, h, away }, radius)

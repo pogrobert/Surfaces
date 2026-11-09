@@ -56,8 +56,12 @@ test("every combination the grammar allows passes the judge", () => {
   const found = combinations()
   assert.ok(found.length >= 12, `${found.length} combinations`)
   for (const { layers, recipe } of found) {
-    for (const shape of recipe.shapes ?? []) {
-      for (const [index, [width, height, place]] of LAYOUTS.entries()) {
+    const shapes = recipe.shapes ?? []
+    // Every shape, each at several layouts in turn rather than at all of
+    // them: the styles made from these parts are held at every shape and
+    // layout by the integrity tests.
+    for (const [index, [width, height, place]] of LAYOUTS.entries()) {
+      for (const shape of [shapes[index % shapes.length]!, shapes[(index + 3) % shapes.length]!]) {
         for (const theme of ["light", "dark"] as const) {
           const input = { seed: `judge-${index}`, shape, width, height, theme, color: BRAND_COLORS[(index * 3) % BRAND_COLORS.length]!, ...titleAt(place) }
           const verdict = judge(drawRecipe(recipe, input))

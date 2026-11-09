@@ -16,6 +16,12 @@ import { screenprint } from "./screenprint.ts"
 import { stencil } from "./stencil.ts"
 import { strataStyle as strata } from "./strata.ts"
 import { underpaint } from "./underpaint.ts"
+import { papercut } from "./papercut.ts"
+import { linocut } from "./linocut.ts"
+import { typewriter } from "./typewriter.ts"
+import { currents } from "./currents.ts"
+import { weave } from "./weave.ts"
+import { terrazzo } from "./terrazzo.ts"
 
 export const STYLES = {
   underpaint,
@@ -37,6 +43,12 @@ export const STYLES = {
   glass,
   stencil,
   screenprint,
+  papercut,
+  linocut,
+  typewriter,
+  currents,
+  weave,
+  terrazzo,
 }
 
 export type StyleName = keyof typeof STYLES

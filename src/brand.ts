@@ -314,11 +314,12 @@ function familyShape(style: StyleName, name: string, tag: string) {
 // Styles in kinds that look alike, so a set of directions can show one of
 // each kind before it shows two of any.
 const KINDS: readonly (readonly StyleName[])[] = [
-  ["stencil", "screenprint", "riso", "photocopy", "halftone", "dither"],
-  ["engraving", "linework", "moire"],
+  ["stencil", "screenprint", "riso", "photocopy", "halftone", "dither", "linocut", "typewriter"],
+  ["engraving", "linework", "moire", "currents"],
   ["underpaint", "sfumato", "fluted"],
   ["aquatint", "mezzotint", "chrome", "glass"],
   ["marbling", "strata", "endpaper"],
+  ["papercut", "weave", "terrazzo"],
 ]
 const kindOf = (style: StyleName) => KINDS.findIndex((kind) => kind.includes(style))
 

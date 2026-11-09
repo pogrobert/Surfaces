@@ -58,6 +58,10 @@ export type FigurePart<R extends Ranges = Ranges> = PartBase<R> & {
 }
 
 export type FillPart<R extends Ranges = Ranges> = PartBase<R> & {
+  // Drawn in hairlines or single characters, covering little of the canvas
+  // by nature: the judge holds a style made with it to how far it spans, not
+  // how much it covers, as it does linework.
+  hairline?: boolean
   // Marks filling `region`, in the scene's tones.
   paint(context: Context, region: Box, p: P): Mark[]
 }

@@ -15,7 +15,7 @@ const PALETTE: PaletteSpec = {
   partnerFloor: 0.09,
   // The first ink is the brand colour itself, as a spot ink is, moved only
   // as far as the paper needs.
-  accent: { light: [0.55, 0.82], dark: [0.5, 0.84] },
+  accent: { light: [0.55, 0.76], dark: [0.5, 0.84] },
   light: {
     ...BASE_PALETTE.light,
     // Paper, not white: warmed a little whatever the brand.

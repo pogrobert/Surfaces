@@ -91,21 +91,21 @@ const TONES: Record<Tone, RegExp> = {
 // mezzotinter's plates print the brand as its darkest shade, so a light
 // amber comes out brown. It leans toward styles that show the colour as it is.
 const LEANS: Record<Face | Tone | "dark" | "bright", Partial<Record<StyleName, number>>> = {
-  serif: { engraving: 3, mezzotint: 2, aquatint: 2, marbling: 2, halftone: 1, strata: 1, linework: 1 },
-  mono: { dither: 3, halftone: 2, linework: 2, photocopy: 2, strata: 1 },
-  rounded: { stencil: 3, riso: 3, screenprint: 2, underpaint: 2, endpaper: 2, strata: 1 },
+  serif: { engraving: 3, mezzotint: 2, aquatint: 2, marbling: 2, halftone: 1, strata: 1, linework: 1, linocut: 1 },
+  mono: { dither: 3, typewriter: 3, halftone: 2, linework: 2, photocopy: 2, strata: 1, currents: 1 },
+  rounded: { stencil: 3, riso: 3, screenprint: 2, underpaint: 2, endpaper: 2, papercut: 2, strata: 1, terrazzo: 1 },
   // Most sites are set in a plain sans, so it leans a little to many styles,
   // and the page's words decide.
-  grotesk: { halftone: 1, dither: 1, screenprint: 1, riso: 1, underpaint: 1, fluted: 2, strata: 1, stencil: 1, endpaper: 1 },
-  technical: { halftone: 3, dither: 3, fluted: 2, strata: 2, linework: 2, screenprint: 1, engraving: 1, underpaint: 2 },
-  editorial: { engraving: 3, mezzotint: 3, aquatint: 2, photocopy: 2, halftone: 1, marbling: 1, linework: 1 },
-  playful: { riso: 3, screenprint: 3, photocopy: 2, stencil: 2, endpaper: 2, marbling: 1 },
-  warm: { stencil: 3, underpaint: 2, riso: 1, screenprint: 1, marbling: 1, strata: 1, aquatint: 1 },
+  grotesk: { halftone: 1, dither: 1, screenprint: 1, riso: 1, underpaint: 1, fluted: 2, strata: 1, stencil: 1, endpaper: 1, terrazzo: 1, currents: 1 },
+  technical: { halftone: 3, dither: 3, fluted: 2, strata: 2, linework: 2, currents: 2, typewriter: 2, screenprint: 1, engraving: 1, underpaint: 2 },
+  editorial: { engraving: 3, mezzotint: 3, aquatint: 2, photocopy: 2, linocut: 2, halftone: 1, marbling: 1, linework: 1, typewriter: 1 },
+  playful: { riso: 3, screenprint: 3, photocopy: 2, stencil: 2, endpaper: 2, papercut: 2, marbling: 1, weave: 1, terrazzo: 1, linocut: 1 },
+  warm: { stencil: 3, underpaint: 2, papercut: 2, weave: 2, riso: 1, screenprint: 1, marbling: 1, strata: 1, aquatint: 1, linocut: 1, terrazzo: 1 },
   glossy: { chrome: 3, glass: 3, fluted: 3, underpaint: 2, sfumato: 1 },
   // A calm page leans to quiet prints first, and to the soft styles after.
-  calm: { aquatint: 3, linework: 2, strata: 2, engraving: 1, underpaint: 1, sfumato: 1 },
-  dark: { mezzotint: 1, moire: 1, underpaint: 1, sfumato: 1, chrome: 1 },
-  bright: { stencil: 2, riso: 2, screenprint: 2, underpaint: 1, strata: 1, halftone: 1, dither: 1, marbling: 1, engraving: -2, mezzotint: -2, aquatint: -1, moire: -1 },
+  calm: { aquatint: 3, linework: 2, strata: 2, terrazzo: 2, engraving: 1, underpaint: 1, sfumato: 1, weave: 1, currents: 1 },
+  dark: { mezzotint: 1, moire: 1, underpaint: 1, sfumato: 1, chrome: 1, currents: 1 },
+  bright: { stencil: 2, riso: 2, screenprint: 2, papercut: 1, terrazzo: 1, weave: 1, underpaint: 1, strata: 1, halftone: 1, dither: 1, marbling: 1, engraving: -2, mezzotint: -2, aquatint: -1, moire: -1 },
 }
 
 const SAID: Record<Face | Tone | "bright", string> = {

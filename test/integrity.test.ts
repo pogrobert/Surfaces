@@ -102,7 +102,7 @@ test("every scene is finite and every tone resolves", () => {
 // Hairlines and dot screens break their ink up by design, so they are held to
 // how much of the canvas their drawing spans rather than to how much ink it
 // lays.
-const HAIRLINE = new Set(["linework", "dither"])
+const HAIRLINE = new Set(["linework", "dither", "currents", "typewriter"])
 
 function span(scene: Scene) {
   let left = Infinity
@@ -115,7 +115,9 @@ function span(scene: Scene) {
     right = Math.max(right, x)
     bottom = Math.max(bottom, y)
   }
-  for (const layer of scene.layers) {
+  // Marks inside a piece cut to its shape count too.
+  const marks = (layers: readonly Layer[]): Layer[] => layers.flatMap((layer) => (layer.kind === "clip" ? marks(layer.layers) : [layer]))
+  for (const layer of marks(scene.layers)) {
     if (layer.kind !== "shapes") continue
     for (const shape of layer.shapes) {
       if (shape.type === "blocks") {

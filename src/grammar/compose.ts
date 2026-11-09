@@ -1,3 +1,4 @@
+import { HAIRLINE } from "../core/judge.ts"
 import { BASE_PALETTE } from "../core/palette.ts"
 import type { PaletteSpec } from "../core/palette.ts"
 import type { Range } from "../core/random.ts"
@@ -65,6 +66,8 @@ export function compose(preset: Preset): Recipe & { layers: Layers } {
     for (const mood of ["calm", "bold"] as const) Object.assign(moods[mood], part.moods?.[mood])
   }
   for (const level of ["smooth", "heavy"] as const) Object.assign(grain[level], process.grain?.[level])
+
+  if (fill.hairline) HAIRLINE.add(preset.style)
 
   const base = ground.palette(preset.palette ?? BASE_PALETTE)
   const palette = process.palette ? process.palette(base) : base
