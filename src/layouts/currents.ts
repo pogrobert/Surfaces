@@ -1,7 +1,8 @@
 import { atan2, clamp, cos, PI, sin, smoothstep, TAU } from "../core/math.ts"
 import type { Art, Frame } from "../core/recipe.ts"
 import type { Box, Mark, Shape, Tone } from "../core/scene.ts"
-import { behind } from "../grammar/kit.ts"
+import { behind, boundsOf, circle, keptClear } from "../grammar/kit.ts"
+import type { Points } from "../grammar/kit.ts"
 import { stroke, streamlines } from "../grammar/materials.ts"
 import { seated } from "../grammar/seated.ts"
 import { inflate } from "./geometry.ts"
@@ -32,8 +33,24 @@ export function currents(frame: Frame, subject: Subject, p: CurrentsParams): Art
   const draw = rng.fork("currents")
   const stage = frame.fill ? { area: { x: 0, y: 0, w, h }, away: { x: 0, y: -1 } } : clearing(frame)
   const seat = seated(frame, stage, p.size, draw)
-  const side = behind(frame, seat.side, 0.85)
-  const { x: cx, y: cy } = seat
+  // The subject's outline fitted clear of the title, as every subject is,
+  // and the subject drawn wherever and however large that leaves it: a round
+  // window, or the confluence's long box.
+  const first = behind(frame, seat.side, 0.85)
+  const outline =
+    subject === "confluence"
+      ? (() => {
+          const a = p.turn * 0.5
+          const [hl, hh] = [first * 0.675, first * 0.4]
+          return [[-1, -1], [1, -1], [1, 1], [-1, 1]].flatMap(([u, v]) => [seat.x + u! * hl * cos(a) - v! * hh * sin(a), seat.y + u! * hl * sin(a) + v! * hh * cos(a)])
+        })()
+      : circle(seat.x, seat.y, first / 2, 72)
+  const [fitted] = subject === "field" ? [outline] : (keptClear(frame, [outline], stage.away) as [Points])
+  const before = boundsOf(outline)
+  const after = boundsOf(fitted)
+  const side = first * (after.w / before.w)
+  const cx = after.x + after.w / 2
+  const cy = after.y + after.h / 2
   const gap = side * p.gap
   // No line crosses the title, or the clearing a title in the middle stands on.
   const clear = [...(titled ? inflate(keep, gap * 2) : []), ...inflate(frame.calm, gap)]
