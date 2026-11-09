@@ -25,9 +25,9 @@ const ABOUT: Record<StyleName, { looks: string; suits: string }> = {
   stencil: { looks: "Loose paint seen through a stencil of rounded tiles, on folded paper.", suits: "Warm, crafted covers with one bold mark." },
   papercut: { looks: "Layers of cut paper, each casting a soft shadow on the one behind: rainbows, ripples, nested frames, or hills under a sun.", suits: "Warm, friendly covers: nonprofits, education, consumer apps." },
   linocut: { looks: "One bold form cut from a block, its gouge strokes printing as paper, in one deep ink.", suits: "Editorial, confident covers with a hand-made edge." },
-  typewriter: { looks: "A form struck in rows of typewriter characters, heavier where it is darker.", suits: "Developer tools, writing, and anything about text." },
+  typewriter: { looks: "Typewriter art: the brand's initial typed large, a lit sphere, a page swelling into a round, or a table of figures, struck in characters.", suits: "Developer tools, writing, and anything about text." },
   currents: { looks: "Fine lines drawn along a current, evenly apart, like filings round a magnet, filling one form.", suits: "AI, infrastructure and data covers." },
-  weave: { looks: "Woven threads in stripes, checks or a tartan's count, cut to one form.", suits: "Fashion, craft, home and anything domestic." },
+  weave: { looks: "Woven cloth: a frayed swatch, a piece with a corner folded back, a strap, or a pile of folded cloths, in stripes, checks or a tartan.", suits: "Fashion, craft, home and anything domestic." },
   terrazzo: { looks: "Chips of stone in the brand's colours set in a pale ground, cut to one form.", suits: "Lifestyle, interiors, and calm product pages." },
   glass: { looks: "A glass object showing the light behind it, bent and dimmed.", suits: "Soft, glossy heroes." },
 }

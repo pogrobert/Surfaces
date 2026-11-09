@@ -42,6 +42,9 @@ export type RecipeContext<Params extends string> = Frame & {
   p: Record<Params, number>
   // The approved shape for this cover, when the recipe has any.
   shape: string | undefined
+  // The seed as given, for a style that draws from its words, as a
+  // typewriter types the brand's initial: a brand's seed begins with its name.
+  seed: string
 }
 
 // A layout's result, before a finish has touched it: what the art stands on,

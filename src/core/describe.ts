@@ -212,9 +212,11 @@ const ART: Record<string, Phrase> = {
   papercut: (shape, inks) =>
     `${pick({ rainbow: "arches", ripples: "rings", frames: "rounded squares", hills: "hills under a sun" }, shape, "arches")} of cut ${both(inks)} paper, layered with soft shadows`,
   linocut: (shape, inks) => `a ${form(shape)} printed from a carved block in ${both(inks)} ink`,
-  typewriter: (shape, inks) => `a ${form(shape)} drawn in rows of typed ${both(inks)} characters`,
+  typewriter: (shape, inks) =>
+    `${pick({ initial: "a large letter", sphere: "a sphere", page: "a typed page swelling into a round", columns: "a table of figures" }, shape, "a shape")} typed in ${both(inks)} characters`,
   currents: (shape, inks) => `a ${form(shape)} of fine ${both(inks)} lines flowing like a current`,
-  weave: (shape, inks) => `a ${form(shape)} of woven ${both(inks)} cloth`,
+  weave: (shape, inks) =>
+    `${pick({ swatch: "a frayed swatch", fold: "a piece with a corner folded back", strap: "a woven strap", stack: "a pile of folded cloths" }, shape, "a piece")} of woven ${both(inks)} cloth`,
   terrazzo: (shape, inks) => `a ${form(shape)} of terrazzo, ${both(inks)} chips set in stone`,
   chrome: (shape, inks) =>
     `a shiny chrome ${pick({ ring: "ring", capsule: "capsule", arch: "arch" }, shape, "sphere")} reflecting ${both(inks)}`,

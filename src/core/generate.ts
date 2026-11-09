@@ -191,6 +191,7 @@ function draw(input: SurfaceInput, fill = false, recipe: Recipe = STYLES[input.s
     mood,
     p,
     shape,
+    seed: String(seed),
     rng: root.fork("compose"),
   }
   let layers: Layer[]

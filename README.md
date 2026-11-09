@@ -163,10 +163,10 @@ moves), `toSvg` (files, `<img>`, email) or `toJpeg` and `toPng`.
 Twenty-five, each with its own shapes, in a light or dark ground, calm or
 bold, smooth, natural or heavy grain, and any colour.
 
-- **Printed:** stencil, screenprint, riso, linocut, photocopy, halftone, dither, typewriter (a form struck in characters)
+- **Printed:** stencil, screenprint, riso, linocut, photocopy, halftone, dither, typewriter (the brand's initial, a page or a table, typed)
 - **Engraved:** engraving, linework, currents (lines along a flow), moire, mezzotint, aquatint
 - **Light:** underpaint (an aura of soft colour), sfumato, fluted (reeded glass), chrome, glass
-- **Made:** papercut (layers of cut paper), weave, terrazzo
+- **Made:** papercut (layers of cut paper), weave (swatches, folds and straps of cloth), terrazzo
 - **Pattern:** marbling, strata, endpaper
 
 `catalog` lists every style with what it looks like, what it suits and its

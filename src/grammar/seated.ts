@@ -3,13 +3,14 @@ import type { Rng } from "../core/random.ts"
 import { framing } from "../layouts/framing.ts"
 import { boxesTouch, inflate } from "../layouts/geometry.ts"
 import { seat } from "../shapes/subjects.ts"
-import type { Context, FigureStage } from "./parts.ts"
+import type { Frame } from "../core/recipe.ts"
+import type { FigureStage } from "./parts.ts"
 
 // Where a figure goes and how large, as a square: seated as a round subject
 // would be beside the title, large and off the edges where the title leaves
 // only thin bands, centred behind a title in the middle, and framed on a
 // third when nothing is kept clear. `size` is its share of the open area.
-export function seated(context: Context, stage: FigureStage, size: number, rng: Rng) {
+export function seated(context: Pick<Frame, "w" | "h" | "keep" | "fill" | "calm" | "titled">, stage: FigureStage, size: number, rng: Rng) {
   const { w, h, keep } = context
   const margin = Math.min(w, h) * 0.06
   // Behind a large title in the middle, the mark is drawn large, so its

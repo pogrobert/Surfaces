@@ -293,7 +293,7 @@ export const flow: FillPart = {
 
 // Threads, the colours they come in, in order, repeating: plain stripes,
 // checks of two, and a tartan's longer count.
-const SETTS: readonly { warp: Tone[]; weft: Tone[] }[] = [
+export const SETTS: readonly { warp: Tone[]; weft: Tone[] }[] = [
   { warp: ["accent"], weft: ["soft"] },
   { warp: ["accent", "accent", "soft", "soft"], weft: ["accent", "accent", "soft", "soft"] },
   { warp: ["strong", "accent", "accent", "partner", "accent", "accent"], weft: ["strong", "accent", "accent", "partner", "accent", "accent"] },
@@ -324,60 +324,103 @@ export const weave: FillPart = {
     bold: { threads: [20, 24], thread: [0.9, 0.93] },
   },
 
-  paint(context, region, p) {
-    const rng = context.rng.fork("weave")
-    const pitch = Math.max(region.w, region.h) / Math.round(p.threads!)
-    const thick = pitch * p.thread!
-    const sett = rng.pick(SETTS)
-    const over = WEAVES[rng.pick(["plain", "plain", "twill", "basket"] as const)]
-    const angle = p.tilt! + (rng.next() < 0.3 ? PI / 4 : 0)
-    const c = cos(angle)
-    const s = sin(angle)
-    const cx = region.x + region.w / 2
-    const cy = region.y + region.h / 2
-    // A box in the cloth's own turned grid, as four corners on the page.
-    const quad = (u: number, v: number, w: number, h: number): Shape => {
-      const at = (a: number, b: number) => [cx + a * c - b * s, cy + a * s + b * c]
-      return { type: "polygon", points: [...at(u, v), ...at(u + w, v), ...at(u + w, v + h), ...at(u, v + h)] }
+  paint: (context, region, p) => cloth(context.theme, context.rng.fork("weave"), region, { threads: p.threads!, thread: p.thread!, tilt: p.tilt! }),
+}
+
+export type Weave = keyof typeof WEAVES
+export type Sett = (typeof SETTS)[number]
+
+// Cloth filling a box: threads one way and the other, crossing over and under
+// as a weave has them, in a sett's colours, each darker where it dips under
+// the next and lit a little along its middle. The sett, the weave and the
+// turn of the cloth are drawn from `rng` unless they are given.
+export function cloth(
+  theme: string,
+  rng: Rng,
+  region: Box,
+  { threads, thread, tilt }: { threads: number; thread: number; tilt: number },
+  // `within` is the outline the cloth will be cut to: crossings wholly
+  // outside it aren't drawn, so a long strap is no heavier than its threads.
+  given: { sett?: Sett; weave?: Weave; angle?: number; id?: string; within?: readonly number[] } = {}
+): Mark[] {
+  const pitch = Math.max(region.w, region.h) / Math.round(threads)
+  const thick = pitch * thread
+  const picked = rng.pick(SETTS)
+  const sett = given.sett ?? picked
+  const woven = rng.pick(["plain", "plain", "twill", "basket"] as const)
+  const over = WEAVES[given.weave ?? woven]
+  const turned = tilt + (rng.next() < 0.3 ? PI / 4 : 0)
+  const angle = given.angle ?? turned
+  const id = given.id ? `${given.id}-` : ""
+  const c = cos(angle)
+  const s = sin(angle)
+  const cx = region.x + region.w / 2
+  const cy = region.y + region.h / 2
+  // A box in the cloth's own turned grid, as four corners on the page.
+  const quad = (u: number, v: number, w: number, h: number): Shape => {
+    const at = (a: number, b: number) => [cx + a * c - b * s, cy + a * s + b * c]
+    return { type: "polygon", points: [...at(u, v), ...at(u + w, v), ...at(u + w, v + h), ...at(u, v + h)] }
+  }
+  const reach = Math.sqrt(region.w * region.w + region.h * region.h) / 2
+  const n = Math.ceil(reach / pitch) + 1
+  const items: { tone: Tone; shape: Shape }[] = []
+  const dips: Shape[] = []
+  // A thread is round: a little light runs along its middle.
+  const sheen: Shape[] = []
+  const inset = (pitch - thick) / 2
+  const dip = pitch * 0.22
+  const shine = thick * 0.24
+  const within = given.within
+  const inside = (x: number, y: number) => {
+    let found = false
+    for (let i = 0, j = within!.length - 2; i < within!.length; j = i, i += 2) {
+      const xi = within![i]!
+      const yi = within![i + 1]!
+      const xj = within![j]!
+      const yj = within![j + 1]!
+      if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) found = !found
     }
-    const reach = Math.sqrt(region.w * region.w + region.h * region.h) / 2
-    const n = Math.ceil(reach / pitch) + 1
-    const items: { tone: Tone; shape: Shape }[] = []
-    const dips: Shape[] = []
-    // A thread is round: a little light runs along its middle.
-    const sheen: Shape[] = []
-    const inset = (pitch - thick) / 2
-    const dip = pitch * 0.22
-    const shine = thick * 0.24
-    for (let j = -n; j < n; j++) {
-      for (let i = -n; i < n; i++) {
-        const u = i * pitch
-        const v = j * pitch
-        const index = (k: number, length: number) => ((k % length) + length) % length
-        if (over(i + n, j + n)) {
-          const tone = sett.warp[index(i, sett.warp.length)]!
-          items.push({ tone, shape: quad(u + inset, v, thick, pitch) })
-          dips.push(quad(u + inset, v, thick, dip), quad(u + inset, v + pitch - dip, thick, dip))
-          sheen.push(quad(u + inset + (thick - shine) / 2, v + dip, shine, pitch - dip * 2))
-        } else {
-          const tone = sett.weft[index(j, sett.weft.length)]!
-          items.push({ tone, shape: quad(u, v + inset, pitch, thick) })
-          dips.push(quad(u, v + inset, dip, thick), quad(u + pitch - dip, v + inset, dip, thick))
-          sheen.push(quad(u + dip, v + inset + (thick - shine) / 2, pitch - dip * 2, shine))
-        }
+    return found
+  }
+  // Whether any corner of a crossing, a little past it, is inside the outline.
+  const shows = (u: number, v: number) => {
+    if (!within) return true
+    for (const [a, b] of [[-0.5, -0.5], [1.5, -0.5], [1.5, 1.5], [-0.5, 1.5], [0.5, 0.5]] as const) {
+      const pu = u + a * pitch
+      const pv = v + b * pitch
+      if (inside(cx + pu * c - pv * s, cy + pu * s + pv * c)) return true
+    }
+    return false
+  }
+  for (let j = -n; j < n; j++) {
+    for (let i = -n; i < n; i++) {
+      const u = i * pitch
+      const v = j * pitch
+      if (!shows(u, v)) continue
+      const index = (k: number, length: number) => ((k % length) + length) % length
+      if (over(i + n, j + n)) {
+        const tone = sett.warp[index(i, sett.warp.length)]!
+        items.push({ tone, shape: quad(u + inset, v, thick, pitch) })
+        dips.push(quad(u + inset, v, thick, dip), quad(u + inset, v + pitch - dip, thick, dip))
+        sheen.push(quad(u + inset + (thick - shine) / 2, v + dip, shine, pitch - dip * 2))
+      } else {
+        const tone = sett.weft[index(j, sett.weft.length)]!
+        items.push({ tone, shape: quad(u, v + inset, pitch, thick) })
+        dips.push(quad(u, v + inset, dip, thick), quad(u + pitch - dip, v + inset, dip, thick))
+        sheen.push(quad(u + dip, v + inset + (thick - shine) / 2, pitch - dip * 2, shine))
       }
     }
-    // Between the threads and where they dip, the dark under the cloth: deep
-    // ink on paper, the ground itself on black.
-    const under: Tone = context.theme === "dark" ? "ground" : "ink"
-    const light: Tone = context.theme === "dark" ? "ink" : "ground"
-    return [
-      solid("backing", under, [rect(region)], 0.85),
-      ...byTone("threads", items),
-      solid("dips", under, dips, context.theme === "dark" ? 0.32 : 0.16),
-      solid("sheen", light, sheen, context.theme === "dark" ? 0.1 : 0.18),
-    ]
-  },
+  }
+  // Between the threads and where they dip, the dark under the cloth: deep
+  // ink on paper, the ground itself on black.
+  const under: Tone = theme === "dark" ? "ground" : "ink"
+  const light: Tone = theme === "dark" ? "ink" : "ground"
+  return [
+    solid(`${id}backing`, under, [rect(region)], 0.85),
+    ...byTone(`${id}threads`, items),
+    solid(`${id}dips`, under, dips, theme === "dark" ? 0.32 : 0.16),
+    solid(`${id}sheen`, light, sheen, theme === "dark" ? 0.1 : 0.18),
+  ]
 }
 
 // Terrazzo: chips of stone in several colours set in a pale ground and
