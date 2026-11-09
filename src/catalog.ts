@@ -29,6 +29,11 @@ const ABOUT: Record<StyleName, { looks: string; suits: string }> = {
   currents: { looks: "Fine lines along a current: a stream parting round a disc, a whirl drawing in to its eye, two streams joining, or a field of flow across the cover.", suits: "AI, infrastructure and data covers." },
   weave: { looks: "Woven cloth: a frayed swatch, a piece with a corner folded back, a strap, or a pile of folded cloths, in stripes, checks or a tartan.", suits: "Fashion, craft, home and anything domestic." },
   terrazzo: { looks: "Terrazzo made into things: a tile with a chipped corner, a slab, stepped blocks, or a floor in panels, the chips in the brand's colours.", suits: "Lifestyle, interiors, and calm product pages." },
+  dashes: { looks: "A form drawn only in short level dashes, longer and heavier where it rises: a lit orb, a cumulus cloud, two ranges of hills in mist, or relief across the cover.", suits: "Weather, maps, data and calm technical covers." },
+  swatchbook: { looks: "A sample book of the brand's materials: cards of flat colour, wash, halftone, stripes, lines, cloth and terrazzo, in a grid, fanned like a paint deck, scattered, or as one paint strip in steps.", suits: "Design studios, agencies, brand and product pages." },
+  patches: { looks: "Plain soft forms, a circle, a rounded square, a pill, laid over one another, each filled with its own pattern of dots, rings, dashes or squares: a cluster, the same on a speckled disc, a row of pills, or a pair.", suits: "Playful brands, communities, social and event covers." },
+  trails: { looks: "Lights in a long exposure: streaks in soft greys and one hot in the brand's colour, glowing, sweeping across the cover, circling in tilted rings, bending round a corner, or drifting one way.", suits: "Mobility, travel, launches, and anything about speed or motion." },
+  prism: { looks: "Light through glass: wide bands running from the brand's deepest shade to its palest, fringed in its partner colour at the edges, flowing in an S, laid in folds, turned into a tilted ring, or stood in a row of bars.", suits: "Optics, creative tools, music and bold launches." },
   glass: { looks: "A glass object showing the light behind it, bent and dimmed.", suits: "Soft, glossy heroes." },
 }
 

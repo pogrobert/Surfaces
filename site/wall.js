@@ -15,10 +15,10 @@ export const SAMPLES = [
 // Every style, in the kinds the explorer lists them by.
 export const KINDS = [
   ["Printed", ["stencil", "screenprint", "riso", "linocut", "photocopy", "halftone", "dither", "typewriter"]],
-  ["Engraved", ["engraving", "linework", "currents", "moire", "mezzotint", "aquatint"]],
-  ["Light", ["underpaint", "sfumato", "fluted", "chrome", "glass"]],
-  ["Made", ["papercut", "weave", "terrazzo"]],
-  ["Pattern", ["marbling", "strata", "endpaper"]],
+  ["Engraved", ["engraving", "linework", "currents", "dashes", "moire", "mezzotint", "aquatint"]],
+  ["Light", ["underpaint", "sfumato", "trails", "prism", "fluted", "chrome", "glass"]],
+  ["Made", ["papercut", "weave", "terrazzo", "swatchbook"]],
+  ["Pattern", ["marbling", "strata", "endpaper", "patches"]],
 ]
 const ORDER = KINDS.flatMap(([, styles]) => styles)
 

@@ -315,11 +315,11 @@ function familyShape(style: StyleName, name: string, tag: string) {
 // each kind before it shows two of any.
 const KINDS: readonly (readonly StyleName[])[] = [
   ["stencil", "screenprint", "riso", "photocopy", "halftone", "dither", "linocut", "typewriter"],
-  ["engraving", "linework", "moire", "currents"],
-  ["underpaint", "sfumato", "fluted"],
+  ["engraving", "linework", "moire", "currents", "dashes"],
+  ["underpaint", "sfumato", "fluted", "trails", "prism"],
   ["aquatint", "mezzotint", "chrome", "glass"],
-  ["marbling", "strata", "endpaper"],
-  ["papercut", "weave", "terrazzo"],
+  ["marbling", "strata", "endpaper", "patches"],
+  ["papercut", "weave", "terrazzo", "swatchbook"],
 ]
 const kindOf = (style: StyleName) => KINDS.findIndex((kind) => kind.includes(style))
 

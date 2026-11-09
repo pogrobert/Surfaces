@@ -160,14 +160,14 @@ moves), `toSvg` (files, `<img>`, email) or `toJpeg` and `toPng`.
 
 ## Styles
 
-Twenty-five, each with its own shapes, in a light or dark ground, calm or
+Thirty, each with its own shapes, in a light or dark ground, calm or
 bold, smooth, natural or heavy grain, and any colour.
 
 - **Printed:** stencil, screenprint, riso, linocut (landscapes, sprigs, waves, an initial), photocopy, halftone, dither, typewriter (the brand's initial, a page or a table, typed)
-- **Engraved:** engraving, linework, currents (streams parting, whirling and joining), moire, mezzotint, aquatint
-- **Light:** underpaint (an aura of soft colour), sfumato, fluted (reeded glass), chrome, glass
-- **Made:** papercut (layers of cut paper), weave (swatches, folds and straps of cloth), terrazzo (tiles, slabs, floors)
-- **Pattern:** marbling, strata, endpaper
+- **Engraved:** engraving, linework, currents (streams parting, whirling and joining), dashes (an orb, a cloud or hills in level dashes), moire, mezzotint, aquatint
+- **Light:** underpaint (an aura of soft colour), sfumato, trails (lights in a long exposure), prism (bands of light with colour fringes), fluted (reeded glass), chrome, glass
+- **Made:** papercut (layers of cut paper), weave (swatches, folds and straps of cloth), terrazzo (tiles, slabs, floors), swatchbook (cards of the brand's materials)
+- **Pattern:** marbling, strata, endpaper, patches (soft forms in screen-tone patterns)
 
 `catalog` lists every style with what it looks like, what it suits and its
 shapes. A brand picks one from the site's own type, words and colour; give

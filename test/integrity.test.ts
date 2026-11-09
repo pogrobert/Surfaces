@@ -102,7 +102,7 @@ test("every scene is finite and every tone resolves", () => {
 // Hairlines and dot screens break their ink up by design, so they are held to
 // how much of the canvas their drawing spans rather than to how much ink it
 // lays.
-const HAIRLINE = new Set(["linework", "dither", "currents", "typewriter"])
+const HAIRLINE = new Set(["linework", "dither", "currents", "typewriter", "dashes", "trails"])
 
 function span(scene: Scene) {
   let left = Infinity

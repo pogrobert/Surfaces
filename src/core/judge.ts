@@ -293,7 +293,7 @@ export type Verdict = {
 // Styles drawn in hairlines, which cover little of a canvas by nature: they
 // are never held to how much of it they cover. A style made from the
 // grammar with a hairline fill joins them as it is made (see compose.ts).
-export const HAIRLINE = new Set<string>(["linework", "dither", "typewriter", "currents"])
+export const HAIRLINE = new Set<string>(["linework", "dither", "typewriter", "currents", "dashes", "trails"])
 
 // Whether a cover is fit to show: every area's content reads at 4.5:1, the art
 // is neither blank nor, where content sits on it, a wall, and its subject

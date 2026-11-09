@@ -43,7 +43,8 @@ style's character is its own subjects. They still use the shared toolkit
 (`src/grammar/kit.ts`, `seated.ts`, and `cloth`, `chipsIn`, `streamlines` and
 `stroke` from `materials.ts`), the paper ground and the film, lift and block
 processes. The `type`, `weave`, `stone`, `gouge` and `flow` fills stay in the
-grammar as parts.
+grammar as parts. Dashes, swatchbook, patches, trails and prism were written
+whole from the start, on the same toolkit.
 
 ## The judge
 

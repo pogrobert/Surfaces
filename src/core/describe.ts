@@ -217,6 +217,16 @@ const ART: Record<string, Phrase> = {
     `${pick({ swatch: "a frayed swatch", fold: "a piece with a corner folded back", strap: "a woven strap", stack: "a pile of folded cloths" }, shape, "a piece")} of woven ${both(inks)} cloth`,
   terrazzo: (shape, inks) =>
     `${pick({ tile: "a terrazzo tile with a chipped corner", slab: "a slab of terrazzo", steps: "two stepped blocks of terrazzo", floor: "a terrazzo floor in panels" }, shape, "terrazzo")}, its chips ${both(inks)}`,
+  dashes: (shape, inks) =>
+    `${pick({ orb: "a lit sphere", cloud: "a cumulus cloud", hills: "two ranges of hills in mist", field: "a landscape of relief" }, shape, "a form")} drawn in short ${both(inks)} dashes`,
+  swatchbook: (shape, inks) =>
+    `${pick({ grid: "a grid of material swatches", fan: "a fanned deck of swatch cards", scatter: "a few swatches scattered on a table", strip: "a paint strip in steps" }, shape, "material swatches")} in ${both(inks)}`,
+  patches: (shape, inks) =>
+    `${pick({ cluster: "a cluster of soft shapes", disc: "soft shapes over a speckled disc", row: "a row of overlapping pills", pair: "a rounded square with a circle over its corner" }, shape, "soft shapes")}, each patterned in small ${both(inks)} marks`,
+  trails: (shape, inks) =>
+    `grey light trails ${pick({ sweep: "sweeping across the picture", orbit: "circling in tilted rings", bend: "bending round a corner", drift: "drifting one way" }, shape, "in a long exposure")}, one glowing ${both(inks)}`,
+  prism: (shape, inks) =>
+    `${pick({ ribbon: "a wide band of light flowing in an S", folds: "three bands of light laid in folds", ring: "a tilted ring of light", bars: "a row of upright bars of light" }, shape, "bands of light")}, ${both(inks)}, with colour fringes at the edges`,
   chrome: (shape, inks) =>
     `a shiny chrome ${pick({ ring: "ring", capsule: "capsule", arch: "arch" }, shape, "sphere")} reflecting ${both(inks)}`,
   glass: (shape, inks) =>

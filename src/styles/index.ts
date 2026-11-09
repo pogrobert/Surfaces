@@ -22,6 +22,11 @@ import { typewriter } from "./typewriter.ts"
 import { currents } from "./currents.ts"
 import { weave } from "./weave.ts"
 import { terrazzo } from "./terrazzo.ts"
+import { dashes } from "./dashes.ts"
+import { swatchbook } from "./swatchbook.ts"
+import { patches } from "./patches.ts"
+import { trails } from "./trails.ts"
+import { prism } from "./prism.ts"
 
 export const STYLES = {
   underpaint,
@@ -49,6 +54,11 @@ export const STYLES = {
   currents,
   weave,
   terrazzo,
+  dashes,
+  swatchbook,
+  patches,
+  trails,
+  prism,
 }
 
 export type StyleName = keyof typeof STYLES
