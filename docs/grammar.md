@@ -34,15 +34,15 @@ clashing parts, naming the fix.
 A style is a preset: one combination, looked at and named. Stencil is the
 first (`paper`, `tiles`, `paint`, `inside`, `wash`); Screenprint the second
 (`paper`, `tiles`, `flat`, `inside`, `press`), built from Riso's print finish
-ported as a process. Papercut and currents followed, each adding a part or
-two.
+ported as a process. Papercut followed, with a figure of its own.
 
-Typewriter, weave, terrazzo and linocut began as presets too, and are now
-written whole (`src/layouts/typewriter.ts`, `weave.ts`, `terrazzo.ts`,
-`linocut.ts`): sharing one figure made them look alike, and a style's
-character is its own subjects. They still use the shared toolkit
-(`src/grammar/kit.ts`, `seated.ts`), the paper ground and the film, lift and
-block processes. The `type`, `weave`, `stone` and `gouge` fills stay in the
+Typewriter, weave, terrazzo, linocut and currents began as presets too, and
+are now written whole (`src/layouts/typewriter.ts`, `weave.ts`, `terrazzo.ts`,
+`linocut.ts`, `currents.ts`): sharing one figure made them look alike, and a
+style's character is its own subjects. They still use the shared toolkit
+(`src/grammar/kit.ts`, `seated.ts`, and `cloth`, `chipsIn`, `streamlines` and
+`stroke` from `materials.ts`), the paper ground and the film, lift and block
+processes. The `type`, `weave`, `stone`, `gouge` and `flow` fills stay in the
 grammar as parts.
 
 ## The judge

@@ -26,7 +26,7 @@ const ABOUT: Record<StyleName, { looks: string; suits: string }> = {
   papercut: { looks: "Layers of cut paper, each casting a soft shadow on the one behind: rainbows, ripples, nested frames, or hills under a sun.", suits: "Warm, friendly covers: nonprofits, education, consumer apps." },
   linocut: { looks: "A relief print in one deep ink: hills under a ringed sun, a white-line sprig, waves cut along their crests, or the brand's initial in a carved block.", suits: "Editorial, confident covers with a hand-made edge." },
   typewriter: { looks: "Typewriter art: the brand's initial typed large, a lit sphere, a page swelling into a round, or a table of figures, struck in characters.", suits: "Developer tools, writing, and anything about text." },
-  currents: { looks: "Fine lines drawn along a current, evenly apart, like filings round a magnet, filling one form.", suits: "AI, infrastructure and data covers." },
+  currents: { looks: "Fine lines along a current: a stream parting round a disc, a whirl drawing in to its eye, two streams joining, or a field of flow across the cover.", suits: "AI, infrastructure and data covers." },
   weave: { looks: "Woven cloth: a frayed swatch, a piece with a corner folded back, a strap, or a pile of folded cloths, in stripes, checks or a tartan.", suits: "Fashion, craft, home and anything domestic." },
   terrazzo: { looks: "Terrazzo made into things: a tile with a chipped corner, a slab, stepped blocks, or a floor in panels, the chips in the brand's colours.", suits: "Lifestyle, interiors, and calm product pages." },
   glass: { looks: "A glass object showing the light behind it, bent and dimmed.", suits: "Soft, glossy heroes." },

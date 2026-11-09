@@ -83,10 +83,6 @@ const pick = (table: Record<string, string>, shape: string | undefined, otherwis
 // A mark of tiles, as stencil and screenprint cut it.
 const TILES = { grid: "four rounded tiles round a round gap", corner: "three rounded tiles and a quarter circle", halves: "two tall tiles, one rounded at the top and one at the foot", pair: "two tall tiles around a round gap", arch: "an arch", bars: "three stacked bars", steps: "three columns rising like steps" }
 
-// One form, as the grammar draws it whole.
-const FORM = { orb: "circle", pill: "pill", slab: "rounded square", arch: "arch", dome: "dome", quarter: "quarter circle" }
-const form = (shape: string | undefined) => pick(FORM, shape, "circle")
-
 const ART: Record<string, Phrase> = {
   underpaint: (_, inks) => `soft pools of ${both(inks)} light`,
   halftone: (shape, inks) =>
@@ -215,7 +211,8 @@ const ART: Record<string, Phrase> = {
     `${pick({ landscape: "hills under a ringed sun", sprig: "a sprig of leaves", waves: "rows of waves", mark: "a large letter in a bordered block" }, shape, "a carved block")}, printed from lino in ${both(inks)} ink`,
   typewriter: (shape, inks) =>
     `${pick({ initial: "a large letter", sphere: "a sphere", page: "a typed page swelling into a round", columns: "a table of figures" }, shape, "a shape")} typed in ${both(inks)} characters`,
-  currents: (shape, inks) => `a ${form(shape)} of fine ${both(inks)} lines flowing like a current`,
+  currents: (shape, inks) =>
+    `fine ${both(inks)} lines ${pick({ obstacle: "flowing round a solid disc", vortex: "whirling in to a still eye", confluence: "in two streams joining into one", field: "flowing across the whole picture" }, shape, "flowing like a current")}`,
   weave: (shape, inks) =>
     `${pick({ swatch: "a frayed swatch", fold: "a piece with a corner folded back", strap: "a woven strap", stack: "a pile of folded cloths" }, shape, "a piece")} of woven ${both(inks)} cloth`,
   terrazzo: (shape, inks) =>

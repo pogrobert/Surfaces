@@ -221,74 +221,96 @@ export const flow: FillPart = {
     const rng = context.rng.fork("flow")
     const side = Math.max(region.w, region.h)
     const gap = side * p.gap!
-    const step = gap * 0.5
     const turn = field(rng.fork("turn"), region, 4)
     const shade = field(rng.fork("shade"), region, 3)
     const base = rng.next() * TAU
-    const angleAt = (x: number, y: number) => base + turn(x, y) * p.curl!
-    // Where lines have been, on a grid half a gap across, so a line stops
-    // before it runs into another.
-    const cols = Math.ceil(region.w / (gap * 0.5)) + 1
-    const rows = Math.ceil(region.h / (gap * 0.5)) + 1
-    const taken = new Uint8Array(cols * rows)
-    const slot = (x: number, y: number) => {
-      const i = Math.floor((x - region.x) / (gap * 0.5))
-      const j = Math.floor((y - region.y) / (gap * 0.5))
-      return i < 0 || j < 0 || i >= cols || j >= rows ? -1 : j * cols + i
-    }
-    const near = (x: number, y: number, own: Set<number>) => {
-      const i = Math.floor((x - region.x) / (gap * 0.5))
-      const j = Math.floor((y - region.y) / (gap * 0.5))
-      for (let dj = -1; dj <= 1; dj++) {
-        for (let di = -1; di <= 1; di++) {
-          const at = (j + dj) * cols + (i + di)
-          if (i + di >= 0 && j + dj >= 0 && i + di < cols && j + dj < rows && taken[at] && !own.has(at)) return true
-        }
-      }
-      return false
-    }
-    const trace = (x0: number, y0: number, way: number, own: Set<number>) => {
-      const path: number[] = []
-      let x = x0
-      let y = y0
-      for (let i = 0; i < 160; i++) {
-        const a = angleAt(x, y)
-        x += cos(a) * step * way
-        y += sin(a) * step * way
-        const at = slot(x, y)
-        if (at < 0 || near(x, y, own)) break
-        own.add(at)
-        path.push(x, y)
-      }
-      return path
-    }
     const items: { tone: Tone; shape: Shape }[] = []
-    const seeds: [number, number][] = []
-    for (let y = region.y; y < region.y + region.h; y += gap * 1.4) {
-      for (let x = region.x; x < region.x + region.w; x += gap * 1.4) seeds.push([x + rng.next() * gap, y + rng.next() * gap])
-    }
-    // In a shuffled order, so no corner fills first.
-    for (let i = seeds.length - 1; i > 0; i--) {
-      const j = Math.floor(rng.next() * (i + 1))
-      ;[seeds[i], seeds[j]] = [seeds[j]!, seeds[i]!]
-    }
-    for (const [x, y] of seeds) {
-      const start = slot(x, y)
-      if (start < 0 || taken[start] || near(x, y, new Set())) continue
-      const own = new Set([start])
-      const back = trace(x, y, -1, own)
-      const ahead = trace(x, y, 1, own)
-      const path: number[] = []
-      for (let i = back.length - 2; i >= 0; i -= 2) path.push(back[i]!, back[i + 1]!)
-      path.push(x, y, ...ahead)
-      for (const at of own) taken[at] = 1
-      if (path.length < 16) continue
+    for (const { path, x, y } of streamlines(rng, region, (px, py) => base + turn(px, py) * p.curl!, gap)) {
       const s = shade(x, y)
       const tone: Tone = s > 0.35 ? "strong" : s > -0.1 ? "accent" : s > -0.45 ? "body" : "soft"
       items.push({ tone, shape: stroke(path, gap * p.weight! * lerp(0.8, 1.3, (s + 1) / 2)) })
     }
     return byTone("flow", items)
   },
+}
+
+// Lines drawn along a field of directions, evenly apart: each from a seed
+// point both ways along the flow until it comes too near another, leaves the
+// box, or reaches a point `blocked` says no line may cross, as a stream stops
+// at a stone. Seeds are tried in a shuffled order, so no corner fills first.
+// Each line comes with the seed it grew from.
+export function streamlines(
+  rng: Rng,
+  region: Box,
+  angleAt: (x: number, y: number) => number,
+  gap: number,
+  // `seeds` start lines at given points instead, in order, as smoke is let
+  // into a wind tunnel along its inlet; with `apart` false a line runs on
+  // however near it comes to another, for a flow whose lines never cross.
+  { blocked, steps = 160, seeds: given, apart = true }: { blocked?: (x: number, y: number) => boolean; steps?: number; seeds?: [number, number][]; apart?: boolean } = {}
+): { path: number[]; x: number; y: number }[] {
+  const step = gap * 0.5
+  // Where lines have been, on a grid half a gap across, so a line stops
+  // before it runs into another.
+  const cols = Math.ceil(region.w / (gap * 0.5)) + 1
+  const rows = Math.ceil(region.h / (gap * 0.5)) + 1
+  const taken = new Uint8Array(cols * rows)
+  const slot = (x: number, y: number) => {
+    const i = Math.floor((x - region.x) / (gap * 0.5))
+    const j = Math.floor((y - region.y) / (gap * 0.5))
+    return i < 0 || j < 0 || i >= cols || j >= rows ? -1 : j * cols + i
+  }
+  const near = (x: number, y: number, own: Set<number>) => {
+    const i = Math.floor((x - region.x) / (gap * 0.5))
+    const j = Math.floor((y - region.y) / (gap * 0.5))
+    for (let dj = -1; dj <= 1; dj++) {
+      for (let di = -1; di <= 1; di++) {
+        const at = (j + dj) * cols + (i + di)
+        if (i + di >= 0 && j + dj >= 0 && i + di < cols && j + dj < rows && taken[at] && !own.has(at)) return true
+      }
+    }
+    return false
+  }
+  const trace = (x0: number, y0: number, way: number, own: Set<number>) => {
+    const path: number[] = []
+    let x = x0
+    let y = y0
+    for (let i = 0; i < steps; i++) {
+      const a = angleAt(x, y)
+      x += cos(a) * step * way
+      y += sin(a) * step * way
+      const at = slot(x, y)
+      if (at < 0 || (apart && near(x, y, own)) || blocked?.(x, y)) break
+      own.add(at)
+      path.push(x, y)
+    }
+    return path
+  }
+  const seeds: [number, number][] = given ?? []
+  if (!given) {
+    for (let y = region.y; y < region.y + region.h; y += gap * 1.4) {
+      for (let x = region.x; x < region.x + region.w; x += gap * 1.4) seeds.push([x + rng.next() * gap, y + rng.next() * gap])
+    }
+    for (let i = seeds.length - 1; i > 0; i--) {
+      const j = Math.floor(rng.next() * (i + 1))
+      ;[seeds[i], seeds[j]] = [seeds[j]!, seeds[i]!]
+    }
+  }
+  const lines: { path: number[]; x: number; y: number }[] = []
+  for (const [x, y] of seeds) {
+    const start = slot(x, y)
+    if (start < 0 || blocked?.(x, y) || (apart && (taken[start] || near(x, y, new Set())))) continue
+    const own = new Set([start])
+    const back = trace(x, y, -1, own)
+    const ahead = trace(x, y, 1, own)
+    const path: number[] = []
+    for (let i = back.length - 2; i >= 0; i -= 2) path.push(back[i]!, back[i + 1]!)
+    path.push(x, y, ...ahead)
+    for (const at of own) taken[at] = 1
+    if (path.length < 16) continue
+    lines.push({ path, x, y })
+  }
+  return lines
 }
 
 // Threads, the colours they come in, in order, repeating: plain stripes,
