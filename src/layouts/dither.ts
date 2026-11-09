@@ -9,7 +9,7 @@ import { clearing } from "./stage.ts"
 // A smooth tone, printed as 1-bit cells through an 8 by 8 ordered (Bayer)
 // screen: the look of early screens and fax machines. Every cell is decided
 // here, as geometry, so it is exactly the same on every renderer.
-export const TONES = ["orb", "slope", "bloom", "ring", "waves", "fringes", "screen"] as const
+export const TONES = ["orb", "slope", "bloom", "ring", "waves", "screen"] as const
 export type ToneForm = (typeof TONES)[number]
 
 export type DitherParams = {
@@ -105,29 +105,6 @@ export function dither(frame: Frame, form: ToneForm, p: DitherParams): Art {
       const o = out(x, y) / depth
       const wave = 0.5 + 0.5 * sin((o + (along(x, y) / depth) * tilt) * TAU * bands + phase)
       return clamp(wave * smoothstep(o + 0.6), 0, 1)
-    }
-  } else if (form === "fringes") {
-    // The double-slit experiment: two sources side by side, just past the far
-    // side of the open area. Where their waves arrive in step the tone
-    // doubles, and where they arrive out of step it cancels, leaving a fan of
-    // bands.
-    const length = p.cell * shape.between([4.5, 6.5])
-    const k = TAU / length
-    const apart = length * shape.between([2.2, 3.4])
-    const ox = middle.x + away.x * depth * 0.62
-    const oy = middle.y + away.y * depth * 0.62
-    const sources = [-0.5, 0.5].map((side) => ({
-      x: ox - away.y * apart * side,
-      y: oy + away.x * apart * side,
-    }))
-    const reach = Math.max(w, h) * p.size
-    tone = (x, y) => {
-      const [a, b] = sources.map((source) => {
-        const dx = x - source.x
-        const dy = y - source.y
-        return Math.sqrt(dx * dx + dy * dy)
-      }) as [number, number]
-      return (0.5 + 0.5 * cos(k * (a - b))) * smoothstep(1 - (a + b) / 2 / reach)
     }
   } else if (form === "screen") {
     // What lands on the screen behind two slits: a row of bars, brightest in

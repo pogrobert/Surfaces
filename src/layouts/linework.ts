@@ -1,6 +1,6 @@
-import { atan2, cos, PI, sin, smoothstep, TAU } from "../core/math.ts"
+import { atan2, cos, PI, sin, TAU } from "../core/math.ts"
 import type { Art, Frame } from "../core/recipe.ts"
-import type { Box, Loop, Mark, Motion, Shape } from "../core/scene.ts"
+import type { Box, Loop, Motion, Shape } from "../core/scene.ts"
 import { seat } from "../shapes/subjects.ts"
 import { boxesTouch, inflate } from "./geometry.ts"
 import { framing } from "./framing.ts"
@@ -8,9 +8,9 @@ import { clearing } from "./stage.ts"
 
 // Diagrams drawn in hairlines of one ink, the small print of science and
 // engineering: orbits, a fan of lines to a vanishing point, a barcode, a coil,
-// contour lines round a peak, an instrument dial, ridges, a wireframe globe, a
-// spiral, an oscilloscope figure, a plotted chart and a petal curve. No fills
-// and no colour, so the drawing is all in where the lines go.
+// contour lines round a peak, an instrument dial, a wireframe globe, a spiral,
+// an oscilloscope figure and a plotted chart. No fills and no colour, so the
+// drawing is all in where the lines go.
 export const DIAGRAMS = [
   "orbits",
   "fan",
@@ -18,12 +18,10 @@ export const DIAGRAMS = [
   "coil",
   "contour",
   "dial",
-  "ridges",
   "globe",
   "spiral",
   "lissajous",
   "chart",
-  "rose",
 ] as const
 export type Diagram = (typeof DIAGRAMS)[number]
 
@@ -72,9 +70,9 @@ const circle = (cx: number, cy: number, r: number): Shape => ({
 
 // Diagrams that run along a band rather than sit round a point. On a wide
 // cover with the title low they take the band across the top.
-const BANDS: readonly Diagram[] = ["coil", "ridges", "chart"]
+const BANDS: readonly Diagram[] = ["coil", "chart"]
 // The diagrams drawn round a centre, which a cover can frame.
-const SEATED: readonly Diagram[] = ["orbits", "contour", "dial", "globe", "spiral", "lissajous", "rose", "bars"]
+const SEATED: readonly Diagram[] = ["orbits", "contour", "dial", "globe", "spiral", "lissajous", "bars"]
 
 export function linework(frame: Frame, diagram: Diagram, p: LineworkParams): Art {
   const { w, h, safe, keep, titled, rng } = frame
@@ -98,8 +96,6 @@ export function linework(frame: Frame, diagram: Diagram, p: LineworkParams): Art
   const across = { x: -away.y, y: away.x }
   const shapes: Shape[] = []
   const dots: Shape[] = []
-  // Marks that must be drawn in order, each over the last, such as ridges.
-  const layered: Mark[] = []
   let subject: Box | undefined
 
   if (diagram === "orbits") {
@@ -228,70 +224,6 @@ export function linework(frame: Frame, diagram: Diagram, p: LineworkParams): Art
     )
     dots.push(circle(x, y, p.hair * 3.5))
     subject = { x: x - r, y: y - r, w: r * 2, h: r * 2 }
-  } else if (diagram === "ridges") {
-    // Stacked ridgelines, each hiding the ones behind it, rising toward the
-    // middle like a plot of a pulse.
-    const box = inflate(area, -margin)
-    const lines = 20 + Math.floor(p.count * 12)
-    const gap = (box.h * 0.8) / lines
-    // A few lines high, so each ridge hides only its near neighbours.
-    const peak = gap * draw.between([3.5, 6])
-    const middle = box.x + box.w * draw.between([0.4, 0.6])
-    const spread = box.w * draw.between([0.14, 0.22])
-    // Fine across the hill, where the detail is, and coarse on the flat.
-    const steps: number[] = []
-    for (let u = 0; u <= 1.0001; ) {
-      steps.push(Math.min(u, 1))
-      const near = Math.abs(box.x + box.w * u - middle) < spread * 1.7
-      u += near ? 1 / 200 : 1 / 36
-    }
-    for (let k = 0; k < lines; k++) {
-      const p1 = draw.next() * TAU
-      const p2 = draw.next() * TAU
-      const p3 = draw.next() * TAU
-      const f1 = draw.between([28, 40])
-      const f2 = draw.between([55, 80])
-      const f3 = draw.between([110, 150])
-      // Ridges toward the middle of the stack stand tallest.
-      const row = 1 - Math.abs(k / (lines - 1) - 0.55) * 1.4
-      const base = box.y + box.h - (lines - 1 - k) * gap - box.h * 0.04
-      const points: Point[] = []
-      for (const u of steps) {
-        const x = box.x + box.w * u
-        const d = Math.abs(x - middle) / spread
-        const hill = d >= 1.6 ? 0 : (1 - smoothstep(d / 1.6)) * (1 - smoothstep(d / 1.6))
-        const jitter =
-          0.5 + 0.25 * sin(u * f1 + p1) + 0.15 * sin(u * f2 + p2) + 0.1 * sin(u * f3 + p3)
-        // A whisper of noise on the flat, so it reads as a signal.
-        const flat = 0.018 * (1 + sin(u * f3 + p2) * sin(u * f2 * 0.7 + p3))
-        points.push({ x, y: base - peak * (hill * jitter * Math.max(row, 0.25) + flat) })
-      }
-      // Paper behind each line, so the ridge in front hides the one behind.
-      layered.push({
-        kind: "shapes",
-        id: `ridge-fill${k}`,
-        paint: { type: "solid", tone: "ground", opacity: 1 },
-        shapes: [
-          {
-            type: "polygon",
-            points: [
-              ...points.flatMap(({ x, y }) => [x, y]),
-              box.x + box.w,
-              box.y + box.h,
-              box.x,
-              box.y + box.h,
-            ],
-          },
-        ],
-      })
-      layered.push({
-        kind: "shapes",
-        id: `ridge${k}`,
-        paint: { type: "solid", tone: "strong", opacity: 1 },
-        shapes: [line(points, p.hair)],
-      })
-    }
-    subject = box
   } else if (diagram === "globe") {
     // A globe seen from a little above, turned and tilted: its meridians and
     // parallels projected from a sphere, and only the face toward us drawn.
@@ -413,31 +345,6 @@ export function linework(frame: Frame, diagram: Diagram, p: LineworkParams): Art
       dots.push(circle(left + box.w * u, bottom - box.h * value(u), p.hair * 2.6))
     }
     subject = box
-  } else if (diagram === "rose") {
-    // A rose curve: one line drawing a ring of petals.
-    const r = unit * 0.42 * p.size
-    const { x, y } = seatAt(r)
-    const [n, d] = draw.pick([
-      [5, 1],
-      [7, 1],
-      [4, 1],
-      [5, 3],
-      [7, 3],
-      [3, 2],
-    ] as const)
-    const spin = draw.next() * TAU
-    const points: Point[] = []
-    const samples = 1200
-    const turns = d % 2 === 1 && n % 2 === 1 ? d : d * 2
-    for (let i = 0; i <= samples; i++) {
-      const t = (PI * turns * i) / samples
-      const rr = r * cos((n / d) * t)
-      points.push({ x: x + cos(t + spin) * rr, y: y + sin(t + spin) * rr })
-    }
-    shapes.push(line(points, p.hair))
-    shapes.push(line(ellipse(x, y, r * 1.06, r * 1.06, 0), p.hair * 0.7))
-    dots.push(circle(x, y, p.hair * 2.6))
-    subject = { x: x - r, y: y - r, w: r * 2, h: r * 2 }
   } else if (diagram === "bars") {
     // A barcode: verticals of a few fixed widths, thinning out to one side.
     const side = unit * 0.92 * p.size
@@ -541,10 +448,8 @@ export function linework(frame: Frame, diagram: Diagram, p: LineworkParams): Art
   // A soft light behind the diagram, so the ground isn't flat paper.
   const lit = subject ?? { x: area.x, y: area.y, w: area.w, h: area.h }
   const glow = Math.max(lit.w, lit.h) * 0.95
-  // Ridges hide each other with paper, and paper over a glow would show as a
-  // box, so they stand on the plain ground.
-  const under: Art["under"] = [{ kind: "fill", id: "ground", tone: "ground" }]
-  if (layered.length === 0) under.push(
+  const under: Art["under"] = [
+    { kind: "fill", id: "ground", tone: "ground" },
     {
       kind: "pool",
       id: "glow",
@@ -556,7 +461,8 @@ export function linework(frame: Frame, diagram: Diagram, p: LineworkParams): Art
       tone: "soft",
       opacity: 0.5,
       core: 0.1,
-    })
+    },
+  ]
 
   // A diagram is drawn on line by line, the way a plotter draws it, and its
   // dots follow. A round one then turns slowly about its middle; the rest
@@ -565,7 +471,7 @@ export function linework(frame: Frame, diagram: Diagram, p: LineworkParams): Art
   const moves = frame.motion !== "none"
   const stagger = Math.min(0.08, 1.1 / Math.max(lines.length, 1))
   const drawn = 0.2 + 1.4 + stagger * Math.max(lines.length - 1, 0)
-  const ROUND: readonly Diagram[] = ["orbits", "rose", "spiral", "lissajous"]
+  const ROUND: readonly Diagram[] = ["orbits", "spiral", "lissajous"]
   const loop: Loop | undefined =
     moves && subject
       ? ROUND.includes(diagram)
@@ -582,22 +488,6 @@ export function linework(frame: Frame, diagram: Diagram, p: LineworkParams): Art
   return {
     under,
     marks: [
-      // Ridges keep their own order; anything on the title is dropped with
-      // its paper.
-      // The paper behind a ridge is the ground's own colour, so it may reach
-      // the title; only the lines are held off it.
-      // Every layer stays, whatever the size, so one seed is one drawing at
-      // every size; only the shapes on the title go.
-      ...layered.map((mark, index) => {
-        const kept =
-          mark.kind === "shapes" && !mark.id.startsWith("ridge-fill")
-            ? { ...mark, shapes: mark.shapes.filter(clear) }
-            : mark
-        // Ridges rise one after another, from the back.
-        return moves
-          ? { ...kept, motion: { enter: { kind: "fade", delay: 0.1 + Math.floor(index / 2) * 0.09, duration: 0.9, dy: 14 } } as Motion }
-          : kept
-      }),
       {
         kind: "shapes",
         id: "lines",

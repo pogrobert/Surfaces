@@ -68,7 +68,7 @@ export function stage(frame: Frame, subject: Subject, p: StageParams): Art {
   const light = theme === "dark" ? lit : lit + PI
   // Now and then a round subject is drawn larger, cropping off the edge. Only
   // on wide covers: on square and tall ones there isn't the room.
-  const round = subject === "orb" || subject === "ring" || subject === "eclipse"
+  const round = subject === "orb" || subject === "ring"
   const bold = rng.fork("scale").next() < 0.2 && round && w >= h * 1.3
   // With nothing to keep clear, most round subjects are framed large and on
   // a third, running off the edges (see framing.ts); the others are drawn

@@ -1,6 +1,6 @@
-import { cos, PI, sin, TAU } from "../core/math.ts"
+import { cos, sin } from "../core/math.ts"
 import type { Rng } from "../core/random.ts"
-import type { Box, Mark, Pool, Shapes } from "../core/scene.ts"
+import type { Box, Mark, Pool } from "../core/scene.ts"
 import { center, distanceFrom, stops } from "../layouts/geometry.ts"
 import type { Keep } from "../layouts/geometry.ts"
 
@@ -10,9 +10,6 @@ export const SUBJECTS = [
   "orb",
   "ring",
   "arch",
-  "limb",
-  "fold",
-  "eclipse",
   "beam",
 ] as const
 export type Subject = (typeof SUBJECTS)[number]
@@ -38,8 +35,6 @@ export type Stage = {
 
 export type SubjectParams = {
   ringWeight: number
-  limbScale: number
-  sag: number
 }
 
 export type Drawn = { light: Mark[]; subject?: Box; cx: number; cy: number }
@@ -194,177 +189,6 @@ function arch(stage: Stage, _: SubjectParams): Drawn {
   }
 }
 
-// The rim of something far larger than the frame.
-function limb(stage: Stage, { limbScale }: SubjectParams): Drawn {
-  const { w, h, area, away } = stage
-  const r = Math.max(w, h) * limbScale
-  const middle = center(area)
-  const rimX = middle.x - away.x * area.w * 0.12
-  const rimY = middle.y - away.y * area.h * 0.12
-  const x = rimX + away.x * r
-  const y = rimY + away.y * r
-  return {
-    cx: rimX,
-    cy: rimY,
-    light: [
-      halo(rimX, rimY, Math.min(area.w, area.h) * 0.9, 0.16),
-      {
-        kind: "shapes",
-        id: "limb",
-        paint: {
-          type: "radial",
-          cx: x,
-          cy: y,
-          r,
-          stops: stops(
-            "strong",
-            [0.66, 0],
-            [0.88, stage.peak * 0.22],
-            [0.97, stage.peak * 0.68],
-            [1, stage.peak]
-          ),
-        },
-        shapes: [{ type: "circle", cx: x, cy: y, r }],
-      },
-    ],
-  }
-}
-
-// Sheets of light turning over: a long slow wave of crisp edge, a body that
-// thins out away from the title, and a second sheet behind it, out of step.
-function fold(stage: Stage, { sag }: SubjectParams): Drawn {
-  const { w, h, area, away, safe, rng } = stage
-  const across = { x: -away.y, y: away.x }
-  const span = Math.sqrt(w * w + h * h) * 0.75
-  const reach = Math.min(area.w, area.h)
-  const swell = reach * sag
-  const waves = rng.between([0.9, 1.5])
-  const phase = rng.next() * TAU
-  const margin = Math.min(w, h) * 0.05
-  const depth = reach * 0.62
-
-  const edge = (ox: number, oy: number, height: number, shift: number) => {
-    const points: { x: number; y: number }[] = []
-    for (let i = 0; i <= 72; i++) {
-      const along = -span + (2 * span * i) / 72
-      const lift = height * sin((PI * waves * along) / span + shift)
-      points.push({
-        x: ox + across.x * along + away.x * lift,
-        y: oy + across.y * along + away.y * lift,
-      })
-    }
-    return points
-  }
-
-  // The edge stays clear of the title by moving away from it.
-  const middle = center(area)
-  let x = middle.x - away.x * reach * 0.12
-  let y = middle.y - away.y * reach * 0.12
-  for (let step = 0; step < 32; step++) {
-    if (
-      edge(x, y, swell, phase).every(
-        (point) => distanceFrom(safe, point.x, point.y) > margin
-      )
-    ) {
-      break
-    }
-    x += away.x * margin
-    y += away.y * margin
-  }
-
-  const sheet = (
-    id: string,
-    ox: number,
-    oy: number,
-    height: number,
-    shift: number,
-    peak: number
-  ): Shapes => {
-    const line = edge(ox, oy, height, shift)
-    const far = Math.max(w, h) * 2
-    const first = line[0]!
-    const last = line[line.length - 1]!
-    return {
-      kind: "shapes",
-      id,
-      paint: {
-        type: "linear",
-        x1: ox - away.x * height,
-        y1: oy - away.y * height,
-        x2: ox + away.x * (depth + height),
-        y2: oy + away.y * (depth + height),
-        stops: stops(
-          "strong",
-          [0, peak],
-          [0.2, peak * 0.74],
-          [0.52, peak * 0.2],
-          [1, 0]
-        ),
-      },
-      shapes: [
-        {
-          type: "polygon",
-          points: [
-            ...line.flatMap((point) => [point.x, point.y]),
-            last.x + away.x * far,
-            last.y + away.y * far,
-            first.x + away.x * far,
-            first.y + away.y * far,
-          ],
-        },
-      ],
-    }
-  }
-
-  const behind = reach * 0.3
-  return {
-    cx: x + away.x * reach * 0.2,
-    cy: y + away.y * reach * 0.2,
-    light: [
-      sheet(
-        "fold-back",
-        x + away.x * behind,
-        y + away.y * behind,
-        swell * 0.8,
-        phase + 1.5,
-        stage.peak * 0.58
-      ),
-      sheet("fold", x, y, swell, phase, stage.peak),
-    ],
-  }
-}
-
-// A disc lit only at its rim, as the moon is in an eclipse.
-function eclipse(stage: Stage, _: SubjectParams): Drawn {
-  const r = Math.min(stage.area.w, stage.area.h) * 0.5 * stage.size
-  const { x, y } = seat(stage, r)
-  // The gradient is centred off toward the dark side, so only the lit rim
-  // reaches its bright end.
-  const cx = x - cos(stage.light) * r * 0.32
-  const cy = y - sin(stage.light) * r * 0.32
-  return {
-    cx: x,
-    cy: y,
-    subject: { x: x - r, y: y - r, w: r * 2, h: r * 2 },
-    light: [
-      halo(x + cos(stage.lit) * r * 0.9, y + sin(stage.lit) * r * 0.9, r * 0.9, 0.24),
-      {
-        kind: "shapes",
-        id: "eclipse",
-        paint: {
-          type: "radial",
-          cx,
-          cy,
-          r: r * 1.32,
-          stops: // The dark face keeps a little light, as the moon's does from the earth.
-          stops("strong", [0, stage.peak * 0.12], [0.5, stage.peak * 0.12], [0.74, stage.peak * 0.4], [0.9, stage.peak * 0.85], [1, stage.peak]),
-        },
-        shapes: [{ type: "circle", cx: x, cy: y, r }],
-      },
-    ],
-  }
-}
-
 // A wedge of light falling into the open area from beyond its far edge.
 function beam(stage: Stage, _: SubjectParams): Drawn {
   const { area, away, w, h } = stage
@@ -422,4 +246,4 @@ function beam(stage: Stage, _: SubjectParams): Drawn {
 export const DRAW_SUBJECT: Record<
   Subject,
   (stage: Stage, params: SubjectParams) => Drawn
-> = { orb, ring, arch, limb, fold, eclipse, beam }
+> = { orb, ring, arch, beam }

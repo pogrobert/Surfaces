@@ -103,7 +103,7 @@ const ART: Record<string, Phrase> = {
     `a pattern of small ${both(inks)} ${pick({ bubble: "bubbles", arch: "arches", leaf: "leaves", disc: "circles" }, shape, "shapes")}`,
   aquatint: (shape, inks) =>
     `a grainy ${both(inks)} ${pick(
-      { orb: "sphere", ring: "ring", arch: "arch", limb: "curve, like the edge of a planet", fold: "folded shape", eclipse: "eclipse", beam: "beam of light" },
+      { orb: "sphere", ring: "ring", arch: "arch", beam: "beam of light" },
       shape,
       "shape"
     )}`,
@@ -164,12 +164,10 @@ const ART: Record<string, Phrase> = {
         coil: "a coiled spring",
         contour: "contour lines round a peak",
         dial: "a dial with tick marks",
-        ridges: "stacked mountain ridges",
         globe: "a wireframe globe",
         spiral: "a spiral",
         lissajous: "looping curves",
         chart: "a wavy line on a grid",
-        rose: "a petal-shaped curve",
       },
       shape,
       "curves"
@@ -181,7 +179,6 @@ const ART: Record<string, Phrase> = {
         bloom: `a pixelated ${both(inks)} glow`,
         ring: `a pixelated ${both(inks)} ring`,
         waves: `pixelated ${both(inks)} waves`,
-        fringes: `pixelated ${both(inks)} stripes`,
         screen: `pixelated ${both(inks)} stripes`,
       },
       shape,

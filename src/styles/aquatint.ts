@@ -15,8 +15,6 @@ export const aquatint = defineRecipe({
     peak: [0.8, 0.96],
     lightTurn: [-48, 48],
     ringWeight: [0.52, 0.68],
-    limbScale: [0.62, 0.95],
-    sag: [0.2, 0.34],
     glow: [0.4, 0.7],
     grainSize: [0.6, 0.8],
     hardness: [1.7, 3.2],
