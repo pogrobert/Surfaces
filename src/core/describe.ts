@@ -206,7 +206,7 @@ const ART: Record<string, Phrase> = {
       "a stencilled shape"
     )}, filled with loose ${both(inks)} paint, on folded paper`,
   papercut: (shape, inks) =>
-    `${pick({ rainbow: "arches", ripples: "rings", frames: "rounded squares", hills: "hills under a sun" }, shape, "arches")} of cut ${both(inks)} paper, layered with soft shadows`,
+    `${pick({ rainbow: "arches", ripples: "rings", frames: "rounded squares", dunes: "long curving strips", hills: "hills under a sun" }, shape, "arches")} of cut ${both(inks)} paper, layered with soft shadows`,
   linocut: (shape, inks) =>
     `${pick({ landscape: "hills under a ringed sun", sprig: "a sprig of leaves", waves: "rows of waves", mark: "a large letter in a bordered block" }, shape, "a carved block")}, printed from lino in ${both(inks)} ink`,
   typewriter: (shape, inks) =>

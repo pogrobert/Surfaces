@@ -143,6 +143,43 @@ const STACKS: Record<string, (count: number, rng: Rng) => Points[]> = {
       return box(cx - half, cy - half, half * 2, half * 2, round)
     })
   },
+  // Long strips of paper laid across one another, each a gentle curve with
+  // round ends, lower and a little longer than the one behind it, like dunes
+  // or a sea in bands.
+  dunes: (count, rng) => {
+    const lean = rng.between([-0.22, 0.22])
+    const bend = rng.between([0.5, 1.1])
+    const phase = rng.next() * TAU
+    return Array.from({ length: count + 1 }, (_, k): Points => {
+      const half = 0.11
+      const middle = 0.16 + (k / count) * 0.68
+      const reach = 0.36 + (k / count) * 0.1
+      const centre = (t: number) => [0.5 + t * reach, middle + t * lean * reach + sin(t * PI * bend + phase + k * 0.6) * 0.04] as const
+      // Points along the centre line, then out each side and round the ends.
+      const along = Array.from({ length: 41 }, (_, i) => -1 + i / 20)
+      const top: Points = []
+      const foot: Points = []
+      for (const t of along) {
+        const [x, y] = centre(t)
+        const [nx, ny] = centre(Math.min(t + 0.02, 1))
+        const [px, py] = centre(Math.max(t - 0.02, -1))
+        const dx = nx - px
+        const dy = ny - py
+        const d = Math.sqrt(dx * dx + dy * dy)
+        top.push(x + (dy / d) * half, y - (dx / d) * half)
+        foot.push(x - (dy / d) * half, y + (dx / d) * half)
+      }
+      const [ex, ey] = centre(1)
+      const [sx, sy] = centre(-1)
+      const end = atan2(top[top.length - 1]! - ey, top[top.length - 2]! - ex)
+      const start = atan2(foot[1]! - sy, foot[0]! - sx)
+      const rows: Points = [...top]
+      rows.push(...arc(ex, ey, half, end, end + PI, 12).slice(2, -2))
+      for (let i = foot.length - 2; i >= 0; i -= 2) rows.push(foot[i]!, foot[i + 1]!)
+      rows.push(...arc(sx, sy, half, start, start + PI, 12).slice(2, -2))
+      return rows
+    })
+  },
   // A disc of sky, a sun low in it, and hills before it, each lower and
   // nearer, cut to the disc's edge.
   hills: (count, rng) => {
@@ -181,7 +218,8 @@ const STACKS: Record<string, (count: number, rng: Rng) => Points[]> = {
 }
 
 // A paper cut: layers of one outline stacked back to front, rainbows,
-// ripples, frames or hills under a sun. A relation lays each on the last.
+// ripples, frames, dunes or hills under a sun. A relation lays each on the
+// last.
 export const cut: FigurePart = {
   name: "cut",
   ranges: {
@@ -193,7 +231,7 @@ export const cut: FigurePart = {
     calm: { layers: [4, 4.99] },
     bold: { layers: [5, 6.99], size: [0.9, 0.96] },
   },
-  shapes: ["rainbow", "ripples", "frames", "hills"],
+  shapes: ["rainbow", "ripples", "frames", "dunes", "hills"],
   // Its layers are laid one on another, not seen through, printed in two
   // inks, laid as grain or washed together.
   avoid: ["inside", "cutout", "press", "plate", "block", "wash"],

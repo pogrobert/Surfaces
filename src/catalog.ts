@@ -23,7 +23,7 @@ const ABOUT: Record<StyleName, { looks: string; suits: string }> = {
   chrome: { looks: "A polished chrome object in a pool of the brand's light.", suits: "Bold, glossy heroes." },
   screenprint: { looks: "A bold mark of rounded tiles printed in two flat inks that don't quite line up, on folded paper.", suits: "Confident, graphic covers that read like a brand mark." },
   stencil: { looks: "Loose paint seen through a stencil of rounded tiles, on folded paper.", suits: "Warm, crafted covers with one bold mark." },
-  papercut: { looks: "Layers of cut paper, each casting a soft shadow on the one behind: rainbows, ripples, nested frames, or hills under a sun.", suits: "Warm, friendly covers: nonprofits, education, consumer apps." },
+  papercut: { looks: "Layers of cut paper, each casting a soft shadow on the one behind: rainbows, ripples, nested frames, dunes, or hills under a sun.", suits: "Warm, friendly covers: nonprofits, education, consumer apps." },
   linocut: { looks: "A relief print in one deep ink: hills under a ringed sun, a white-line sprig, waves cut along their crests, or the brand's initial in a carved block.", suits: "Editorial, confident covers with a hand-made edge." },
   typewriter: { looks: "Typewriter art: the brand's initial typed large, a lit sphere, a page swelling into a round, or a table of figures, struck in characters.", suits: "Developer tools, writing, and anything about text." },
   currents: { looks: "Fine lines along a current: a stream parting round a disc, a whirl drawing in to its eye, two streams joining, or a field of flow across the cover.", suits: "AI, infrastructure and data covers." },

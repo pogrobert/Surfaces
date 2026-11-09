@@ -15,7 +15,7 @@ combination, and a new answer to one decision works with every other.
 | Layer | Question | Parts so far |
 |---|---|---|
 | ground | What is it printed on? | `plain`, `paper` (warm stock, one fold) |
-| figure | What is the subject? | `tiles` (grid, corner, halves, pair, arch, bars, steps), `form` (one shape drawn true: orb, pill, slab, arch, dome, quarter), `cut` (layers of paper: rainbow, ripples, frames, hills) |
+| figure | What is the subject? | `tiles` (grid, corner, halves, pair, arch, bars, steps), `form` (one shape drawn true: orb, pill, slab, arch, dome, quarter), `cut` (layers of paper: rainbow, ripples, frames, dunes, hills) |
 | fill | What is the ink? | `paint` (torn blots in three coats), `flat`, `gouge` (a block with lines cut from it), `type` (typewriter characters), `flow` (lines along a current), `weave` (threads over and under), `stone` (terrazzo chips) |
 | relation | How do figure and fill meet? | `inside` (fill seen through the figure), `cutout` (figure cut from a slab of fill), `stacked` (layers laid one on the next, deepening) |
 | process | How was it reproduced? | `film`, `wash` (soft inside, sharp edge), `plate` (one-ink aquatint), `press` (two inks out of line, Riso's own print), `lift` (cut paper casting soft shadows), `block` (a relief print, its cuts left as paper) |
