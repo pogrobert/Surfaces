@@ -36,7 +36,7 @@ function field(rng: Rng, box: Box, waves = 4) {
 
 // A gouge's stroke along a path: thin at both ends, full in the middle, as a
 // V-tool goes in and comes out of the block.
-function stroke(points: number[], width: number): Shape {
+export function stroke(points: number[], width: number): Shape {
   const ribbon: number[] = []
   const count = points.length / 2
   for (let i = 0; i < count; i++) {
@@ -440,49 +440,61 @@ export const stone: FillPart = {
     bold: { chips: [100, 120], largest: [0.095, 0.11] },
   },
 
-  paint(context, region, p) {
-    const rng = context.rng.fork("stone")
-    const side = Math.max(region.w, region.h)
-    const TONES: readonly Tone[] = ["accent", "accent", "strong", "partner", "partner", "body", "ink"]
-    const placed: { x: number; y: number; r: number }[] = []
-    const items: { tone: Tone; shape: Shape }[] = []
-    const chip = (x: number, y: number, r: number, corners: number) => {
-      const turn = rng.next() * TAU
-      const angles = Array.from({ length: corners }, (_, k) => turn + ((k + rng.between([-0.3, 0.3])) / corners) * TAU).sort((a, b) => a - b)
-      const points: number[] = []
-      for (const a of angles) {
-        const rr = r * rng.between([0.62, 1])
-        points.push(x + cos(a) * rr, y + sin(a) * rr * rng.between([0.75, 1]))
-      }
-      return { type: "polygon", points } as Shape
+  paint: (context, region, p) => chipsIn(context.rng.fork("stone"), region, { chips: p.chips!, largest: p.largest!, specks: p.specks! }),
+}
+
+// Terrazzo filling a box: chips of stone in the brand's colours, large ones few
+// and small ones many and none touching, and fine specks, set in a pale ground.
+// `scale` is the side the chip sizes and counts are measured against, so pieces
+// of one floor share one stone; by default the box's own longer side.
+export function chipsIn(
+  rng: Rng,
+  region: Box,
+  { chips, largest, specks }: { chips: number; largest: number; specks: number },
+  { scale, id }: { scale?: number; id?: string } = {}
+): Mark[] {
+  const side = scale ?? Math.max(region.w, region.h)
+  const share = scale ? (region.w * region.h) / (side * side) : 1
+  const prefix = id ? `${id}-` : ""
+  const TONES: readonly Tone[] = ["accent", "accent", "strong", "partner", "partner", "body", "ink"]
+  const placed: { x: number; y: number; r: number }[] = []
+  const items: { tone: Tone; shape: Shape }[] = []
+  const chip = (x: number, y: number, r: number, corners: number) => {
+    const turn = rng.next() * TAU
+    const angles = Array.from({ length: corners }, (_, k) => turn + ((k + rng.between([-0.3, 0.3])) / corners) * TAU).sort((a, b) => a - b)
+    const points: number[] = []
+    for (const a of angles) {
+      const rr = r * rng.between([0.62, 1])
+      points.push(x + cos(a) * rr, y + sin(a) * rr * rng.between([0.75, 1]))
     }
-    const count = Math.round(p.chips!)
-    for (let k = 0, tries = 0; k < count && tries < count * 30; tries++) {
-      // Sizes fall off steeply: a few large chips among many small.
-      const size = rng.next()
-      const r = side * p.largest! * lerp(0.18, 1, size * size * size)
-      const x = region.x + rng.next() * region.w
-      const y = region.y + rng.next() * region.h
-      if (placed.some((other) => distance(other.x - x, other.y - y) < (other.r + r) * 1.08)) continue
-      placed.push({ x, y, r })
-      items.push({ tone: rng.pick(TONES), shape: chip(x, y, r, rng.int(5, 8)) })
-      k++
-    }
-    const specks: { tone: Tone; shape: Shape }[] = []
-    for (let k = 0; k < Math.round(p.specks!); k++) {
-      const x = region.x + rng.next() * region.w
-      const y = region.y + rng.next() * region.h
-      specks.push({ tone: rng.pick(["body", "strong", "accent"] as const), shape: chip(x, y, side * rng.between([0.003, 0.008]), 5) })
-    }
-    // The ground the chips are set in: a step off the paper, so the slab keeps
-    // its edge.
-    return [
-      solid("matrix", "soft", [rect(region)]),
-      // A little of the colour's body in it, so a pale brand's ground still
-      // stands off the paper.
-      solid("tint", "body", [rect(region)], 0.22),
-      ...byTone("chips", items),
-      ...byTone("specks", specks, 0.75),
-    ]
-  },
+    return { type: "polygon", points } as Shape
+  }
+  const count = Math.round(chips * share)
+  for (let k = 0, tries = 0; k < count && tries < count * 30; tries++) {
+    // Sizes fall off steeply: a few large chips among many small.
+    const size = rng.next()
+    const r = side * largest * lerp(0.18, 1, size * size * size)
+    const x = region.x + rng.next() * region.w
+    const y = region.y + rng.next() * region.h
+    if (placed.some((other) => distance(other.x - x, other.y - y) < (other.r + r) * 1.08)) continue
+    placed.push({ x, y, r })
+    items.push({ tone: rng.pick(TONES), shape: chip(x, y, r, rng.int(5, 8)) })
+    k++
+  }
+  const dust: { tone: Tone; shape: Shape }[] = []
+  for (let k = 0; k < Math.round(specks * share); k++) {
+    const x = region.x + rng.next() * region.w
+    const y = region.y + rng.next() * region.h
+    dust.push({ tone: rng.pick(["body", "strong", "accent"] as const), shape: chip(x, y, side * rng.between([0.003, 0.008]), 5) })
+  }
+  // The ground the chips are set in: a step off the paper, so the slab keeps
+  // its edge.
+  return [
+    solid(`${prefix}matrix`, "soft", [rect(region)]),
+    // A little of the colour's body in it, so a pale brand's ground still
+    // stands off the paper.
+    solid(`${prefix}tint`, "body", [rect(region)], 0.22),
+    ...byTone(`${prefix}chips`, items),
+    ...byTone(`${prefix}specks`, dust, 0.75),
+  ]
 }

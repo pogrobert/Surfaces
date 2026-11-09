@@ -114,3 +114,19 @@ export function behind({ calm, w, h }: Pick<Frame, "calm" | "w" | "h">, side: nu
   if (!box) return side
   return Math.max(side, box.w + (w - box.w) * reach, box.h + (h - box.h) * reach)
 }
+
+// Whether a point is inside outlines by the even-odd rule, so a letter's
+// counters stay open.
+export function insideOf(contours: readonly (readonly number[])[], x: number, y: number) {
+  let inside = false
+  for (const points of contours) {
+    for (let i = 0, j = points.length - 2; i < points.length; j = i, i += 2) {
+      const xi = points[i]!
+      const yi = points[i + 1]!
+      const xj = points[j]!
+      const yj = points[j + 1]!
+      if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside
+    }
+  }
+  return inside
+}

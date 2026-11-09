@@ -211,13 +211,15 @@ const ART: Record<string, Phrase> = {
     )}, filled with loose ${both(inks)} paint, on folded paper`,
   papercut: (shape, inks) =>
     `${pick({ rainbow: "arches", ripples: "rings", frames: "rounded squares", hills: "hills under a sun" }, shape, "arches")} of cut ${both(inks)} paper, layered with soft shadows`,
-  linocut: (shape, inks) => `a ${form(shape)} printed from a carved block in ${both(inks)} ink`,
+  linocut: (shape, inks) =>
+    `${pick({ landscape: "hills under a ringed sun", sprig: "a sprig of leaves", waves: "rows of waves", mark: "a large letter in a bordered block" }, shape, "a carved block")}, printed from lino in ${both(inks)} ink`,
   typewriter: (shape, inks) =>
     `${pick({ initial: "a large letter", sphere: "a sphere", page: "a typed page swelling into a round", columns: "a table of figures" }, shape, "a shape")} typed in ${both(inks)} characters`,
   currents: (shape, inks) => `a ${form(shape)} of fine ${both(inks)} lines flowing like a current`,
   weave: (shape, inks) =>
     `${pick({ swatch: "a frayed swatch", fold: "a piece with a corner folded back", strap: "a woven strap", stack: "a pile of folded cloths" }, shape, "a piece")} of woven ${both(inks)} cloth`,
-  terrazzo: (shape, inks) => `a ${form(shape)} of terrazzo, ${both(inks)} chips set in stone`,
+  terrazzo: (shape, inks) =>
+    `${pick({ tile: "a terrazzo tile with a chipped corner", slab: "a slab of terrazzo", steps: "two stepped blocks of terrazzo", floor: "a terrazzo floor in panels" }, shape, "terrazzo")}, its chips ${both(inks)}`,
   chrome: (shape, inks) =>
     `a shiny chrome ${pick({ ring: "ring", capsule: "capsule", arch: "arch" }, shape, "sphere")} reflecting ${both(inks)}`,
   glass: (shape, inks) =>

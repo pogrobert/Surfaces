@@ -2,7 +2,7 @@ import { clamp, cos, PI, sin, TAU } from "../core/math.ts"
 import type { Rng } from "../core/random.ts"
 import type { Art, Frame } from "../core/recipe.ts"
 import type { Box, Mark, Shape, Tone } from "../core/scene.ts"
-import { behind } from "../grammar/kit.ts"
+import { behind, insideOf } from "../grammar/kit.ts"
 import { CAP, CAPITALS, DIGITS, KEYS } from "../grammar/keys.ts"
 import type { Key } from "../grammar/keys.ts"
 import { seated } from "../grammar/seated.ts"
@@ -35,22 +35,6 @@ function keyFor(ink: number): { key: Key; tone: Tone } {
   const key = KEYS[Math.min(KEYS.length - 1, Math.floor(ink * KEYS.length))]!
   const tone: Tone = ink > 0.8 ? "ink" : ink > 0.56 ? "strong" : ink > 0.32 ? "accent" : "body"
   return { key, tone }
-}
-
-// Whether a point is inside outlines by the even-odd rule, so a letter's
-// counters stay open.
-function insideOf(contours: readonly (readonly number[])[], x: number, y: number) {
-  let inside = false
-  for (const points of contours) {
-    for (let i = 0, j = points.length - 2; i < points.length; j = i, i += 2) {
-      const xi = points[i]!
-      const yi = points[i + 1]!
-      const xj = points[j]!
-      const yj = points[j + 1]!
-      if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside
-    }
-  }
-  return inside
 }
 
 // A slow texture over the sheet, -1 to 1, so a tone typed flat still varies
