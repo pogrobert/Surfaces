@@ -1,4 +1,4 @@
-import { clamp, cos, PI, sin, TAU } from "../core/math.ts"
+import { atan2, clamp, cos, PI, sin, TAU } from "../core/math.ts"
 import type { Art, Frame } from "../core/recipe.ts"
 import type { Layer, Mark, Shape, Tone } from "../core/scene.ts"
 import { behind, boundsOf, circle, keptClear } from "../grammar/kit.ts"
@@ -87,7 +87,8 @@ export function trails(frame: Frame, subject: Subject, p: TrailParams): Art {
     const spread = Math.min(w, h) * 0.32
     const hotAt = draw.int(Math.floor(n * 0.3), Math.floor(n * 0.7))
     for (let k = 0; k < n; k++) {
-      const offset = (((k + 0.5) / n - 0.5) * 2) ** 3 * spread + draw.between([-0.5, 0.5]) * width * 3
+      const lane = ((k + 0.5) / n - 0.5) * 2
+      const offset = lane * lane * lane * spread + draw.between([-0.5, 0.5]) * width * 3
       const from = draw.between([-0.1, 0.35])
       const to = from + draw.between([0.45, 0.9])
       const path = along((t) => {
@@ -126,10 +127,15 @@ export function trails(frame: Frame, subject: Subject, p: TrailParams): Art {
       [w, h],
       [0, h],
     ] as const
-    const far = titled ? corners.reduce((best, corner) => (Math.hypot(corner[0] - (keep[0]!.x + keep[0]!.w / 2), corner[1] - (keep[0]!.y + keep[0]!.h / 2)) > Math.hypot(best[0] - (keep[0]!.x + keep[0]!.w / 2), best[1] - (keep[0]!.y + keep[0]!.h / 2)) ? corner : best)) : draw.pick(corners)
+    const away = (corner: readonly [number, number]) => {
+      const dx = corner[0] - (keep[0]!.x + keep[0]!.w / 2)
+      const dy = corner[1] - (keep[0]!.y + keep[0]!.h / 2)
+      return dx * dx + dy * dy
+    }
+    const far = titled ? corners.reduce((best, corner) => (away(corner) > away(best) ? corner : best)) : draw.pick(corners)
     const [ox, oy] = far
     // The turn from one edge to the next about that corner, a quarter round.
-    const start = Math.atan2(h / 2 - oy, w / 2 - ox) - PI / 4
+    const start = atan2(h / 2 - oy, w / 2 - ox) - PI / 4
     const base = Math.min(w, h) * draw.between([0.42, 0.62])
     const spread = Math.min(w, h) * 0.3
     const hotAt = draw.int(Math.floor(n * 0.3), Math.floor(n * 0.7))

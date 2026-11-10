@@ -72,7 +72,10 @@ export const union = (boxes: Box[]): Box => {
 // Outlines drawn a little smaller about their middle until they come no
 // nearer the title than the square they were seated in may: a turned
 // outline reaches past its square at the corners.
-export function keptClear(context: Pick<Frame, "w" | "h" | "keep" | "titled" | "fill" | "calm">, outlines: Points[], away: { x: number; y: number }): Points[] {
+// `whole` is for a thing that reads only seen whole, such as a hand of cards
+// or a ring: it is slid back onto the canvas even when it needed no
+// shrinking, where its stage ran past an edge to give it room.
+export function keptClear(context: Pick<Frame, "w" | "h" | "keep" | "titled" | "fill" | "calm">, outlines: Points[], away: { x: number; y: number }, { whole = false }: { whole?: boolean } = {}): Points[] {
   const { w, h, keep, titled, fill, calm } = context
   if (!titled || fill || calm.length) return outlines
   const margin = Math.min(w, h) * 0.06
@@ -89,7 +92,7 @@ export function keptClear(context: Pick<Frame, "w" | "h" | "keep" | "titled" | "
     drawn = drawn.map((points) => points.map((v, i) => (i % 2 ? cy + (v - cy) * 0.92 : cx + (v - cx) * 0.92)))
     shrunk = true
   }
-  if (!shrunk) return drawn
+  if (!shrunk && !whole) return drawn
   // Drawn smaller, it may have been left hanging off an edge it no longer
   // needs to run off: it is slid back onto the canvas as far as it can go
   // without coming nearer the title.

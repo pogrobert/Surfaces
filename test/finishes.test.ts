@@ -82,6 +82,7 @@ test("any layout can go through any finish", () => {
         p,
         shape: recipe.shapes?.[0],
         rng: createRng("matrix"),
+        seed: "matrix",
       })
       const svg = toSvg({ ...base, layers: finish(art) })
       assert.doesNotMatch(svg, /NaN|undefined/, `${style} through ${name}`)

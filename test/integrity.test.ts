@@ -20,10 +20,13 @@ import { coverage, keptBoxes, worstTitleContrast } from "../src/core/judge.ts"
 // 1,000 seeds, each through every style with a random colour, use or size,
 // mood and theme.
 const INPUTS = randomInputs(1000)
-const scenes = INPUTS.map((input) => ({
-  input,
-  scene: generate(input),
-}))
+// Made again for each test that reads them rather than all held at once: a
+// thousand scenes of the densest styles together outgrow a modest heap.
+const scenes = {
+  *[Symbol.iterator]() {
+    for (const input of INPUTS) yield { input, scene: generate(input) }
+  },
+}
 const label = (input: unknown) => JSON.stringify(input)
 
 // What a missing or broken number prints as. Ids are lowercase base 36 hashes

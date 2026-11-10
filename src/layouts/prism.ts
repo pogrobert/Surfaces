@@ -40,7 +40,7 @@ function band(centre: Points, width: (t: number) => number, stripes: number) {
     const b = Math.min(i + 1, n - 1)
     const dx = centre[b * 2]! - centre[a * 2]!
     const dy = centre[b * 2 + 1]! - centre[a * 2 + 1]!
-    const d = Math.hypot(dx, dy) || 1
+    const d = Math.sqrt(dx * dx + dy * dy) || 1
     normals.push([-dy / d, dx / d])
   }
   const edge = (share: number) => {
@@ -75,6 +75,9 @@ export function prism(frame: Frame, subject: Subject, p: PrismParams): Art {
   const { x: cx, y: cy } = seat
   const wide = side * p.band
   const angle = p.turn
+  // In a wide band of room beside a title, a band runs longer and a ring is
+  // wider, so each holds the room it is given.
+  const wider = !frame.titled || frame.calm.length || frame.fill ? 1 : clamp(stage.area.w / stage.area.h / 1.4, 1, 1.6)
 
   // Each band as a centre line and a width along it.
   const bands: { centre: Points; width: (t: number) => number }[] = []
@@ -96,10 +99,10 @@ export function prism(frame: Frame, subject: Subject, p: PrismParams): Art {
   let bars: { x: number; w: number; top: Tone; foot: Tone }[] = []
   let frameBox = { x: 0, y: 0, w: 0, h: 0 }
   if (subject === "ribbon") {
-    bands.push({ centre: sway(side * 0.98, side * 0.16, 2, draw.between([-0.4, 0.4])), width: (t) => ends(t) * 1.4 })
+    bands.push({ centre: sway(side * 0.98 * wider, side * 0.16, 2, draw.between([-0.4, 0.4])), width: (t) => ends(t) * 1.4 })
   } else if (subject === "folds") {
     const phase = draw.next() * TAU
-    for (let k = 0; k < 3; k++) bands.push({ centre: sway(side * 0.92, side * 0.1, 1.6, phase + k * 0.7, (k - 1) * wide * 0.9), width: ends })
+    for (let k = 0; k < 3; k++) bands.push({ centre: sway(side * 0.92 * wider, side * 0.1, 1.6, phase + k * 0.7, (k - 1) * wide * 0.9), width: ends })
   } else if (subject === "ring") {
     // A ring seen at a slant: the near half of the band wider than the far.
     const r = side * 0.36
@@ -108,7 +111,7 @@ export function prism(frame: Frame, subject: Subject, p: PrismParams): Art {
     // A little past a full turn, so the band's ends overlap and leave no seam.
     for (let i = 0; i <= 150; i++) {
       const a = (i / 144) * TAU
-      const u = cos(a) * r
+      const u = cos(a) * r * wider
       const v = sin(a) * r * flat
       points.push(cx + u * cos(angle) - v * sin(angle), cy + u * sin(angle) + v * cos(angle))
     }
@@ -137,7 +140,7 @@ export function prism(frame: Frame, subject: Subject, p: PrismParams): Art {
   if (subject === "bars") {
     const box = frameBox
     const drawn = bars.map((bar) => [bar.x, box.y, bar.x + bar.w, box.y, bar.x + bar.w, box.y + box.h, bar.x, box.y + box.h])
-    outlines = keptClear(frame, drawn, stage.away)
+    outlines = keptClear(frame, drawn, stage.away, { whole: true })
     const split = (outlines[0]![2]! - outlines[0]![0]!) * p.split * 1.4
     const fringes: Mark[] = []
     const fills: Mark[] = []
@@ -158,7 +161,7 @@ export function prism(frame: Frame, subject: Subject, p: PrismParams): Art {
     // they run softly together inside it its edge keeps its full colour.
     const built = bands.map((each) => ({ ...band(each.centre, (t) => each.width(t) * 1.3, ACROSS.length), outline: band(each.centre, each.width, 1).outline }))
     const all = built.flatMap((each) => [each.outline, ...each.stripes])
-    const placed = keptClear(frame, all, stage.away)
+    const placed = keptClear(frame, all, stage.away, { whole: true })
     const shrink = boundsOf(placed[0]!).w / boundsOf(all[0]!).w || 1
     const split = wide * shrink * p.split
     const per = ACROSS.length + 1

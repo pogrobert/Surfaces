@@ -108,7 +108,7 @@ export function dashes(frame: Frame, subject: Subject, p: DashParams): Art {
       // Each puff a round with a soft edge; the cloud is the most any one
       // gives, so the billows keep their own outlines.
       let most = 0
-      for (const puff of puffs) most = Math.max(most, 1 - Math.hypot(x - puff.x, y - puff.y) / (puff.s * 1.55))
+      for (const puff of puffs) most = Math.max(most, 1 - Math.sqrt((x - puff.x) * (x - puff.x) + (y - puff.y) * (y - puff.y)) / (puff.s * 1.55))
       const body = smoothstep(clamp(most * 4, 0, 1))
       const foot = y > base ? 0 : smoothstep(clamp((base - y) / (r * 0.05), 0, 1))
       // Lit from above: the tops fuller than the shade along the base.

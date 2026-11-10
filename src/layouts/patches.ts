@@ -1,4 +1,4 @@
-import { cos, PI, sin } from "../core/math.ts"
+import { clamp, cos, PI, sin } from "../core/math.ts"
 import type { Art, Frame, Piece } from "../core/recipe.ts"
 import type { Box, Mark, Shape, Tone } from "../core/scene.ts"
 import { behind, boundsOf, circle, curve, insideOf, keptClear, union } from "../grammar/kit.ts"
@@ -38,8 +38,8 @@ function squircle(x: number, y: number, side: number, angle: number): Points {
     const a = t * 2 * PI
     const ca = cos(a)
     const sa = sin(a)
-    const u = (Math.sign(ca) * Math.abs(ca) ** 0.5 * side) / 2
-    const v = (Math.sign(sa) * Math.abs(sa) ** 0.5 * side) / 2
+    const u = (Math.sign(ca) * Math.sqrt(Math.abs(ca)) * side) / 2
+    const v = (Math.sign(sa) * Math.sqrt(Math.abs(sa)) * side) / 2
     return [x + u * c - v * s, y + u * s + v * c]
   }, 96)
 }
@@ -109,11 +109,15 @@ export function patches(frame: Frame, subject: Subject, p: PatchParams): Art {
   } else if (subject === "row") {
     // Pills in a row, each over the last, the long way of the space.
     const wide = stage.area.w >= stage.area.h
-    const count = 4
+    // On a long, narrow sheet the row runs further along it, and one more
+    // pill joins it, so it does not sit as a small knot in the middle.
+    const long = Math.max(stage.area.w, stage.area.h) / Math.min(stage.area.w, stage.area.h)
+    const stretch = clamp(long / 1.6, 1, 1.8)
+    const count = stretch > 1.3 ? 5 : 4
     const length = side * 0.44
     const thick = side * 0.3
     for (let k = 0; k < count; k++) {
-      const t = (k - (count - 1) / 2) * side * 0.27
+      const t = (k - (count - 1) / 2) * side * 0.27 * stretch
       const lean = p.tilt * 0.5 + (wide ? 0.22 : PI / 2 - 0.22)
       add(card(cx + (wide ? t : 0), cy + (wide ? 0 : t), length, thick, thick / 2, lean))
     }
@@ -123,7 +127,7 @@ export function patches(frame: Frame, subject: Subject, p: PatchParams): Art {
     add(circle(cx + side * 0.22, cy + side * 0.22, side * 0.19, 96))
   }
 
-  const outlines = keptClear(frame, [...(disc ? [disc] : []), ...forms.map((form) => form.outline)], stage.away)
+  const outlines = keptClear(frame, [...(disc ? [disc] : []), ...forms.map((form) => form.outline)], stage.away, { whole: true })
   const placed = disc ? outlines.slice(1) : outlines
   const shrink = boundsOf(outlines[0]!).w / boundsOf(disc ?? forms[0]!.outline).w
   const pitch = side * shrink * p.pitch
@@ -131,7 +135,7 @@ export function patches(frame: Frame, subject: Subject, p: PatchParams): Art {
   if (disc) {
     // The disc: deep, with a fine speckle of the paper across it.
     const round = outlines[0]!
-    pieces.push({ id: "disc", clip: { type: "polygon", points: round }, marks: [solid("disc-coat", theme === "dark" ? "quiet" : "strong", [{ type: "polygon", points: round }]), solid("disc-speckle", theme === "dark" ? "body" : "soft", pattern("stagger", boundsOf(round), round, pitch * 0.55, 0.34), 0.55)] })
+    pieces.push({ id: "disc", clip: { type: "polygon", points: round }, marks: [solid("disc-coat", theme === "dark" ? "soft" : "strong", [{ type: "polygon", points: round }]), solid("disc-speckle", theme === "dark" ? "body" : "soft", pattern("stagger", boundsOf(round), round, pitch * 0.55, 0.34), 0.55)] })
   }
   placed.forEach((outline, k) => {
     const [coat, ink] = coats[(k + offset) % coats.length]!

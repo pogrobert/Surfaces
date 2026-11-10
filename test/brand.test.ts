@@ -102,7 +102,7 @@ test("directions are varied, judged, and start with the brand's own pick", () =>
   const styles = options.map((option) => option.look.style)
   assert.equal(new Set(styles).size, styles.length)
   // One of each kind before two of any: no two of the first five are one kind.
-  const kinds = [["stencil", "riso", "photocopy", "halftone", "dither"], ["engraving", "linework", "moire"], ["underpaint", "sfumato", "fluted"], ["aquatint", "mezzotint", "chrome", "glass"], ["marbling", "strata", "endpaper"]]
+  const kinds = [["stencil", "screenprint", "riso", "photocopy", "halftone", "dither", "linocut", "typewriter"], ["engraving", "linework", "moire", "currents", "dashes"], ["underpaint", "sfumato", "fluted", "trails", "prism"], ["aquatint", "mezzotint", "chrome", "glass"], ["marbling", "strata", "endpaper", "patches"], ["papercut", "weave", "terrazzo", "swatchbook"]]
   assert.equal(new Set(styles.slice(0, 5).map((style) => kinds.findIndex((kind) => kind.includes(style)))).size, 5)
   for (const option of options) {
     assert.ok(judge(option.cover({ title: "A title it wasn't tried on" })).ok, option.look.style)

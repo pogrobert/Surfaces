@@ -1,4 +1,4 @@
-import { cos, PI, sin, TAU } from "../core/math.ts"
+import { atan2, clamp, cos, PI, sin, TAU } from "../core/math.ts"
 import type { Rng } from "../core/random.ts"
 import type { Art, Frame, Piece } from "../core/recipe.ts"
 import type { Box, Mark, Shape, Tone } from "../core/scene.ts"
@@ -154,9 +154,18 @@ export function swatchbook(frame: Frame, subject: Subject, p: SwatchParams): Art
   if (subject === "grid") {
     // Two by two, or three by two the long way of the space it has.
     const wide = stage.area.w >= stage.area.h
-    const [across, down] = draw.next() < 0.5 ? [2, 2] : wide ? [3, 2] : [2, 3]
+    let [across, down] = draw.next() < 0.5 ? [2, 2] : wide ? [3, 2] : [2, 3]
     const gap = side * 0.04
     const cell = (side * 0.92 - gap * (Math.max(across, down) - 1)) / Math.max(across, down)
+    // On a long stage, more cards along it, as far as it has room for. Not
+    // before 2.2 to 1, so a post's cover and its OG image, near 16:9 and
+    // 1.9:1, are one drawing.
+    const long = Math.max(stage.area.w, stage.area.h)
+    const along = long / Math.min(stage.area.w, stage.area.h)
+    let more = along >= 3 ? 2 : along >= 2.2 ? 1 : 0
+    while (more > 0 && ((wide ? across : down) + more) * (cell + gap) > long * 0.9) more--
+    if (wide) across += more
+    else down += more
     cards = []
     for (let j = 0; j < down; j++)
       for (let i = 0; i < across; i++) {
@@ -174,11 +183,29 @@ export function swatchbook(frame: Frame, subject: Subject, p: SwatchParams): Art
   } else if (subject === "fan") {
     // A deck of long cards held at its foot and fanned open.
     const count = 5
-    const length = side * 0.86
+    // On a long stage the deck lies along it, its cards longer and fanned
+    // less, so it holds the band it is given and is not a small knot in it.
+    const along = Math.max(stage.area.w, stage.area.h) / Math.min(stage.area.w, stage.area.h)
+    const stretch = clamp(along / 1.4, 1, 2)
+    const length = side * 0.86 * stretch
     const width = side * 0.27
-    const spread = draw.between([0.16, 0.22])
-    const pivot = { x: cx, y: cy + side * 0.36 }
-    const lean = p.tilt
+    const spread = draw.between([0.16, 0.22]) / stretch
+    // Held at its foot, upright; along a long stage, opening one way along
+    // it; and where it is seated running off an edge beside a title, held
+    // from beyond that edge and opening toward the title, so the spread of
+    // cards is what shows and not only their foot.
+    const off = cx - side / 2 < 0 || cy - side / 2 < 0 || cx + side / 2 > w || cy + side / 2 > h
+    const flip = draw.next() < 0.5 ? 1 : -1
+    const toward =
+      stretch > 1.2
+        ? stage.area.w >= stage.area.h
+          ? (flip * PI) / 2
+          : flip > 0 ? 0 : PI
+        : frame.titled && !frame.calm.length && !frame.fill && off
+          ? atan2(-stage.away.x, stage.away.y)
+          : 0
+    const pivot = { x: cx - sin(toward) * length * 0.44, y: cy + cos(toward) * length * 0.44 }
+    const lean = p.tilt + toward
     cards = Array.from({ length: count }, (_, k) => {
       const a = lean + (k - (count - 1) / 2) * spread
       // Each card's middle, half its length up from the pivot along its turn.
@@ -222,7 +249,8 @@ export function swatchbook(frame: Frame, subject: Subject, p: SwatchParams): Art
   const outlines = keptClear(
     frame,
     cards.map((each) => card(each.x, each.y, each.w, each.h, subject === "strip" ? 0 : r, each.angle)),
-    stage.away
+    stage.away,
+    { whole: true }
   )
   const pieces: Piece[] = outlines.map((outline, k) => {
     const each = cards[k]!

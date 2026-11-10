@@ -163,7 +163,11 @@ export function terrazzo(frame: Frame, subject: Subject, p: TerrazzoParams): Art
     }
     const blocks =
       subject === "slab"
-        ? [block("slab", cx - side * 0.46, cy - side * 0.24, side * 0.92, side * 0.38, side * 0.1)]
+        ? // Behind a title in the middle, deeper, so it shows above and
+          // below the calm round the title and is not all hidden by it.
+          frame.calm.length
+          ? [block("slab", cx - side * 0.46, cy - side * 0.33, side * 0.92, side * 0.56, side * 0.1)]
+          : [block("slab", cx - side * 0.46, cy - side * 0.24, side * 0.92, side * 0.38, side * 0.1)]
         : [
             block("lower", cx - side * 0.46, cy - side * 0.06, side * 0.92, side * 0.28, side * 0.09),
             block("upper", cx - side * 0.3, cy - side * 0.36, side * 0.6, side * 0.24, side * 0.09),
