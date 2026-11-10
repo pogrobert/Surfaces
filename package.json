@@ -38,7 +38,9 @@
     "docs/api.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.cli.json && node scripts/schema.ts",
+    "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
+    "build": "pnpm clean && tsc -p tsconfig.build.json && tsc -p tsconfig.cli.json && node scripts/schema.ts",
+    "prepack": "pnpm build",
     "typecheck": "tsc --noEmit",
     "test": "pnpm build && node --test test/*.test.ts",
     "golden": "UPDATE_GOLDEN=1 node --test test/determinism.test.ts",
