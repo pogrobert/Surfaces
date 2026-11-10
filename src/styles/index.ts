@@ -62,3 +62,21 @@ export const STYLES = {
 }
 
 export type StyleName = keyof typeof STYLES
+
+// The styles that are drawn still: asked to move, they stay as they are. Said
+// here so the catalog can tell a reader, a cover asked to move can say so, and
+// a brand's hero never promises motion its style doesn't have. The tests hold
+// this list to what the styles really do.
+export const STILL: ReadonlySet<StyleName> = new Set<StyleName>([
+  "screenprint",
+  "linocut",
+  "typewriter",
+  "currents",
+  "weave",
+  "terrazzo",
+  "dashes",
+  "swatchbook",
+  "patches",
+  "trails",
+  "prism",
+])

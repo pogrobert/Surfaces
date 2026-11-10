@@ -1,4 +1,4 @@
-import { STYLES } from "./styles/index.ts"
+import { STILL, STYLES } from "./styles/index.ts"
 import type { StyleName } from "./styles/index.ts"
 
 // Every style, said plainly, so a person or an agent can choose one by what it
@@ -38,15 +38,22 @@ const ABOUT: Record<StyleName, { looks: string; suits: string }> = {
 }
 
 export type CatalogEntry = {
+  /** The name to give as `style`. */
   style: StyleName
+  /** What it looks like, in everyday words. */
   looks: string
+  /** What kinds of page it suits. */
   suits: string
-  // The shapes it can be asked for by `shape`; empty when it has none.
+  /** The shapes it can be asked for by `shape`; empty when it has none. */
   shapes: readonly string[]
+  /** Whether it moves when asked to (`motion: "once"` or `"loop"`, drawn by `toHtml`). A still style stays as it is. */
+  moves: boolean
 }
 
+/** Every style: what it looks like and suits, in plain words to search, its shapes, and whether it moves. */
 export const catalog: readonly CatalogEntry[] = (Object.keys(STYLES) as StyleName[]).map((style) => ({
   style,
   ...ABOUT[style],
   shapes: (STYLES[style].shapes ?? []) as readonly string[],
+  moves: !STILL.has(style),
 }))

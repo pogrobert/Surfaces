@@ -6,7 +6,8 @@ import { describe } from "./core/describe.ts"
 import { watch } from "./dom.ts"
 import { generate } from "./core/generate.ts"
 import type { SurfaceInput } from "./core/generate.ts"
-import type { Area } from "./core/intent.ts"
+import type { Area, MotionLevel } from "./core/intent.ts"
+import { titleOf } from "./core/scene.ts"
 import type { SceneArea } from "./core/scene.ts"
 import { toHtml } from "./render/layers.ts"
 import type { Use } from "./page.ts"
@@ -31,9 +32,17 @@ export type SurfaceProps = Omit<SurfaceInput, "areas"> & {
   className?: string
   css?: CSSProperties
   children?: ReactNode
-  // Read out instead of the art, which is otherwise hidden from screen
-  // readers. `true` reads out a description of the art itself.
+  /**
+   * Read out instead of the art, which is otherwise hidden from screen
+   * readers. `true` reads out a description of the art itself. A cover with
+   * its `title` drawn in reads that out unless told otherwise.
+   */
   label?: string | true
+  /**
+   * Holds a moving cover where it is. A loop runs for as long as the page is
+   * open, so give readers a control that sets this (WCAG 2.2.2).
+   */
+  paused?: boolean
 }
 
 // Content aligned to the side of its area that the area hangs from.
@@ -44,7 +53,7 @@ const align = (area: SceneArea): CSSProperties => {
   return { justifyContent: row, alignItems: column }
 }
 
-export function Surface({ className, css, children, label, areas, ...input }: SurfaceProps): ReactElement {
+export function Surface({ className, css, children, label, paused, areas, ...input }: SurfaceProps): ReactElement {
   if (children !== undefined && areas !== undefined) {
     throw new Error("Surface takes children or areas, not both: put the children in an area's content.")
   }
@@ -63,15 +72,14 @@ export function Surface({ className, css, children, label, areas, ...input }: Su
   const holder = useRef<HTMLDivElement>(null)
   const moves = input.motion !== undefined && input.motion !== "none"
   useEffect(() => (moves && holder.current ? watch(holder.current) : undefined), [art, moves])
-  const spoken = label === true ? describe(scene) : label
+  // A title drawn into the art is words in a picture, so it is read out.
+  const spoken = label === true ? describe(scene) : label ?? titleOf(scene)
   const { w, h } = scene.output
   const share = (value: number, of: number) => `${(value / of) * 100}%`
   return createElement(
     "div",
     {
       className,
-      role: spoken ? "img" : undefined,
-      "aria-label": spoken,
       style: {
         position: "relative",
         aspectRatio: `${w} / ${h}`,
@@ -82,7 +90,11 @@ export function Surface({ className, css, children, label, areas, ...input }: Su
     },
     createElement("div", {
       ref: holder,
-      "aria-hidden": true,
+      // The picture alone is named or hidden, never the element round it:
+      // what stands in the areas is the page's own content, and a role of
+      // "img" on its parent would hide it from a screen reader.
+      ...(spoken ? { role: "img", "aria-label": spoken } : { "aria-hidden": true }),
+      "data-paused": paused ? "" : undefined,
       style: { position: "absolute", inset: 0, lineHeight: 0 },
       // The art is built here from numbers and palette colours; nothing a
       // caller passes reaches it as markup.
@@ -105,8 +117,9 @@ export function Surface({ className, css, children, label, areas, ...input }: Su
                 flexDirection: "column",
                 ...align(area),
                 // Content on the art reads in the cover's ink; a card brings
-                // its own colours.
-                ...(area.art === "around" ? { color: area.ink } : null),
+                // its own colours. The art keeps its colours when a reader's
+                // system forces its own, so the ink chosen for it stays too.
+                ...(area.art === "around" ? { color: area.ink, forcedColorAdjust: "none" as const } : null),
               },
             },
             asked[index]!.content
@@ -117,16 +130,34 @@ export function Surface({ className, css, children, label, areas, ...input }: Su
 
 // <Cover brand={brand} title={post.title} />
 //
-// A brand's cover for a page: a post's by default, or the `use` asked for.
-// Its title is shown where the cover keeps room for it, unless `children`
-// stand there instead; a card shows none, its title being beside it.
-export type CoverProps = Content & {
+// A brand's cover for a page, with its title on it: a post's by default, or
+// the `use` asked for. The title is shown over the art where the cover keeps
+// room for it, in the page's own font and at a title's size, so the page
+// needs no heading of its own beside it. To make it the page's heading, or
+// to set it any other way, give it as `children`: <Cover brand={brand}
+// title={title}><h1>{title}</h1></Cover>. For the art alone, as beside a
+// heading the page already has, `text="none"`; a card shows none either way,
+// its title being beside it.
+export type CoverProps = Omit<Content, "drawTitle"> & {
   brand: Brand
+  /** Which of the brand's covers: "post" (the default), "card", "hero" or "og". */
   use?: Use
+  /** Whether it moves. A hero loops by itself where its style moves; "none" keeps it still. */
+  motion?: MotionLevel
   className?: string
   css?: CSSProperties
+  /** Stands where the title would, in place of it: the page's own heading, or anything else. */
   children?: ReactNode
   label?: string | true
+  paused?: boolean
+}
+
+// A title's size on a cover, as a share of the cover's short side, set as a
+// designer sets one: large when short, smaller as it runs on (see setTitle,
+// which draws the same title into an image by the same rule).
+function titleSize(title: string) {
+  const length = title.trim().length
+  return length <= 18 ? 1 / 8 : length <= 36 ? 1 / 10 : length <= 60 ? 1 / 12.5 : length <= 90 ? 1 / 15 : 1 / 18
 }
 
 export function Cover({ brand, use = "post", title, id, tag, text, children, ...rest }: CoverProps): ReactElement {
@@ -136,7 +167,29 @@ export function Cover({ brand, use = "post", title, id, tag, text, children, ...
   if (typeof brand?.input !== "function") throw new Error(`<Cover> takes "brand", made by createBrand(): <Cover brand={brand} title={post.title} />`)
   const at = text ?? titleAt(brand.name, use) ?? "none"
   const { areas, ...input } = brand.input(use, { ...(title !== undefined ? { title } : null), ...(id !== undefined ? { id } : null), ...(tag !== undefined ? { tag } : null), text: at })
-  const content = children ?? title
+  // The title alone is set as a title: sized to the cover, which is its
+  // container, tight and balanced, in whatever font the page gives it.
+  const short = Math.min(input.width ?? 1600, input.height ?? 900) / (input.width ?? 1600)
+  const set =
+    typeof title === "string" && title.trim()
+      ? createElement(
+          "div",
+          {
+            style: {
+              fontSize: `${(titleSize(title) * short * 100).toFixed(2)}cqw`,
+              fontWeight: 700,
+              lineHeight: 1.06,
+              letterSpacing: "-0.02em",
+              textWrap: "balance",
+              overflowWrap: "break-word",
+              maxWidth: "100%",
+              textAlign: at.endsWith("left") ? "left" : at.endsWith("right") ? "right" : "center",
+            } as CSSProperties,
+          },
+          title
+        )
+      : undefined
+  const content = children ?? set
   return createElement(Surface, {
     ...input,
     ...rest,

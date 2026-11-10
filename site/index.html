@@ -57,7 +57,7 @@
   .wall .art { position: absolute; inset: 0; line-height: 0; }
   .wall .art > span { position: absolute; inset: 0; }
   .wall .label { position: absolute; left: 8px; bottom: 8px; font-size: 12px; line-height: 1.2; padding: 4px 9px; border-radius: 999px; background: rgb(255 255 255 / 0.92); color: #111; opacity: 0; transition: opacity 0.15s ease; pointer-events: none; }
-  .wall .tile:hover .label { opacity: 1; }
+  @media (hover: hover) { .wall .tile:hover .label { opacity: 1; } }
   /* The wall fades into the page under the card. */
   .hero::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 12%; background: linear-gradient(transparent, color-mix(in srgb, var(--paper) 80%, transparent)); pointer-events: none; }
   .pitch { position: absolute; z-index: 2; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(620px, calc(100% - 32px)); background: var(--sheet); border-radius: 26px; padding: 26px 26px 18px; box-shadow: 0 0 0 1px var(--rule), 0 50px 90px -40px rgb(0 0 0 / 0.55); display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
@@ -75,6 +75,8 @@
   .colours button[aria-pressed="true"], .colours label[data-on="true"] { box-shadow: 0 0 0 2px var(--sheet), 0 0 0 4px var(--ink); }
   .colours label { background: conic-gradient(#f15060, #f59e0b, #00a95c, #00838a, #0078bf, #635bff, #e5488f, #f15060); }
   .colours label input { position: absolute; inset: 0; opacity: 0; cursor: default; width: 100%; height: 100%; }
+  /* A hidden input has no ring of its own to show, so what stands for it wears it. */
+  .colours label:focus-within, label:has(+ .sr:focus-visible) { outline: 2px solid var(--action); outline-offset: 3px; }
   .read .colours button, .read .colours label { width: 24px; height: 24px; }
 
   /* What was read, each part a click from being put right. */
@@ -83,7 +85,7 @@
   .read .home { font-weight: 600; font-size: 18px; letter-spacing: -0.01em; color: var(--ink); text-decoration: none; padding-right: 16px; border-right: 1px solid var(--rule); }
   .read .site img { height: 24px; max-width: 120px; object-fit: contain; }
   .read .site input { font-weight: 600; font-size: 17px; border: 0; background: transparent; padding: 4px 6px; margin-left: -6px; border-radius: 8px; width: 15ch; }
-  .read .site input:hover, .read .site input:focus { background: color-mix(in srgb, var(--ink) 6%, transparent); outline: 0; }
+  .read .site input:hover, .read .site input:focus { background: color-mix(in srgb, var(--ink) 6%, transparent); }
   .read .part { display: flex; align-items: center; gap: 10px; color: var(--quiet); }
   .read .part b { color: var(--ink); font-weight: 600; }
   .read .grow { flex: 1; }
@@ -206,14 +208,15 @@
   .go, .shuffle, .plain, .soft, .choice button, .tabs button, .list button, .colours button, .colours label, .swatches button, .frame .save, .read .home {
     transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, opacity 150ms ease, scale 160ms var(--ease-out);
   }
-  .wall .art, .grid .frame { transition: scale 300ms var(--ease-out), box-shadow 150ms ease; }
+  /* A tile on the wall names itself under the pointer and no more: sixty
+     grained drawings are each drawn again on every frame one is scaled. */
+  .grid .frame { transition: box-shadow 150ms ease; }
   @media (hover: hover) {
     .go:hover { background: color-mix(in srgb, var(--ink) 82%, var(--paper)); }
     .shuffle:hover, .plain:hover, .soft:not(:disabled):hover, .choice button[aria-pressed="false"]:hover, .choice button:not([aria-pressed]):hover { background: color-mix(in srgb, var(--ink) 5%, var(--sheet)); border-color: color-mix(in srgb, var(--ink) 22%, var(--sheet)); }
     .tabs button:not([aria-selected="true"]):hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 6%, transparent); }
     .list button:not([aria-pressed="true"]):hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
     .colours button:hover, .colours label:hover, .swatches button:hover { scale: 1.12; }
-    .wall .tile:hover .art { scale: 1.04; }
     .grid figure:hover .frame { box-shadow: 0 0 0 2px color-mix(in srgb, var(--ink) 30%, transparent); }
     .grid figure[aria-current="true"]:hover .frame { box-shadow: 0 0 0 2px var(--ink); }
     .frame .save:hover { background: #fff; }
@@ -223,10 +226,10 @@
     .go:active, .shuffle:active, .plain:active, .soft:not(:disabled):active, .choice button:active, .tabs button:active, .list button:active, .frame .save:active { scale: 0.97; }
     .colours button:active, .colours label:active, .swatches button:active { scale: 0.94; }
   }
-  @media (prefers-reduced-motion: reduce) { .wall .tile:hover .art { scale: 1; } }
 </style>
 </head>
 <body>
+<p class="sr" role="status" id="said"></p>
 <section class="hero" id="hero">
   <div class="wall" id="wall" aria-hidden="true"></div>
   <div class="pitch" id="pitch">
@@ -364,6 +367,14 @@ import { toPngInBrowser } from "/dist/png.js"
 import { KINDS, SAMPLES, scene, tiles, wall, TILES } from "/wall.js"
 
 const $ = (selector) => document.querySelector(selector)
+// Says something aloud to a screen reader, where what happened shows only to
+// the eye: a copy, or a brand that couldn't be made.
+function say(text) {
+  // Emptied first and filled a moment later, so saying the same thing twice
+  // is heard twice; a timer, since a page out of sight draws no frames.
+  $("#said").textContent = ""
+  setTimeout(() => ($("#said").textContent = text), 60)
+}
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i
 const NAMES = Object.fromEntries(catalog.map((entry) => [entry.style, entry.style[0].toUpperCase() + entry.style.slice(1)]))
 // What the page knows: the site's facts once read, its logo, and what the
@@ -569,12 +580,26 @@ function faceOf(brand) {
 // Which view of the chosen style shows: its variations, or the places it goes.
 let view = "variations"
 
+// A redraw makes its controls again, which would drop the keyboard's place
+// on the page and leave the next key press to the page itself. So the place
+// is kept: after the redraw, focus goes to the control standing where the
+// one that was pressed stood.
+const FOCUSABLE = "button, [tabindex], input, a[href]"
 function draw() {
+  const active = document.activeElement
+  const host = active && active !== document.body ? active.parentElement?.closest("[id]") : null
+  const place = host ? [...host.querySelectorAll(FOCUSABLE)].indexOf(active) : -1
+  redraw()
+  if (host && place >= 0 && !active.isConnected) [...host.querySelectorAll(FOCUSABLE)][place]?.focus({ preventScroll: true })
+}
+
+function redraw() {
   let brand
   try {
     brand = createBrand(choices())
   } catch (error) {
     $("#styleLooks").textContent = error.message
+    say(error.message)
     return
   }
   // The wall repaints in the brand: the page becomes the site's own.
@@ -738,9 +763,16 @@ function drawVariations(brand) {
   const look = brand.look
   const tile = (caption, change, scene) => {
     const holder = make("div", { className: "frame" })
-    const figure = make("figure", { tabIndex: 0 }, holder, make("figcaption", { textContent: caption }))
+    const figure = make("figure", {}, holder, make("figcaption", { textContent: caption }))
     frame(holder, scene, "", face)
-    const current = Object.keys(change).length && Object.entries(change).every(([key, value]) => (look[key] ?? undefined) === value)
+    // A tile that changes nothing, such as a size, is a picture to look at:
+    // not a stop for the keyboard, and not a step to undo.
+    if (!Object.keys(change).length) return figure
+    const current = Object.entries(change).every(([key, value]) => (look[key] ?? undefined) === value)
+    // Pressed like a button, and said to be one.
+    figure.tabIndex = 0
+    figure.setAttribute("role", "button")
+    figure.setAttribute("aria-pressed", String(current))
     if (current) figure.setAttribute("aria-current", "true")
     const pick = () => choose(change)
     figure.addEventListener("click", pick)
@@ -912,9 +944,19 @@ $("#logoNone").addEventListener("click", () => {
   setLogo(undefined)
   draw()
 })
-$("#copy").addEventListener("click", () => navigator.clipboard?.writeText($("#code").textContent))
+// A copy says it happened: on the button for a moment, for whoever is
+// looking, and aloud, for whoever isn't.
+function copied(button) {
+  const label = button.dataset.label ?? (button.dataset.label = button.textContent)
+  button.textContent = "Copied"
+  say("Copied")
+  clearTimeout(button.back)
+  button.back = setTimeout(() => (button.textContent = label), 1600)
+}
+$("#copy").addEventListener("click", () => navigator.clipboard?.writeText($("#code").textContent).then(() => copied($("#copy"))))
 $("#copyAgent").addEventListener("click", () => {
   const look = createBrand(choices()).look
+  copied($("#copyAgent"))
   navigator.clipboard?.writeText(
     `Add Surfaces to this site for its covers, link previews, headers and any other picture it repeats. Run \`npx @pogrobert/surfaces init\`, then set the brand it writes to ${JSON.stringify({ ...(state.name.trim() ? { name: state.name.trim() } : null), ...look })}${state.name.trim() ? "" : ", with the site's own domain as its name"}. The pictures are art: set titles in the site's own font over them, with <Cover brand title /> from @pogrobert/surfaces/react, and use \`toJpeg(brand.og({ title, drawTitle: true }))\` only for link preview files. Then run \`npx @pogrobert/surfaces kit\` for the site's preview and headers.`
   )

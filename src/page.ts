@@ -318,6 +318,11 @@ const list = (parts: string[]) =>
 // description, and leaves out what it can't find. A site's DESIGN.md, given
 // third, says its brand outright, so what it gives outranks what the page
 // suggests. Hand the facts to createBrand(); correct any it got wrong first.
+/**
+ * Reads a brand's facts from a site's own source text, without a browser or
+ * a fetch: its colours, background, dark mode, fonts and words. Spread the
+ * result into `createBrand`. A `DESIGN.md` given third comes first.
+ */
 export function readPage(html = "", css = "", design = ""): Omit<PageFacts, "covers"> {
   const page = readStyles(html, css)
   const said = design.trim() ? readDesign(design) : {}

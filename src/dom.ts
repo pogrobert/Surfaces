@@ -18,6 +18,11 @@ import { toHtml } from "./render/layers.ts"
 // is drawn with, is taken out of the page: hidden, a browser would still
 // redraw it every frame. Without script, or where a browser can't tell, the
 // cover plays as soon as it loads.
+//
+// A reader can stop it too: `data-paused` on the element, or on anything
+// round it, holds the cover where it is, and taking it off lets it go on. A
+// loop that runs longer than five seconds needs a control that does this
+// (WCAG 2.2.2), and `mount` returns `pause` and `play` for one.
 export function watch(element: Element): () => void {
   const leave = (event: Event) => {
     const { target, animationName } = event as AnimationEvent
@@ -28,35 +33,50 @@ export function watch(element: Element): () => void {
     return () => element.removeEventListener("animationend", leave)
   }
   let seen = false
-  const observer = new IntersectionObserver(([entry]) => {
-    const showing = entry?.isIntersecting ?? true
+  let showing = true
+  const sync = () => {
+    const held = element.closest("[data-paused]") !== null
     for (const animation of element.getAnimations({ subtree: true })) {
-      if (showing) animation.play()
+      if (showing && !held) animation.play()
       else {
         animation.pause()
         // Not yet seen: back to the beginning, so it arrives when it is.
-        if (!seen) animation.currentTime = 0
+        if (!showing && !seen) animation.currentTime = 0
       }
     }
     if (showing) seen = true
+  }
+  const observer = new IntersectionObserver(([entry]) => {
+    showing = entry?.isIntersecting ?? true
+    sync()
   })
   observer.observe(element)
+  const holding = typeof MutationObserver === "undefined" ? undefined : new MutationObserver(sync)
+  holding?.observe(element, { attributes: true, attributeFilter: ["data-paused"] })
   return () => {
     observer.disconnect()
+    holding?.disconnect()
     element.removeEventListener("animationend", leave)
   }
 }
 
 // Draws a cover into an element, inline, and watches it. The art is hidden
 // from screen readers unless `label` says what to read out instead; `true`
-// reads out a description of the art itself.
+// reads out a description of the art itself. A cover with its title drawn in
+// reads the title out unless told otherwise. `pause` and `play` stop a
+// moving cover and let it go on, for the control a loop needs.
 export function mount(
   element: Element,
   input: SurfaceInput,
   { label }: { label?: string | true } = {}
-): { scene: Scene; stop: () => void } {
+): { scene: Scene; stop: () => void; pause: () => void; play: () => void } {
   const scene = generate(input)
   const spoken = label === true ? describe(scene) : label
   element.innerHTML = toHtml(scene, { fill: true, ...(spoken ? { label: spoken } : null) })
-  return { scene, stop: watch(element) }
+  return {
+    scene,
+    stop: watch(element),
+    pause: () => element.setAttribute("data-paused", ""),
+    play: () => element.removeAttribute("data-paused"),
+  }
 }

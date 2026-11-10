@@ -305,9 +305,10 @@ function agentBlock(module: string) {
 
 - For pictures the site repeats: covers, link previews, docs, changelog and email headers, empty states, slides. A picture of one particular thing (a product, a person) is a photo or an image model's job.
 - The brand is \`brand\`, exported from \`${module}\`. Change its look there; \`npx @pogrobert/surfaces directions\` draws others to choose from.
-- The pictures are art; the words are the site's, in its own type. A cover is \`brand.cover({ title })\`, \`brand.card\`, \`brand.hero\`, \`brand.banner\`. React: \`<Cover brand={brand} title={title} />\` from \`@pogrobert/surfaces/react\` sets the title in the page's font where the art keeps room.
-- Words over the art: \`text: "bottom-left"\` (or any place) keeps them room; \`scene.areas[0]\` is its box and \`ink\`. A link preview file is \`toJpeg(brand.og({ title, drawTitle: true }))\` from \`@pogrobert/surfaces/png\`; alt \`describe(scene, { title })\`. In the site's own font: \`drawTitle: { font: await loadFont(await readFile(titleFont)) }\`, where the brand module exports \`titleFont\`.
-- \`id: post.slug\` keeps a cover's art when its title is edited. There are no seeds to choose.
+- The pictures are art; the words are the site's, in its own type. A cover is \`brand.cover({ title })\`, \`brand.card\`, \`brand.hero\`, \`brand.banner\`. Each draws art with no words on it.
+- React: \`<Cover brand={brand} title={title} />\` from \`@pogrobert/surfaces/react\` shows the title on the art itself, in the page's font, so don't repeat the title beside it. To make it the page's heading, pass \`<h1>{title}</h1>\` as children; \`text="none"\` is the art alone, and \`use="card"\` a card in a list.
+- Words over the art elsewhere: \`text: "bottom-left"\` (or any place) keeps them room; \`scene.areas[0]\` is its box and \`ink\`. A link preview file is \`toJpeg(brand.og({ title, drawTitle: true }))\`, with \`toJpeg\` from \`@pogrobert/surfaces/png\`; alt \`describe(scene, { title })\`. In the site's own font: \`drawTitle: { font: await loadFont(await readFile(titleFont)) }\`, with \`loadFont\` from \`@pogrobert/surfaces\`, where the brand module exports \`titleFont\`.
+- \`id: post.slug\` keeps a cover's art when its title is edited. There are no seeds to choose. A cover takes only \`title\`, \`id\`, \`tag\`, \`text\` and \`drawTitle\`; for another size or motion, \`generate({ ...brand.input("post", { title }), width, height })\`.
 - Look before shipping: \`npx @pogrobert/surfaces preview --title "..."\` writes images to .surfaces/; \`check\` says whether they hold. \`kit\` writes the preview and headers, with the site's logo.
 - Everything else: node_modules/@pogrobert/surfaces/docs/api.md.
 <!-- surfaces:end -->`

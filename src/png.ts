@@ -23,8 +23,9 @@ import { toSvg } from "./render/svg.ts"
 export type { WasmSource }
 
 export type PngOptions = {
-  // Pixels across; the scene's own size by default.
+  /** Pixels across; the scene's own size by default. */
   width?: number
+  /** The `@resvg/resvg-wasm` module, where a native one can't load: an edge runtime or a Worker. */
   wasm?: WasmSource
 }
 
@@ -44,26 +45,38 @@ async function render(scene: Scene, { width, wasm }: PngOptions, format: "PNG" |
   return rasterize(toSvg(scene, { target: "resvg", outlines: outlinePath }), w, wasm)
 }
 
-// Drawn at the size the scene was asked for, or `width` pixels wide.
-export async function toPng(scene: Scene, options: PngOptions = {}) {
-  return (await render(scene, options, "PNG")).asPng()
+/**
+ * A scene as PNG bytes, at the size it was asked for or `width` pixels wide.
+ * Lossless, so a grainy cover is large: for a link preview use `toJpeg`.
+ * Needs `@resvg/resvg-js` (Node) or `@resvg/resvg-wasm` installed.
+ * The bytes go straight into a response: `new Response(await toPng(scene))`.
+ */
+export async function toPng(scene: Scene, options: PngOptions = {}): Promise<Uint8Array<ArrayBuffer>> {
+  // resvg hands back bytes of its own, never shared memory.
+  return (await render(scene, options, "PNG")).asPng() as Uint8Array<ArrayBuffer>
 }
 
 // The same picture as a JPEG, for link previews: grain is noise, which a PNG
 // can't squeeze, so a grainy cover is a megabyte as a PNG and a fraction of
 // that as a JPEG, under what chat apps will show as a preview. `quality`
 // runs from 1 to 100; the default keeps a title's edges clean.
-export async function toJpeg(scene: Scene, { quality = 86, ...options }: PngOptions & { quality?: number } = {}) {
+/**
+ * A scene as JPEG bytes, for link previews: about 50–170 KB where a PNG of
+ * the same grainy cover is a megabyte. `quality` runs from 1 to 100 (86).
+ * Needs `@resvg/resvg-js` (Node) or `@resvg/resvg-wasm` installed.
+ * The bytes go straight into a response: `new Response(await toJpeg(scene))`.
+ */
+export async function toJpeg(scene: Scene, { quality = 86, ...options }: PngOptions & { quality?: number } = {}): Promise<Uint8Array<ArrayBuffer>> {
   if (!Number.isInteger(quality) || quality < 1 || quality > 100) throw new Error(`"quality" runs from 1 to 100; got ${quality}`)
   const image = await render(scene, options, "JPEG")
-  return encodeJpeg(image.pixels, image.width, image.height, quality)
+  return encodeJpeg(image.pixels, image.width, image.height, quality) as Uint8Array<ArrayBuffer>
 }
 
 // In a browser the page draws the SVG itself, every filter included, so a PNG
 // needs nothing installed.
 // A picture has one theme; a cover drawn for both has to say which.
 function oneTheme(scene: Scene, format: "PNG" | "JPEG" = "PNG") {
-  if (scene.dark) throw new Error(`A ${format} has one theme: draw it with theme "light" or "dark", not "auto"`)
+  if (scene.dark) throw new Error(`A ${format} has one theme: draw it with theme "light" or "dark", not "auto". From a brand: generate({ ...brand.input("post", { title }), theme: "light" }); a brand's link preview and headers are light already.`)
 }
 
 export async function toPngInBrowser(

@@ -5,44 +5,61 @@ import { lerp } from "./math.ts"
 import { makePalette } from "./palette.ts"
 import { createRng, hash } from "./random.ts"
 import type { Recipe } from "./recipe.ts"
-import type { Box, Layer, Motion, Scene } from "./scene.ts"
+import type { Box, Layer, Motion, Palette, Scene, TextLayer } from "./scene.ts"
+import { colorAt, toHex } from "./judge.ts"
 import { logoColours, readLogo } from "./image.ts"
 import type { ImageInput } from "./image.ts"
 import { micrographics } from "../overlays/micro.ts"
 import { STYLES } from "../styles/index.ts"
-import { setTitle, useFont } from "./type.ts"
+import { lineBoxes, setTitle, useFont } from "./type.ts"
 import type { TitleFont } from "../type/fontfile.ts"
 import type { Font } from "./type.ts"
 import { validate } from "./validate.ts"
 import type { StyleName } from "../styles/index.ts"
 
+/**
+ * One exact cover. Every value is a word from a fixed list or a size; a
+ * wrong one throws an error that names the fix. For a site's covers, make a
+ * brand with `createBrand` instead: it writes this input for you.
+ */
 export type SurfaceInput = {
+  /** The look, such as "riso" or "halftone". `catalog` lists every style with what it looks like. */
   style: StyleName
+  /** A stable name for this one drawing, such as the page's slug. The same seed always draws the same art. */
   seed: string | number
+  /** The brand colour, as hex: "#635bff" or "#63f". The only colour given; the rest are chosen from it. Default "#5b5bd6". */
   color?: string
-  // The size of the output; the art only cares about its shape.
+  /** Output width in pixels, given with `height`. Default 1600 by 900. The art only cares about the shape. */
   width?: number
+  /** Output height in pixels, given with `width`. */
   height?: number
-  // Where content goes. With none, the art fills the canvas.
+  /** Where content goes over the art. With none, the art fills the canvas. */
   areas?: readonly Area[]
+  /** "calm" keeps to the quiet end of what the style does and "bold" to the loud end. Left out, the seed ranges over all of it. */
   mood?: Mood
+  /** How much film grain: "smooth" (a little; never none), "natural" (the default) or "heavy". */
   grain?: Grain
+  /** "micro" lays a technical drawing's small print over the art: crop marks, a ruler. Default "none". */
   detail?: Detail
-  // "auto" draws both, and the cover follows the reader's light or dark mode.
+  /** "light" (the default), "dark", or "auto": both, following the reader's light or dark mode. An image file has one theme, so not "auto". */
   theme?: Theme | "auto"
-  // Whether the art moves: not at all, once as it arrives, or on a loop.
+  /** "once" arrives and stays, "loop" then keeps moving gently; only `toHtml` shows it. Default "none". Styles with `moves: false` in `catalog` stay still. */
   motion?: MotionLevel
-  // One of the shapes the style has been judged with. The seed picks otherwise.
+  /** One of the style's shapes, listed in `catalog`. The seed picks one otherwise. */
   shape?: string
-  // Words set into the art in the largest area it goes around, for images
-  // nothing else can set them on: link previews, files, email.
+  /**
+   * Words drawn into the art, in the largest area it goes around: for images
+   * nothing else can set words on, such as link previews and email. Needs an
+   * area. On a page, set the title in HTML over `scene.areas[0]` instead.
+   */
   title?: string
-  // The face it is set in: "sans" (the default), "serif", or a site's own
-  // font from loadFont().
+  /** The face `title` is drawn in: "sans" (Inter Bold, the default), "serif" (Fraunces), or a site's own font from `loadFont()`. */
   font?: Font | TitleFont
-  // The brand's own logo, drawn as it is in a small area at `place` that the
-  // art keeps clear: an SVG file's text, or a PNG, JPEG or WebP. `dark` is
-  // the one for a dark cover, for a logo whose colours a dark ground loses.
+  /**
+   * The brand's own logo, drawn as it is in a small area at `place` that the
+   * art keeps clear: an SVG file's text, or a PNG, JPEG or WebP. `dark` is
+   * the one for a dark cover, for a logo whose colours a dark ground loses.
+   */
   logo?: { image: string | ImageInput; dark?: string | ImageInput; place: Place }
 }
 
@@ -68,16 +85,25 @@ const warned = new Set<string>()
 
 // A cover from an input, checked first: anything wrong throws, all of it at
 // once, each with how to fix it (see validate.ts).
+/**
+ * Draws one cover as a `Scene`: plain data, the same in every runtime, for
+ * `toHtml`, `toSvg`, `toPng` or `toJpeg` to render. Anything wrong with the
+ * input throws, all at once, each problem with its fix.
+ */
 export function generate(input: SurfaceInput): Scene {
   const { errors, warnings } = validate(input)
   if (errors.length) throw new Error(errors.join("\n"))
-  for (const warning of warnings) {
-    // Once each: a page of covers with one trivial seed says it once.
-    if (warned.has(warning)) continue
-    warned.add(warning)
-    console.warn(`surfaces: ${warning}`)
-  }
+  for (const warning of warnings) warn(warning)
   return draw(input)
+}
+
+// Says a warning once: a page of covers with one trivial seed says it once.
+// A cover is drawn the same in every runtime, one with no console included,
+// so a warning there is dropped rather than stopping the drawing.
+function warn(warning: string) {
+  if (warned.has(warning)) return
+  warned.add(warning)
+  if (typeof console !== "undefined" && typeof console.warn === "function") console.warn(`surfaces: ${warning}`)
 }
 
 // The art filling the whole canvas, composed to its middle, with no areas,
@@ -217,31 +243,14 @@ function draw(input: SurfaceInput, fill = false, recipe: Recipe = STYLES[input.s
     layers.splice(layers[last]?.kind === "grain" ? last : last + 1, 0, ...small)
   }
 
-  // Any area besides the main one gets a soft patch of ground under it, over
-  // the art and under the grain, so what sits there reads in any style: the
-  // art was composed round the main area alone.
-  const patches = [
-    ...(behind ? clearingUnder(behind.box, palette) : []),
-    ...kept.filter((box) => box !== safe).flatMap((box, index): Layer[] => patch(box, index)),
-  ]
-  if (patches.length) {
-    // Under a paper frame, if the style lays one round the art, so a patch
-    // never spills over it; else over the art and under the grain.
-    const frame = layers.findIndex((layer) => layer.id === "paper")
-    const last = layers.length - 1
-    layers.splice(frame >= 0 ? frame : layers[last]?.kind === "grain" ? last : last + 1, 0, ...patches)
-  }
+  // The title, laid out before the ground that goes under it, so that ground
+  // can follow its lines. It sits in the main area, whose ink was chosen to
+  // read there.
+  const main = input.title ? areas.find((area) => area.box === safe && area.art === "around") : undefined
+  const title = main && input.title ? setTitle(input.title, main.box, main.place, typeof input.font === "object" ? useFont(input.font) : input.font ?? "sans", Math.min(w, h)) : undefined
 
-  // The title, over everything, the grain included, so its edges stay clean.
-  // It sits in the main area, whose ink was chosen to read there.
-  if (input.title) {
-    const main = areas.find((area) => area.box === safe && area.art === "around")
-    const text = main && setTitle(input.title, main.box, main.place, typeof input.font === "object" ? useFont(input.font) : input.font ?? "sans", Math.min(w, h))
-    if (text) layers.push(text)
-  }
-
-  // The logo over everything too, in its own area, the last, kept clear of
-  // the art and given a patch of ground like any area beside the title.
+  // The logo, in its own area, the last, kept clear of the art.
+  let logo: Extract<Layer, { kind: "logo" }> | undefined
   if (input.logo) {
     const { box } = areas.at(-1)!
     const place = input.logo.place
@@ -252,19 +261,16 @@ function draw(input: SurfaceInput, fill = false, recipe: Recipe = STYLES[input.s
     const image = typeof given === "string" ? given.replace(/currentColor/gi, palette.ink) : given
     const align = place.endsWith("left") ? "start" : place.endsWith("right") ? "end" : "middle"
     // On the title's side, it lines up with the title's edge.
-    const title = titled && safe !== box && areas.find((area) => area.box === safe)?.place
+    const beside = titled && safe !== box && areas.find((area) => area.box === safe)?.place
     const edge =
-      title && align === "start" && title.endsWith("left") ? safe.x - box.x
-      : title && align === "end" && title.endsWith("right") ? safe.x + safe.w - (box.x + box.w)
+      beside && align === "start" && beside.endsWith("left") ? safe.x - box.x
+      : beside && align === "end" && beside.endsWith("right") ? safe.x + safe.w - (box.x + box.w)
       : 0
     // A logo whose every colour would vanish on this ground, and with no
     // version given for it, is drawn reversed: in one colour, the cover's
     // ink, as a brand's one-colour logo is for a ground its own colours lose.
     const lost = typeof image === "string" && !input.logo.dark && fadesInto(image, palette.ground)
-    if (lost && !warned.has(lost)) {
-      warned.add(lost)
-      console.warn(`surfaces: ${lost}`)
-    }
+    if (lost) warn(lost)
     const shown = lost && typeof image === "string" ? reversed(image, palette.ink) : image
     // Drawn at its own shape: a mark about half the area's height, a wordmark
     // as tall as the area's width allows, never more than a cap's height
@@ -275,9 +281,34 @@ function draw(input: SurfaceInput, fill = false, recipe: Recipe = STYLES[input.s
     const left = align === "start" ? box.x + edge : align === "end" ? box.x + box.w + edge - wide : box.x + (box.w - wide) / 2
     // Just over a title below it in the same column, as a lockup's logo
     // sits; otherwise in the middle of its area.
-    const below = title && safe.y >= box.y + box.h && safe.y - (box.y + box.h) < h * 0.12 && edge !== 0
-    layers.push({ kind: "logo", id: "logo", href, x: left, y: below ? box.y + box.h - tall : box.y + (box.h - tall) / 2, w: wide, h: tall, align })
+    const below = beside && safe.y >= box.y + box.h && safe.y - (box.y + box.h) < h * 0.12 && edge !== 0
+    logo = { kind: "logo", id: "logo", href, x: left, y: below ? box.y + box.h - tall : box.y + (box.h - tall) / 2, w: wide, h: tall, align }
   }
+
+  // Any area besides the main one gets a soft patch of ground under it, over
+  // the art and under the grain, so what sits there reads in any style: the
+  // art was composed round the main area alone. The logo's is no larger than
+  // the logo, so the art shows right up to it.
+  const logoArea = logo && areas.at(-1)!.box
+  const about = logo && { x: logo.x - logo.h * 0.3, y: logo.y - logo.h * 0.3, w: logo.w + logo.h * 0.6, h: logo.h * 1.6 }
+  const patches = [
+    // The page's words get ground under their whole area; a title drawn in
+    // brings its own, round its letters.
+    ...(behind && !title ? clearingUnder(behind.box, palette, layers) : []),
+    ...kept.filter((box) => box !== safe).flatMap((box, index): Layer[] => patch(box === logoArea ? about! : box, index)),
+  ]
+  if (patches.length) {
+    // Under a paper frame, if the style lays one round the art, so a patch
+    // never spills over it; else over the art and under the grain.
+    const frame = layers.findIndex((layer) => layer.id === "paper")
+    const last = layers.length - 1
+    layers.splice(frame >= 0 ? frame : layers[last]?.kind === "grain" ? last : last + 1, 0, ...patches)
+  }
+
+  // The title and the logo over everything, the grain included, so their
+  // edges stay clean.
+  if (title) layers.push(onArt(title, palette, layers))
+  if (logo) layers.push(logo)
 
   // A layout says how its art arrives and how it then moves; a cover asked
   // only to arrive keeps the first.
@@ -346,24 +377,55 @@ function patch(box: Box, index: number): Layer[] {
   ]
 }
 
-// Ground under a large area in the middle, so the art behind shows all round
-// the title and the title reads: the area's own box, past it by twice the
-// blur so the area itself is solid, and softened out from there. As solid as
-// keeps the title well clear of the darkest art there could be on paper, or
-// the lightest on black (11:1, past the 4.5 it needs, so the art under the
-// text is quiet and not merely legible), and no more, so the art still shows
-// through faded rather than wiped out.
-function clearingUnder(box: Box, palette: { ground: string; ink: string }): Layer[] {
-  // The worst is the far end from the ground: a print can be dark in a light
-  // theme, as a mezzotint plate is.
-  const worst = luminance(palette.ground) < 0.18 ? "#ffffff" : "#000000"
-  let opacity = 0.97
-  for (let step = 0.4; step < 0.97; step += 0.03) {
-    if (contrast(palette.ink, over(palette.ground, worst, step)) >= 11) {
-      opacity = step
-      break
+// What words on the art are held to, wherever they stand on it: past the 4.5
+// they need, so the art under them is quiet and not merely legible.
+const READS = 7
+
+// How much ground words need under them to read on the art, from none to
+// nearly all: measured on the art that is really there, in each of `regions`,
+// so quiet art is left as it is and nothing is covered that didn't have to
+// be. It is read at every point the judge reads a cover at (see
+// worstTitleContrast, at its own spacing and the tests' coarser one), edges
+// included, and twice as closely across a whole area, where a thin mark
+// could otherwise pass between two of them.
+function groundNeeded(regions: Box[], close: boolean, palette: Palette, art: Layer[]) {
+  const under = new Set<string>()
+  for (const region of regions) {
+    for (const [across, down] of [[close ? 28 : 14, 14], [8, 8]] as const) {
+      for (let i = 0; i <= across; i++) {
+        for (let j = 0; j <= down; j++) {
+          under.add(toHex(colorAt({ palette, layers: art }, region.x + (region.w * i) / across, region.y + (region.h * j) / down)))
+        }
+      }
     }
   }
+  const colours = [...under]
+  for (let step = 0; step <= 32; step++) {
+    const opacity = Math.min(step * 0.03, 0.97)
+    if (colours.every((colour) => contrast(palette.ink, over(palette.ground, colour, opacity)) >= READS)) return opacity
+  }
+  return 0.97
+}
+
+// A title drawn into the art, with what it needs to read there: where the art
+// under its lines is too strong for it, a halo of ground round the letters
+// themselves, only as strong as that art calls for. The art shows right up
+// to the words, and where it is quiet already the title has no halo at all.
+function onArt(title: TextLayer, palette: Palette, art: Layer[]): TextLayer {
+  const opacity = groundNeeded(lineBoxes(title), false, palette, art)
+  return opacity > 0 ? { ...title, halo: { opacity, reach: 0.15, soft: 0.07 } } : title
+}
+
+// Ground under a large area in the middle whose words are the page's: they
+// may stand anywhere in it, so the ground covers the area's own box, past it
+// by twice the blur so the area itself is solid, and softens out from there.
+// Only as strong as the art under the area needs. (A title drawn in needs no
+// such ground: it carries a halo of its own, see `onArt`.)
+function clearingUnder(box: Box, palette: Palette, art: Layer[]): Layer[] {
+  // Laid even at no strength at all, which a renderer leaves out: light and
+  // dark, and one brand colour and another, then stay one drawing, layer for
+  // layer, whichever of them needed it.
+  const paint = { type: "solid", tone: "ground", opacity: groundNeeded([box], true, palette, art) } as const
   const radius = Math.min(box.w, box.h) * 0.15
   const pad = radius * 2
   const round = Math.min(box.w, box.h) / 2 + pad
@@ -376,7 +438,7 @@ function clearingUnder(box: Box, palette: { ground: string; ink: string }): Laye
         {
           kind: "shapes",
           id: "clearing-box",
-          paint: { type: "solid", tone: "ground", opacity },
+          paint,
           shapes: [
             {
               type: "rect",

@@ -51,10 +51,15 @@ export type AreaArt = (typeof AREA_ART)[number]
 
 // A place for content. `box` is an exact one, in shares of the canvas, in
 // place of `place` and `size`.
+/** A place for content over the art. Give `place`, or an exact `box`. */
 export type Area = {
+  /** One of nine places: "top-left", "top", "top-right", "left", "center", "right", "bottom-left", "bottom", "bottom-right". Needed unless `box` is given. */
   place?: Place
+  /** "sm", "md" (the default) or "lg". */
   size?: AreaSize
+  /** An exact box in shares of the canvas, 0 to 1, as { x, y, w, h }, in place of `place` and `size`. */
   box?: Box
+  /** "around" (the default): content sits on the art, which keeps clear of it, and its colour reads. "behind": an opaque card covers the art, which runs on under it. */
   art?: AreaArt
 }
 

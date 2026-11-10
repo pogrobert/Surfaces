@@ -12,6 +12,7 @@ import type {
 } from "./scene.ts"
 import { boxesTouch } from "../layouts/geometry.ts"
 import { logoColours } from "./image.ts"
+import { lineBoxes } from "./type.ts"
 
 // The judge: what makes a cover good enough to show, checked from the scene
 // alone. Hand-built styles are held to it by the tests; the grammar's
@@ -180,7 +181,7 @@ function lightAt(layers: Layer[], x: number, y: number) {
   return alpha
 }
 
-export function colorAt(scene: Scene, x: number, y: number): Rgb {
+export function colorAt(scene: Pick<Scene, "palette" | "layers">, x: number, y: number): Rgb {
   const tone = (name: Tone) => [...parseHex(scene.palette[name])] as Rgb
   const draw = (under: Rgb, layer: Layer): Rgb => {
     switch (layer.kind) {
@@ -219,7 +220,7 @@ export function colorAt(scene: Scene, x: number, y: number): Rgb {
   return scene.layers.reduce(draw, [0, 0, 0] as Rgb)
 }
 
-const toHex = (color: Rgb) =>
+export const toHex = (color: Rgb) =>
   `#${color
     .map((channel) =>
       Math.round(clamp(channel, 0, 1) * 255)
@@ -239,17 +240,29 @@ export function keptBoxes(scene: Scene) {
 }
 
 // The worst contrast the content's colour gets anywhere in an area the art
-// goes around: content there sits straight on the art.
+// goes around: content there sits straight on the art. Where the art runs on
+// behind an area and the cover's own title is drawn in it, the title is all
+// that stands there, so it is measured where its lines are, against what is
+// round its letters: the art, under the title's halo of ground when it has
+// one.
 export function worstTitleContrast(scene: Scene, steps = 14) {
   const scale = scene.size.w / scene.output.w
+  const title = scene.layers.find((layer) => layer.kind === "text" && layer.id === "title")
+  const lines = title?.kind === "text" ? lineBoxes(title) : []
+  const halo = title?.kind === "text" ? title.halo?.opacity ?? 0 : 0
+  const ground = [...parseHex(scene.palette.ground)] as Rgb
   let worst = Infinity
   for (const area of scene.areas) {
     if (area.art !== "around") continue
     const [x, y, w, h] = [area.x, area.y, area.width, area.height].map((value) => value * scale) as [number, number, number, number]
-    for (let i = 0; i <= steps; i++) {
-      for (let j = 0; j <= steps; j++) {
-        const under = toHex(colorAt(scene, x + (w * i) / steps, y + (h * j) / steps))
-        worst = Math.min(worst, contrast(scene.ink, under))
+    const within = lines.filter((line) => line.x + line.w / 2 >= x && line.x + line.w / 2 <= x + w && line.y + line.h / 2 >= y && line.y + line.h / 2 <= y + h)
+    const lettered = !area.clear && within.length > 0
+    for (const region of lettered ? within : [{ x, y, w, h }]) {
+      for (let i = 0; i <= steps; i++) {
+        for (let j = 0; j <= steps; j++) {
+          const art = colorAt(scene, region.x + (region.w * i) / steps, region.y + (region.h * j) / steps)
+          worst = Math.min(worst, contrast(scene.ink, toHex(lettered ? blend(art, ground, halo) : art)))
+        }
       }
     }
   }
@@ -258,21 +271,26 @@ export function worstTitleContrast(scene: Scene, steps = 14) {
 
 // How much of the art differs from its own ground, sampled over the canvas.
 // `clear` names other colours that stand for open ground, as the pale veins
-// of a dark marbled sheet do.
-export function coverage(scene: Scene, steps = 37, clear: string[] = []) {
+// of a dark marbled sheet do. With `wordsOpen`, an area the art runs on
+// behind for words counts as open too: the words there bring ground of their
+// own, only as much as they need, so the art under them may still show and
+// the place is theirs all the same. That is the measure for whether a cover
+// is a wall; whether it is blank is asked of the art alone.
+export function coverage(scene: Scene, steps = 37, clear: string[] = [], wordsOpen = false) {
   const ground = scene.palette.ground
+  const scale = scene.size.w / scene.output.w
+  const theirs = wordsOpen
+    ? scene.areas.filter((area) => area.art === "around" && !area.clear).map((area) => ({ x: area.x * scale, y: area.y * scale, w: area.width * scale, h: area.height * scale }))
+    : []
   let moved = 0
   for (let i = 0; i < steps; i++) {
     for (let j = 0; j < steps; j++) {
       // Offset along the golden ratio: a regular grid of samples can fall
       // into the gaps of a regular grid of cells.
-      const here = toHex(
-        colorAt(
-          scene,
-          (scene.size.w * (i + ((j * 0.618034) % 1))) / steps,
-          (scene.size.h * (j + ((i * 0.381966) % 1))) / steps
-        )
-      )
+      const x = (scene.size.w * (i + ((j * 0.618034) % 1))) / steps
+      const y = (scene.size.h * (j + ((i * 0.381966) % 1))) / steps
+      if (theirs.some((box) => x >= box.x && x <= box.x + box.w && y >= box.y && y <= box.y + box.h)) continue
+      const here = toHex(colorAt(scene, x, y))
       if ([ground, ...clear].every((open) => contrast(here, open) > 1.15)) moved++
     }
   }
@@ -305,7 +323,7 @@ export function judge(scene: Scene, steps = 8): Verdict {
   if (worst < 4.5) problems.push(`content reads at ${worst.toFixed(2)}:1 in an area, under 4.5:1`)
   const covered = coverage(scene, 23)
   if (covered <= 0.04 && !HAIRLINE.has(scene.style)) problems.push(`the art covers ${(covered * 100).toFixed(1)}% of the canvas: almost blank`)
-  if (covered >= 0.98 && scene.areas.length) problems.push("the art covers the whole canvas, leaving no ground")
+  if (covered >= 0.98 && scene.areas.length && coverage(scene, 23, [], true) >= 0.98) problems.push("the art covers the whole canvas, leaving no ground")
   const kept = keptBoxes(scene)
   if (scene.subject && kept.length && boxesTouch(scene.subject, kept)) problems.push("the subject runs into an area")
   const logo = logoContrast(scene)

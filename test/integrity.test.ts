@@ -262,9 +262,14 @@ test("no cover is blank, and none is all art", () => {
     }
     // A dark marbled sheet's veins are the pale ink, where a light one's are
     // the paper: open ground either way.
-    const covered = coverage(scene, 37, scene.style === "marbling" && input.theme === "dark" ? [scene.palette.ink] : [])
+    const veins = scene.style === "marbling" && input.theme === "dark" ? [scene.palette.ink] : []
+    const covered = coverage(scene, 37, veins)
     assert.ok(covered > 0.05, `${label(input)}: ${covered} covered`)
-    assert.ok(covered < 0.98, `${label(input)}: ${covered} covered`)
+    // A wall leaves content nowhere to stand. Where the art runs on behind
+    // an area for words, that area is theirs: the ground under them is only
+    // as strong as they need, so the art may still show there.
+    const walled = covered < 0.98 ? covered : coverage(scene, 37, veins, true)
+    assert.ok(walled < 0.98, `${label(input)}: ${covered} covered`)
   }
 })
 

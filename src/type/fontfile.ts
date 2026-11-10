@@ -554,6 +554,11 @@ function inkAcross(contours: Contour[], y: number) {
   return sum
 }
 
+/**
+ * Reads a site's own font file (TTF, WOFF or WOFF2 bytes) so a title can be
+ * drawn in it: `brand.og({ title, drawTitle: { font: await loadFont(bytes) } })`.
+ * Imported from the package root, not from `/png`.
+ */
 export async function loadFont(data: Uint8Array | ArrayBuffer): Promise<TitleFont> {
   if (!(data instanceof Uint8Array) && !(data instanceof ArrayBuffer)) {
     throw new Error("Expected the font file's bytes, as from readFile(\"public/fonts/Brand.woff2\")")

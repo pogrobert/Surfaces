@@ -3,7 +3,8 @@ import type { Box } from "./scene.ts"
 import { FONTS, missing, useFont } from "./type.ts"
 import type { TitleFont } from "../type/fontfile.ts"
 import type { Font } from "./type.ts"
-import { STYLES } from "../styles/index.ts"
+import { STILL, STYLES } from "../styles/index.ts"
+import type { StyleName } from "../styles/index.ts"
 
 // Everything wrong with an input, each said with how to put it right, so a
 // person or an agent can fix it in one go. Nothing is ever quietly dropped or
@@ -28,6 +29,23 @@ const OPTIONS = [
   "logo",
 ] as const
 const AREA_OPTIONS = ["place", "size", "box", "art"] as const
+
+// Names an input doesn't take that are easy to reach for, each with what it
+// takes instead.
+const ELSEWHERE: Record<string, string> = {
+  text: ` Where words go is an area: areas: [{ place: "bottom-left", size: "lg" }]. ("text" is a brand's cover option: brand.cover({ title, text: "bottom-left" }).)`,
+  place: ` A place belongs to an area: areas: [{ place: "bottom-left", size: "lg" }].`,
+  size: ` Give "width" and "height" in pixels; an area has a "size" of its own.`,
+  use: ` A use belongs to a brand: createBrand({ name }).og({ title }); here give "width", "height" and "areas".`,
+  id: ` Here the "seed" names the drawing; "id" is a brand's cover option.`,
+  tag: ` "tag" is a brand's cover option; here, give "shape".`,
+  name: ` A name belongs to a brand: createBrand({ name }); here the "seed" names the drawing.`,
+  drawTitle: ` Here a title is drawn by giving it: title: "…", with an area for it to sit in.`,
+  background: ` The ground is made from "color" and "theme"; there is no separate background, and none that is transparent.`,
+  transparent: ` Every cover has a ground, made from "color" and "theme"; there is no transparent one.`,
+  colors: ` One "color", the brand's, as hex; the colours beside it are chosen from it.`,
+  secondary: ` One "color", the brand's, as hex; the colour beside it is chosen to sit well with it.`,
+}
 
 // Seeds people reach for when they don't mean one. They work, but every site
 // that uses them gets the same cover.
@@ -64,6 +82,11 @@ const list = (choices: readonly string[]) => {
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value)
 
+/**
+ * Checks a `generate` input without drawing it: every error `generate` would
+ * throw, each with its fix, and warnings for what works but is likely a
+ * mistake. A brand's choices are checked by `createBrand` itself.
+ */
 export function validate(input: unknown): Problems {
   const errors: string[] = []
   const warnings: string[] = []
@@ -73,7 +96,7 @@ export function validate(input: unknown): Problems {
 
   for (const key of Object.keys(input)) {
     if (!(OPTIONS as readonly string[]).includes(key)) {
-      const hint = nearest(key, OPTIONS)
+      const hint = ELSEWHERE[key] ?? nearest(key, OPTIONS)
       errors.push(`Unknown option "${key}".${hint || ` Options are ${list(OPTIONS)}.`}`)
     }
   }
@@ -98,6 +121,9 @@ export function validate(input: unknown): Problems {
   word("grain", GRAINS)
   word("detail", DETAILS)
   word("motion", MOTIONS)
+  if ((input.motion === "once" || input.motion === "loop") && typeof input.style === "string" && STILL.has(input.style as StyleName)) {
+    warnings.push(`${input.style} is drawn still, so "motion" changes nothing. Styles that move have moves: true in \`catalog\`, such as ${list((Object.keys(STYLES) as StyleName[]).filter((style) => !STILL.has(style)).slice(0, 4))}.`)
+  }
   // A bundled face by name, or a font read by loadFont().
   const ownFont = isObject(input.font) && (input.font as { kind?: unknown }).kind === "font"
   if (!ownFont) word("font", FONTS)

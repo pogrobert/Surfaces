@@ -78,13 +78,25 @@ brand.og({ title, text: "none" })            // the whole frame for the art
 
 The scene's first area is that place, in pixels, with the colour that reads
 there: `scene.areas[0]` is `{ place, x, y, width, height, ink }`. In React,
-`<Cover>` sets the title there as text, in the page's own font:
+`<Cover>` does all of it: it shows the title on the art itself, at a title's
+size, in the page's own font, so the page needs no copy of the title beside
+it:
 
 ```tsx
 import { Cover } from "@pogrobert/surfaces/react"
 
-<Cover brand={brand} title={post.title} />
+<Cover brand={brand} title={post.title} />                 // the title, set on the art
+<Cover brand={brand} title={post.title}><h1>{post.title}</h1></Cover>  // as the page's heading, styled your way
+<Cover brand={brand} title={post.title} text="none" />     // the art alone, beside a heading the page has
+<Cover brand={brand} title={post.title} use="card" />      // a card in a list: art alone
 ```
+
+Words over art are measured, not assumed. Where the art under them is calm
+enough, nothing is laid over it. Where it isn't, a title drawn into the
+image gets a halo of ground round its own letters, only as strong as that
+art calls for, so the art shows right up to the words; and words the page
+sets in the middle of a cover, which may stand anywhere in their area, get a
+soft ground under the area, as weak as it can be.
 
 ## Link previews
 
@@ -94,7 +106,10 @@ Next.js's `ImageResponse` (Satori) does:
 
 ```tsx
 import { ImageResponse } from "next/og"
-import { toPng } from "@pogrobert/surfaces/png"
+import { toPng } from "@pogrobert/surfaces/png"   // needs @resvg/resvg-js installed
+import { brand } from "@/surfaces"                // your brand module, as `init` writes it
+
+const yourFontFile = await fetch(new URL("./Brand.ttf", import.meta.url)).then((file) => file.arrayBuffer())
 
 export async function GET(request: Request) {
   const title = new URL(request.url).searchParams.get("title") ?? "Acme"
@@ -136,7 +151,14 @@ A variable font is drawn at its default weight, and a font with PostScript
 A JPEG keeps a grainy picture to about 50–170 KB, under what chat apps show;
 `toPng` gives it losslessly. On Node they use `@resvg/resvg-js` or
 `@resvg/resvg-wasm`, whichever is installed; on an edge runtime or a Worker,
-install the WASM one and pass its module: `toJpeg(scene, { wasm })`.
+install the WASM one and pass its module: `toJpeg(scene, { wasm })`. The
+bytes go straight into a response: `new Response(jpeg, { headers: {
+"content-type": "image/jpeg" } })`.
+
+A file has one theme. A brand that follows its reader (`theme: "auto"`, as a
+site with a dark mode gets) draws its link previews and headers light, so
+they export as they are; any other cover in both themes is drawn in one
+first: `generate({ ...brand.input("post", { title }), theme: "light" })`.
 
 ## Everywhere else
 
@@ -158,6 +180,14 @@ at("wallpaper", 1170, 2532)      // a phone wallpaper
 Draw any of them with `toHtml` (inline on a page, the only output that
 moves), `toSvg` (files, `<img>`, email) or `toJpeg` and `toPng`.
 
+A brand's hero moves by itself, and any cover does when asked:
+`generate({ ...brand.input("post", { title }), motion: "once" })`. Nineteen
+of the styles move; the others are drawn still and say so (`moves` in
+`catalog`). Readers who ask for less motion get the still drawing. A loop
+runs for as long as the page is open, so give it a pause control:
+`data-paused` on the cover or anything round it, `paused` on `<Surface>` and
+`<Cover>`, or `pause()` and `play()` from `mount`.
+
 ## Styles
 
 Thirty, each with its own shapes, in a light or dark ground, calm or
@@ -169,16 +199,24 @@ bold, smooth, natural or heavy grain, and any colour.
 - **Made:** papercut (layers of cut paper), weave (swatches, folds and straps of cloth), terrazzo (tiles, slabs, floors), swatchbook (cards of the brand's materials)
 - **Pattern:** marbling, strata, endpaper, patches (soft forms in screen-tone patterns)
 
-`catalog` lists every style with what it looks like, what it suits and its
-shapes. A brand picks one from the site's own type, words and colour; give
-`style` to choose.
+`catalog` lists every style with what it looks like, what it suits, its
+shapes and whether it moves. A brand picks one from the site's own type,
+words and colour; give `style` to choose.
+
+A cover is drawn from one colour, the brand's: its ground, its shades and
+the second colour beside it are chosen from that, so there is no second
+colour or background to give, and no transparent ground. `mood` keeps a
+style to its quiet end (`"calm"`) or its loud one (`"bold"`); `grain:
+"smooth"` is a little grain, never none.
 
 ## Alt text
 
 A picture under its page's heading is decoration and stays hidden from
 screen readers; a list of covers reads as its titles. Label one only where it
 stands alone: `label={post.title}` when the cover is itself the link, and
-`describe(scene, { title })` for a link preview or a gallery.
+`describe(scene, { title })` for a link preview or a gallery, as
+`<meta property="og:image:alt">`. A cover with its title drawn into it is a
+picture of words, so it reads the title out without being told.
 
 ## Link previews from a URL
 

@@ -1,7 +1,7 @@
 import { cos, sin, TAU } from "../core/math.ts"
-import { fontOf } from "../core/type.ts"
+import { fontOf, lineBoxes } from "../core/type.ts"
 import { hash } from "../core/random.ts"
-import { poolAlpha } from "../core/scene.ts"
+import { poolAlpha, titleOf } from "../core/scene.ts"
 import type {
   Box,
   Enter,
@@ -726,6 +726,10 @@ function drawSoften(
   scene: Scene,
   out: Output
 ) {
+  // Nothing to show: marks laid at no strength, such as ground under a
+  // title that the art turned out not to need. A filter over nothing still
+  // costs a browser a pass, so none is written.
+  if (!layer.motion && layer.layers.every((item) => item.kind === "shapes" && !item.motion && item.paint.type === "solid" && item.paint.opacity === 0)) return
   const id = `${prefix}${layer.id}`
   const { w, h } = scene.size
   const ry = layer.ry ?? layer.radius
@@ -788,7 +792,7 @@ export function drawLayer(layer: Layer, prefix: string, scene: Scene, out: Outpu
       drawClip(layer, prefix, scene, out)
       break
     case "text":
-      drawText(layer, scene, out)
+      drawText(layer, prefix, scene, out)
       break
     case "logo": {
       const align = layer.align === "start" ? "xMin" : layer.align === "end" ? "xMax" : "xMid"
@@ -805,10 +809,31 @@ const FACES = {
   serif: `Fraunces, "Iowan Old Style", Charter, Georgia, "Times New Roman", serif`,
 }
 
-function drawText(layer: TextLayer, scene: Scene, out: Output) {
+function drawText(layer: TextLayer, prefix: string, scene: Scene, out: Output) {
   const fill = colour("fill", scene.palette[layer.tone])
+  // The halo, under the letters: the letters' own shapes drawn out to its
+  // reach in the ground's colour, and softened. Whatever draws the title, its
+  // outlines or a font by name, draws the halo, so the two always agree.
+  const halo = layer.halo
+  const haloed = (shape: (paint: string) => string) => {
+    if (!halo) return ""
+    const id = `${prefix}${layer.id}-halo`
+    const boxes = lineBoxes(layer)
+    const far = (halo.reach + halo.soft * 3) * layer.size
+    const left = Math.min(...boxes.map((box) => box.x)) - far
+    const top = Math.min(...boxes.map((box) => box.y)) - far
+    const right = Math.max(...boxes.map((box) => box.x + box.w)) + far
+    const bottom = Math.max(...boxes.map((box) => box.y + box.h)) + far
+    out.defs.push(
+      `<filter id="${id}" filterUnits="userSpaceOnUse" x="${num(left)}" y="${num(top)}" width="${num(right - left)}" height="${num(bottom - top)}" color-interpolation-filters="sRGB">` +
+        `<feGaussianBlur stdDeviation="${num(halo.soft * layer.size)}"/></filter>`
+    )
+    const stroke = `fill="none" ${colour("stroke", scene.palette.ground)} stroke-width="${num(halo.reach * 2 * layer.size)}" stroke-linejoin="round"`
+    return `<g filter="url(#${id})" opacity="${fraction(halo.opacity)}">${shape(stroke)}</g>`
+  }
   if (out.outlines) {
-    out.body.push(`<path d="${out.outlines(layer)}" ${fill}/>`)
+    const d = out.outlines(layer)
+    out.body.push(`${haloed((paint) => `<path d="${d}" ${paint}/>`)}<path d="${d}" ${fill}/>`)
     return
   }
   // A site's own font is named as itself, for a page that loads it.
@@ -821,9 +846,9 @@ function drawText(layer: TextLayer, scene: Scene, out: Output) {
         `<tspan x="${num(line.x)}" y="${num(line.y)}" textLength="${num(line.width)}" lengthAdjust="spacingAndGlyphs">${escapeText(line.text)}</tspan>`
     )
     .join("")
-  out.body.push(
-    `<text font-family='${family}' font-weight="${weight}" font-size="${num(layer.size)}"${layer.tracking ? ` letter-spacing="${num(layer.tracking * layer.size)}"` : ""} text-anchor="${layer.align}" ${fill}>${lines}</text>`
-  )
+  const text = (paint: string) =>
+    `<text font-family='${family}' font-weight="${weight}" font-size="${num(layer.size)}"${layer.tracking ? ` letter-spacing="${num(layer.tracking * layer.size)}"` : ""} text-anchor="${layer.align}" ${paint}>${lines}</text>`
+  out.body.push(`${haloed(text)}${text(fill)}`)
 }
 
 const escapeText = (text: string) =>
@@ -867,6 +892,10 @@ export function themeRules(scene: Scene, dark: NonNullable<Scene["dark"]>, prefi
 export const themeVars = (scene: Scene) =>
   Object.fromEntries(Object.keys(scene.palette).map((tone) => [tone, `var(--sf-${tone})`])) as Palette
 
+/**
+ * A cover as one SVG string, always still: for a file, an `<img>`, email.
+ * Hidden from screen readers unless given a `label`, or a title is drawn in.
+ */
 export function toSvg(scene: Scene, options: RenderOptions = {}) {
   const prefix = idPrefix(scene)
   const { w, h } = scene.size
@@ -923,11 +952,14 @@ export function toSvg(scene: Scene, options: RenderOptions = {}) {
   // still drawing.
   const rules = themes.join("")
   const style = rules ? `<style>${rules}</style>` : ""
+  // Art alone is decoration and hidden; a cover with its title drawn in is a
+  // picture of words, and says them unless told what to say instead.
+  const label = options.label ?? titleOf(scene)
 
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${num(w)} ${num(h)}" width="${scene.output.w}" height="${scene.output.h}"` +
-    `${dark ? ` class="${prefix}t"` : ""} preserveAspectRatio="xMidYMid slice"${options.label ? ' role="img"' : ' aria-hidden="true"'}>` +
-    (options.label ? `<title>${escapeText(options.label)}</title>` : "") +
+    `${dark ? ` class="${prefix}t"` : ""} preserveAspectRatio="xMidYMid slice"${label ? ' role="img"' : ' aria-hidden="true"'}>` +
+    (label ? `<title>${escapeText(label)}</title>` : "") +
     `${style}<defs>${out.defs.join("")}</defs>${out.body.join("")}</svg>`
   )
 }

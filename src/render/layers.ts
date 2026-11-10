@@ -1,4 +1,5 @@
 import { cos, radians, sin } from "../core/math.ts"
+import { titleOf } from "../core/scene.ts"
 import type { Box, Layer, Motion, Scene, Shape } from "../core/scene.ts"
 import { drawLayer, fraction, idPrefix, moving, num, shapePath, themeRules, themeVars } from "./svg.ts"
 import type { Output, RenderOptions } from "./svg.ts"
@@ -36,6 +37,11 @@ type Context = {
   clips: string[]
 }
 
+/**
+ * A cover as an HTML string to place inline on a page: the only output that
+ * moves. Hidden from screen readers unless given a `label`, or a title is
+ * drawn in. `data-paused` on it, or on anything round it, holds its motion.
+ */
 export function toHtml(scene: Scene, options: HtmlOptions = {}) {
   const root = idPrefix(scene)
   const { w, h } = scene.size
@@ -69,12 +75,17 @@ export function toHtml(scene: Scene, options: HtmlOptions = {}) {
     // The drawing is centred and covers the element, as the SVG's own "slice".
     `.${root}c{position:absolute;left:50%;top:50%;width:max(100cqw,calc(100cqh * ${fraction(w / h)}));aspect-ratio:${num(w)}/${num(h)};transform:translate(-50%,-50%)}` +
     (dark ? themeRules(scene, dark, root).join("") : "") +
-    (out.css.length ? `@media (prefers-reduced-motion:no-preference){${out.css.join("")}}` : "")
+    // Anything that moves can be stopped: `data-paused` on the cover, or on
+    // anything round it, holds every mark where it is until it is taken off.
+    (out.css.length ? `@media (prefers-reduced-motion:no-preference){${out.css.join("")}}[data-paused] .${root}c *{animation-play-state:paused!important}` : "")
   const size = options.fill ? "width:100%;height:100%" : `width:100%;aspect-ratio:${num(w)}/${num(h)}`
   const clips = context.clips.length
     ? `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>${context.clips.join("")}</defs></svg>`
     : ""
-  const spoken = options.label ? ` role="img" aria-label="${escapeAttribute(options.label)}"` : ' aria-hidden="true"'
+  // Art alone is decoration and hidden; a cover with its title drawn in is a
+  // picture of words, and says them unless told what to say instead.
+  const label = options.label ?? titleOf(scene)
+  const spoken = label ? ` role="img" aria-label="${escapeAttribute(label)}"` : ' aria-hidden="true"'
   return (
     `<div class="${root}k${dark ? ` ${root}t` : ""}" style="position:relative;overflow:hidden;isolation:isolate;container-type:size;${size}"${spoken}>` +
     `<style>${rules}</style>${clips}<div class="${root}c">${body}</div></div>`
@@ -335,7 +346,9 @@ function bounds(layer: Layer): Box | null {
       const right = Math.max(...layer.lines.map((line) => line.x + (layer.align === "end" ? 0 : layer.align === "start" ? line.width : line.width / 2)))
       const top = layer.lines[0]!.y - layer.size
       const bottom = layer.lines.at(-1)!.y + layer.size * 0.3
-      return { x: left, y: top, w: right - left, h: bottom - top }
+      // A halo reaches past the letters, and fades out further still.
+      const far = layer.halo ? (layer.halo.reach + layer.halo.soft * 3) * layer.size : 0
+      return { x: left - far, y: top - far, w: right - left + far * 2, h: bottom - top + far * 2 }
     }
     case "pool": {
       const turn = radians(layer.rotate ?? 0)

@@ -42,7 +42,23 @@ test("no picture is drawn larger than a server can hold", async () => {
   await assert.rejects(toJpeg({} as never), /Expected a scene/)
   assert.throws(() => generate({ style: "riso", seed: "s", color: "#635bff", width: 1e9, height: 1e9 }), /keep each side to 8192/)
   assert.throws(() => generate({ style: "riso", seed: "s", color: "#635bff", width: 4096, height: 16 }), /such as 4096 by 1024/)
-  await assert.rejects(toJpeg(createBrand({ name: "a.dev", color: "#635bff", theme: "auto" }).og({ title: "Hi" })), /A JPEG has one theme/)
+  // A cover that follows the reader is two pictures, and a file is one.
+  const follows = createBrand({ name: "a.dev", color: "#635bff", theme: "auto" })
+  await assert.rejects(toJpeg(follows.cover({ title: "Hi" })), /A JPEG has one theme/)
+  // A link preview and a header are files by nature, so a brand that follows
+  // its reader hands them over in one theme, ready to export.
+  assert.equal(follows.og({ title: "Hi" }).dark, undefined)
+  assert.equal(follows.banner({ for: "x" }).dark, undefined)
+  assert.notEqual(follows.cover({ title: "Hi" }).dark, undefined)
+})
+
+test("a cover is given only what a cover takes, and says where the rest belongs", () => {
+  assert.throws(() => brand.cover({ title: "Hi", width: 800 } as never), /Unknown option "width" for a cover\..*brand\.input\("post"/)
+  assert.throws(() => brand.cover({ title: "Hi", slug: "hi" } as never), /Unknown option "slug" for a cover\. Use "id"/)
+  assert.throws(() => brand.cover({ titel: "Hi" } as never), /Unknown option "titel" for a cover\. Did you mean "title"\?/)
+  assert.throws(() => brand.og({ title: "Hi", color: "#000" } as never), /That is the brand's own choice/)
+  assert.throws(() => createBrand({ name: "a.dev", secondary: "#f00" } as never), /Unknown choice "secondary"\. A brand has one "color"/)
+  assert.throws(() => createBrand({ name: "a.dev", style: "light-trails" as never }), /Unknown style "light-trails"\. Use "underpaint"/)
 })
 
 test("a font file cut short or damaged says so, whatever part is missing", async () => {

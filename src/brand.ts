@@ -12,7 +12,7 @@ import { coverage, HAIRLINE, worstTitleContrast } from "./core/judge.ts"
 import type { Scene } from "./core/scene.ts"
 import type { TitleFont } from "./type/fontfile.ts"
 import { nearest } from "./core/validate.ts"
-import { STYLES } from "./styles/index.ts"
+import { STILL, STYLES } from "./styles/index.ts"
 import type { StyleName } from "./styles/index.ts"
 import { checkFacts, choose, FACTS, leansOf, PLACING, styleReason, USES } from "./page.ts"
 import type { PageFacts, Use } from "./page.ts"
@@ -30,22 +30,37 @@ import type { PageFacts, Use } from "./page.ts"
 //
 //   const brand = createBrand({ name: "acme.dev", ...readPage(html, css) })
 
+/**
+ * What a brand decides once. Only `name` is needed; whatever is left out is
+ * chosen from the page's own facts, most simply spread in from
+ * `readPage(html, css)`. `brand.look` is what was decided and `brand.why`
+ * the reasons.
+ */
 export type BrandChoices = PageFacts & {
-  // The brand's own name, such as its domain.
+  /** The brand's own name, such as its domain. It is in every seed, so two brands never share a drawing. */
   name: string
+  /** The brand colour, as hex. One colour: the others on a cover are chosen from it. */
   color?: string
+  /** The look, from `catalog`. */
   style?: StyleName
+  /** "light", "dark", or "auto" to follow the reader on the site's own pages. Link previews and headers are files, so they are light under "auto". */
   theme?: Theme | "auto"
+  /** "calm" or "bold": the quiet or the loud end of what the style does. */
   mood?: Mood
+  /** "smooth" (a little grain; never none), "natural" or "heavy". */
   grain?: Grain
-  // One of the style's shapes, for every cover: a mark the brand always
-  // makes. Without it each title draws its own.
+  /**
+   * One of the style's shapes, for every cover: a mark the brand always
+   * makes. Without it each title draws its own.
+   */
   shape?: string
-  // The face titles are drawn in, where an image carries its own title.
+  /** The bundled face titles are drawn in, where an image carries its own title: "sans" or "serif". */
   font?: Font
-  // The brand's own logo, set as it is on the pictures a site shows of itself
-  // elsewhere: its link previews and its headers. An SVG file's text, or a
-  // PNG, JPEG or WebP; `{ light, dark }` gives one for each ground.
+  /**
+   * The brand's own logo, set as it is on the pictures a site shows of itself
+   * elsewhere: its link previews and its headers. An SVG file's text, or a
+   * PNG, JPEG or WebP; `{ light, dark }` gives one for each ground.
+   */
   logo?: Logo
 }
 
@@ -69,31 +84,73 @@ const LOGO_AT: Partial<Record<Use, Place>> = { og: "top-left", x: "right", linke
 // gives the art the whole frame. `drawTitle` sets the title into the image
 // in the library's own face instead, for a file that has to carry it and a
 // site that can't set its own.
-export type Content = { title?: string; id?: string; tag?: string; text?: Place | "none"; drawTitle?: boolean | { font: TitleFont } }
+/** What one cover is about. Nothing else is taken: its size, style and colours are the brand's. */
+export type Content = {
+  /** What the cover is about. The same title always draws the same art. It is not written on the picture unless `drawTitle` says so. */
+  title?: string
+  /** A name that outlasts the title, such as the post's slug: the art stays when the title is edited. */
+  id?: string
+  /** The post's category: every cover with one tag draws the same shape, so a category reads as a family. */
+  tag?: string
+  /**
+   * Where words will go over the art: any place, such as "bottom-left", keeps
+   * a calm area there (`scene.areas[0]`, with its box and `ink`); "none"
+   * gives the art the whole frame. By default a link preview keeps one at the
+   * brand's edge and a hero in the middle; a post's cover, a card and a
+   * header keep none.
+   */
+  text?: Place | "none"
+  /**
+   * Draws the title into the image itself, for a file that has to carry it,
+   * such as a link preview: `true` in a bundled face, or `{ font }` in the
+   * site's own from `loadFont()`. On a page, leave it out and set the title
+   * in HTML.
+   */
+  drawTitle?: boolean | { font: TitleFont }
+}
 
+/** A site's look, decided once. Each method draws one kind of cover from what it is about. */
 export type Brand = {
   name: string
-  // The decisions, as plain data: keep them to rebuild the brand exactly.
+  /** The decisions, as plain data: keep them to rebuild the brand exactly. */
   look: { style: StyleName; color?: string; theme: Theme | "auto"; mood?: Mood; grain?: Grain; shape?: string; font?: Font }
-  // Why each decision that wasn't given was made, one sentence each.
+  /** Why each decision that wasn't given was made, one sentence each. */
   why: string[]
-  // A post's cover, the art alone, its title set by the page.
+  /** A post's cover, 1600x900: the art alone, its title set by the page. The use "post". */
   cover(content: Content): Scene
-  // A cover for a card in a list, its title beside it.
+  /** A cover for a card in a list, 1600x900, its title beside it. */
   card(content: Content): Scene
-  // The page's hero: room for its title in the middle, and the one cover
-  // that moves.
+  /** The page's hero, 2400x1200: room for its title in the middle, and the one cover that moves, where its style does. */
   hero(content: Content): Scene
-  // A link preview, 1200x630, with room for the title at the brand's edge.
+  /** A link preview, 1200x630, with room for the title at the brand's edge. Always one theme, ready for `toJpeg`. */
   og(content: Content): Scene
-  // A profile's or a newsletter's header: X (1500x500), LinkedIn (1584x396)
-  // or email (1200x400), the art alone.
+  /** A profile's or a newsletter's header: X (1500x500), LinkedIn (1584x396) or email (1200x400), the art alone. */
   banner(content: Content & { for: "x" | "linkedin" | "email" }): Scene
-  // The input any of those draws, for the components and the HTTP handler.
+  /**
+   * The input any of those draws, to change before drawing: another size,
+   * shape or motion, as `generate({ ...brand.input("post", { title }), width, height })`.
+   * The uses are "post" (what `cover` draws), "card", "hero", "og", "x", "linkedin" and "email".
+   */
   input(use: Use, content?: Content): SurfaceInput
 }
 
 const OPTIONS = ["name", "color", "style", "theme", "mood", "grain", "shape", "font", "logo", ...FACTS] as const
+
+// What a cover is given, and nothing else: a key that isn't one of these is
+// a mistake, and is said with where it belongs rather than dropped.
+const CONTENT = ["title", "id", "tag", "text", "drawTitle"] as const
+function misplaced(key: string, use: Use, called: string) {
+  const spread = `generate({ ...brand.input("${use}", { title }), `
+  if (key === "slug" || key === "seed" || key === "key" || key === "name") return ` Use "id": it names the ${called}, so its art stays when the title is edited.`
+  if (key === "width" || key === "height" || key === "size") return ` A ${called} has its own size; for another, draw its input at that size: ${spread}width, height }).`
+  if (key === "shape") return ` Give the brand its "shape" for every cover, createBrand({ name, shape }), or one cover its own: ${spread}shape }).`
+  if (["style", "color", "theme", "mood", "grain", "font", "logo"].includes(key)) return ` That is the brand's own choice: createBrand({ name, ${key} }).`
+  if (key === "motion" || key === "detail" || key === "areas") return ` That is an option of the input: ${spread}${key} }).`
+  if (key === "place" || key === "position" || key === "area" || key === "align") return ` Use "text" for where words go over the art: a place such as "bottom-left", or "none".`
+  if (key === "for") return ` Only a banner is for somewhere: brand.banner({ for: "x" }).`
+  if (key === "draw" || key === "titleFont" || key === "drawText") return ` Use "drawTitle": true, or { font } with a font from loadFont().`
+  return nearest(key, CONTENT) || ` A ${called} takes ${CONTENT.map((name) => `"${name}"`).join(", ")}.`
+}
 
 // Risograph inks, for a brand with no colour: strong, and none of them the
 // violet that marks a page nobody chose a colour for.
@@ -108,7 +165,14 @@ function check(choices: unknown): string[] {
   const errors: string[] = []
   for (const key of Object.keys(given)) {
     if (!(OPTIONS as readonly string[]).includes(key)) {
-      const hint = key === "seed" || key === "slug" ? ` A brand has no seed: give each cover its title.` : nearest(key, OPTIONS)
+      // Said so the choice can be moved to where it belongs.
+      const hint =
+        key === "seed" || key === "slug" ? ` A brand has no seed: give each cover its title.`
+        : (CONTENT as readonly string[]).includes(key) ? ` That belongs to a cover, not the brand: brand.cover({ ${key} }).`
+        : key === "motion" ? ` A brand's hero moves by itself, where its style does; for any other cover, generate({ ...brand.input("post", { title }), motion: "once" }).`
+        : key === "width" || key === "height" || key === "size" ? ` Each kind of cover has its own size; for another, generate({ ...brand.input("post", { title }), width, height }).`
+        : /^(secondary|accent|partner|second|color2|colour2|secondaryColor)$/i.test(key) ? ` A brand has one "color"; the second colour on a cover is chosen to sit well beside it.`
+        : nearest(key, OPTIONS) || ` A brand's choices are ${OPTIONS.map((option) => `"${option}"`).join(", ")}.`
       errors.push(`Unknown choice "${key}".${hint}`)
     }
   }
@@ -116,7 +180,7 @@ function check(choices: unknown): string[] {
     errors.push(`Missing "name": give the brand's name, such as its domain, so no other brand shares its drawings`)
   }
   if (given.style !== undefined && !(String(given.style) in STYLES)) {
-    errors.push(`Unknown style "${String(given.style)}".${nearest(String(given.style), Object.keys(STYLES))}`)
+    errors.push(`Unknown style "${String(given.style)}".${nearest(String(given.style), Object.keys(STYLES))} Use ${Object.keys(STYLES).map((style) => `"${style}"`).join(", ")}; \`catalog\` says what each looks like.`)
   }
   if (given.color !== undefined && (typeof given.color !== "string" || !/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(given.color))) {
     errors.push(`"color" should be the brand's hex colour, such as #635bff`)
@@ -180,6 +244,12 @@ function resolve(choices: BrandChoices) {
   return { name, look, why, decided, page, ranked: chosen.ranked, logo }
 }
 
+/**
+ * A site's brand: `createBrand({ name: "acme.dev", color: "#635bff" })`, or
+ * with the page's own facts, `createBrand({ name, ...readPage(html, css) })`.
+ * Then `brand.cover({ title })`, `brand.card`, `brand.hero`, `brand.og`,
+ * `brand.banner({ for: "x" })`. There is no seed to choose.
+ */
 export function createBrand(choices: BrandChoices): Brand {
   const { name, look, why, logo } = resolve(choices)
   return build(name, look, why, logo)
@@ -218,6 +288,10 @@ function logoFor(logo: Logo | undefined, use: Use, name: string, title?: string)
 // theirs beside them on the page.
 const TEXT_AT: Partial<Record<Use, true>> = { og: true, hero: true }
 
+// The uses that are files shown by other sites, never a page of this one: a
+// link preview and the headers.
+const FILES: Partial<Record<Use, true>> = { og: true, x: true, linkedin: true, email: true }
+
 // Where a use's title goes when it is set over the art, by the page or drawn
 // in: the use's own place, and a link preview's at the brand's edge.
 // A use's placing, or what the uses are.
@@ -249,6 +323,11 @@ function clipped(title: string) {
 function build(name: string, look: Brand["look"], why: string[], logo?: Logo): Brand {
   const input = (use: Use, content: Content = {}): SurfaceInput => {
     const placing = placingOf(use)
+    if (typeof content !== "object" || content === null || Array.isArray(content)) {
+      throw new Error(`Give the ${CALLED[use]} what it is about, as an object: { title: post.title }`)
+    }
+    const unknown = Object.keys(content).filter((key) => !(CONTENT as readonly string[]).includes(key))
+    if (unknown.length) throw new Error(unknown.map((key) => `Unknown option "${key}" for a ${CALLED[use]}.${misplaced(key, use, CALLED[use])}`).join("\n"))
     // A banner is one of a kind, so it needs no name of its own.
     const about = content?.id ?? content?.title ?? (placing.optional ? use : undefined)
     if (typeof about !== "string" || !about.trim()) {
@@ -277,12 +356,16 @@ function build(name: string, look: Brand["look"], why: string[], logo?: Logo): B
       ...(look.color ? { color: look.color } : null),
       ...placing.size,
       ...(areas.length ? { areas } : null),
-      theme: look.theme,
+      // A picture handed to another site is a file, and a file has one
+      // theme: a brand that follows its reader shows its light side there,
+      // as it does in every picture the command line writes.
+      theme: look.theme === "auto" && FILES[use] ? "light" : look.theme,
       ...(look.mood ? { mood: look.mood } : null),
       ...(look.grain ? { grain: look.grain } : null),
       ...(look.shape ? { shape: look.shape } : content.tag?.trim() ? familyShape(look.style, name, content.tag.trim()) : null),
       ...(drawn ? { title: clipped(content.title!), ...(own ? { font: own } : look.font ? { font: look.font } : null) } : null),
-      ...(placing.motion && !drawn ? { motion: placing.motion } : null),
+      // A hero moves, where its style does; a still style's stays as drawn.
+      ...(placing.motion && !drawn && !STILL.has(look.style) ? { motion: placing.motion } : null),
       ...(logoFor(logo, use, name, drawn ? content.title : undefined) ? { logo: logoFor(logo, use, name, drawn ? content.title : undefined) } : null),
     }
   }
@@ -358,6 +441,11 @@ function holds(name: string, look: Brand["look"]) {
 //
 //   const options = directions({ name: "acme.dev", ...readPage(html, css) })
 //   createBrand({ name: "acme.dev", ...options[2].look })
+/**
+ * Several brands for one site to show a person, varied and each already
+ * checked; the first is what `createBrand` picks. Keep the chosen one's look:
+ * `createBrand({ name, ...options[2].look })`.
+ */
 export function directions(choices: BrandChoices, { count = 6 }: { count?: number } = {}): Brand[] {
   const { name, look, why, decided, page, ranked, logo } = resolve(choices)
   const leans = leansOf(page)

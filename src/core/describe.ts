@@ -1,4 +1,5 @@
 import { toOklch } from "./color.ts"
+import { titleOf } from "./scene.ts"
 import type { Layer, Scene, Tone } from "./scene.ts"
 
 // A cover in one plain sentence, for alt text where a cover is seen without
@@ -251,6 +252,12 @@ function tonesIn(layers: readonly Layer[], found: Set<Tone>) {
 const list = (names: string[]) =>
   names.length < 3 ? names.join(" and ") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`
 
+/**
+ * Alt text for a cover seen without its page, such as `og:image:alt`: says
+ * the art is abstract, then what it looks like in everyday words, and names
+ * the page when given its `title` (a title drawn into the cover is named
+ * without asking).
+ */
 export function describe(scene: Scene, { title }: { title?: string } = {}) {
   const phrase = ART[scene.style]
   if (!phrase) throw new Error(`No description for style "${scene.style}"`)
@@ -275,6 +282,8 @@ export function describe(scene: Scene, { title }: { title?: string } = {}) {
     }
   }
   const what = phrase(scene.shape, inks)
-  const named = title?.trim()
+  // A title drawn into the cover is part of what it shows, so it is named
+  // without being asked for.
+  const named = (title ?? titleOf(scene))?.trim()
   return named ? `Abstract cover art for "${named}": ${what}.` : `Abstract art: ${what}.`
 }

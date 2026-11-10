@@ -25,11 +25,19 @@ const brand = createBrand({ name: "acme.dev", color: "#635bff" })
 
 brand.cover({ title: post.title })      // a post's cover: the art, its title set by the page
 brand.card({ title: post.title })       // a card in a list, title beside it
-brand.hero({ title: "Pricing" })        // room for the title in the middle; the one cover that moves
+brand.hero({ title: "Pricing" })        // room for the title in the middle; the one cover that moves, where its style does
 brand.og({ title: post.title })         // a link preview, 1200x630, room for the title at the brand's edge
 brand.banner({ for: "x" })              // a header: "x" 1500x500, "linkedin" 1584x396, "email" 1200x400
-brand.input("post", { title })          // the input any of those draws, for components
+brand.input("post", { title })          // the input any of those draws ("post" is cover's), to change before drawing
 ```
+
+- A cover is given what it is about and nothing else: `title`, `id`, `tag`,
+  `text` and `drawTitle`. Any other key throws and says where it belongs.
+  Another size, shape or motion for one cover is its input, changed:
+  `generate({ ...brand.input("post", { title }), width: 800, height: 800 })`.
+- A link preview and a header are files other sites show, and a file has
+  one theme: a brand that follows its reader (`theme: "auto"`) draws them
+  light, ready for `toJpeg`. Its covers, cards and heroes follow the reader.
 
 - `name`, such as the domain, is the one thing a brand must have. It is in
   every seed, so the same title in one brand is always the same art and two
@@ -41,7 +49,8 @@ brand.input("post", { title })          // the input any of those draws, for com
   the brand's edge and a hero in the middle, and a post's cover, a card and
   a header keep none, their words sitting beside them on the page. The
   scene's first area is that place, with its box and the `ink` that reads
-  there. React's `<Cover>` sets the title there in the page's own font.
+  there. React's `<Cover>` sets the title there in the page's own font, on
+  a post's cover too, at its foot: it is the cover with its words on.
 - A banner is art alone. An X header puts nothing that must be seen at
   its bottom left, where X lays the profile's photo; the art runs on under
   it. There is no icon: an icon is a brand's
@@ -173,17 +182,19 @@ type SurfaceInput = {
   height?: number                       // default 1600 x 900
   areas?: Area[]                        // where content goes; none = art fills the canvas
 
-  theme?: "light" | "dark" | "auto"     // auto draws both and follows the reader
-  mood?: "calm" | "bold"
-  grain?: "smooth" | "natural" | "heavy"
+  theme?: "light" | "dark" | "auto"     // auto draws both and follows the reader; a file has one, so not auto
+  mood?: "calm" | "bold"                // the quiet or the loud end of the style; left out, the seed ranges over both
+  grain?: "smooth" | "natural" | "heavy" // default "natural"; "smooth" is a little grain, never none
   detail?: "none" | "micro"             // the small marks of a technical drawing
-  motion?: "none" | "once" | "loop"     // default "none"
+  motion?: "none" | "once" | "loop"     // default "none"; shown by toHtml, on styles the catalog says move
   shape?: string                        // one of the style's approved shapes
+  title?: string                        // words drawn into the art, in its largest area: for image files
+  font?: "sans" | "serif" | TitleFont   // the face the title is drawn in; a TitleFont is from loadFont()
   logo?: { image, dark?, place }        // the brand's logo, as it is, in a small area the art keeps clear
 }
 
 type Area = {
-  place:
+  place:                                // needed, unless `box` is given
     | "top-left" | "top" | "top-right"
     | "left" | "center" | "right"
     | "bottom-left" | "bottom" | "bottom-right"
@@ -198,17 +209,26 @@ type Area = {
   exceptions, both so the art isn't squeezed into slivers:
   - A large or medium area in the middle has the art drawn behind it, as on
     a cover with nothing to keep clear, with a soft clearing of ground under
-    the area, only as strong as the text needs. Endpaper, Photocopy and
+    the area. The clearing is only as strong as the art really under the
+    area needs for words to read at 7:1, measured there: quiet art gets
+    none. It covers the area because the words are the page's, which may
+    set them anywhere in it. A title drawn in needs no clearing: it carries
+    a halo instead (see "Titles in images"). Endpaper, Photocopy and
     Linework keep going round it instead (a pattern that already frames it,
     or lines of their own that would read as text).
   - Any area besides the largest gets a soft patch of ground under it; the
-    art is composed round the largest.
+    art is composed round the largest. A logo's patch is no larger than the
+    logo.
 - `art: "behind"`: content covers the art (an opaque card). The art may run
   behind it and frames it.
 - `box` is the only numeric escape hatch. It is validated: inside the canvas
   margins, not too small, not overlapping another area.
-- Gone: `use` (a shortcut that bundled a size and a title place) and `text`
-  (one place from a list of five).
+- An input has no `use` and no `text`: those are a brand's (`brand.og`,
+  `text: "bottom-left"`), and it writes the size and areas they stand for.
+  `validate` says so when one is given here.
+- There is one `color`. The ground, the shades and the second colour on a
+  cover are chosen from it, so there is no second colour or background to
+  give, and no transparent ground.
 
 Sizes that other platforms fix are plain data, not a mode:
 
@@ -237,6 +257,14 @@ for it never moves the art.
 { place, size, art, clear, x, y, width, height, ink }
 // pixels; ink is a CSS colour that reads there; clear says whether the art keeps out of the box
 ```
+
+- The box is in pixels of `scene.output`, the size that was asked for.
+  `scene.size` is the canvas the layers are drawn on, in the library's own
+  units, which an SVG's `viewBox` carries; nothing outside the renderers
+  needs it.
+- An area's `ink` is CSS: a hex colour, or on a cover drawn for both themes
+  a `var(…, #hex)` that follows whichever shows. `scene.ink` is always hex,
+  for an image renderer that can't read a variable.
 
 ### Titles in images
 
@@ -273,6 +301,13 @@ toJpeg(brand.og({ title, drawTitle: { font } }))
   `next/font/google` keeps no file in the project, so its sites get the
   bundled faces until the file is added.
 
+- It reads wherever it lands. The art under its lines is measured, and
+  where that is too strong for the words the title gets a halo: ground laid
+  softly round the letters themselves, drawn from their own shapes, only as
+  strong as the art there calls for (7:1), so it reads as the letters' own
+  shadow on a dark cover and their glow on a light one, and the art shows
+  right up to them. On calm art, and beside art that keeps clear, there is
+  none. It is `halo` on the scene's text layer, and every renderer draws it.
 - It is set as a designer would: large on one or two lines when short, down
   to four balanced lines when long, kerned, and against the side its area
   hangs from. A title that can't fit at the smallest size ends in an ellipsis.
@@ -299,8 +334,16 @@ Renderers, named by where the cover goes:
 | `toPng(scene)` | The same picture losslessly, anywhere an SVG won't do. From `@pogrobert/surfaces/png`. |
 | `describe(scene, { title? })` | Alt text, for a cover seen without its page. |
 
+`toHtml` moves a cover asked to (`motion: "once"` or `"loop"`), on the
+styles `catalog` gives `moves: true`; the rest are drawn still, and asking
+them to move is a warning, not an error. A reader who asks for less motion
+sees the still drawing. A loop can be stopped: `data-paused` on the cover or
+on anything round it holds it, `paused` does the same on `<Surface>` and
+`<Cover>`, and `mount` returns `pause()` and `play()`. A page that loops a
+cover gives its readers a control for one of them.
+
 Also: `mount(element, input, { label })` for plain DOM, the React `<Surface>`,
-and the HTTP handler, `createHandler({ defaults, png })`, a fetch handler whose
+and the HTTP handler, `createHandler({ defaults, png, jpeg, brand, font, secret })`, a fetch handler whose
 parameters are the input's own names:
 `/cover?style=riso&seed=x&color=635bff&width=1200&height=630&area=bottom-left:lg`
 (`area` repeats, as `place:size:art`; `title` and `font` set a title in;
@@ -335,12 +378,26 @@ names the page, which also tells apart two covers that look alike:
 `Abstract cover art for "How the new search works": a grainy teal ring.`
 `label: true` reads out `describe(scene)` without a title.
 
+A cover with its title drawn into it is a picture of words, so it is not
+hidden: `toSvg`, `toHtml`, `mount` and `<Surface>` read the title out unless
+given a `label` of their own, and `describe` names it.
+
+In React the label names the picture alone, never the element round it, so
+a heading, a link or a card standing in an area stays what it is to a screen
+reader.
+
 ## React
 
-A brand's cover: `<Cover brand={brand} title={post.title} use="post" />`.
-`use` is `"post"` (default), `"card"`, `"hero"` or `"og"`; the title shows
-where the cover keeps room for it, unless `children` stand there instead. The
-rest of this section is the lower level, one exact cover:
+A brand's cover with its title on: `<Cover brand={brand} title={post.title} />`.
+`use` is `"post"` (default), `"card"`, `"hero"` or `"og"`. The title is set
+over the art where the cover keeps room for it, a post's at its foot, in the
+page's own font, at a size that follows its length and the cover's width, so
+the page adds no copy of it beside the cover. It is a plain block, not a
+heading: to make it the page's heading, or set it any other way, give it as
+`children`, `<Cover brand={brand} title={title}><h1>{title}</h1></Cover>`,
+which stand there instead. `text="none"` is the art alone, and a card shows
+no title either way. `motion` and `paused` are taken as `<Surface>` takes
+them. The rest of this section is the lower level, one exact cover:
 
 
 ```tsx
@@ -380,6 +437,10 @@ toPng(generate({ ...launch, ...formats.og, areas: [{ place: "bottom-left", size:
 `generate` validates everything and throws with the fix:
 
 - Unknown key: `Unknown option "grian". Did you mean "grain"?`
+- A key that belongs elsewhere says where: `text` here is an area, `width`
+  on a brand's cover is its input's, `slug` is `id`, a second colour doesn't
+  exist. A brand's covers and `createBrand` throw the same way; nothing
+  given is ever quietly dropped.
 - Unknown value: `Unknown grain "rough". Use "smooth", "natural" or "heavy".`
 - Wrong shape for a style: lists that style's shapes.
 - Trivial seeds (`42`, `1`, `"seed"`): a warning to use the page's slug.
@@ -393,11 +454,16 @@ toPng(generate({ ...launch, ...formats.og, areas: [{ place: "bottom-left", size:
    (`@pogrobert/surfaces/schema.json`, also exported as `inputSchema`).
 2. Done: `AGENTS.md`, a rules block under 1 KB, shipped in the package.
 3. Done: the examples-first README and `llms.txt`, both shipped.
-4. Done: `catalog`, each style with what it looks like, what it suits and its
-   shapes.
-5. Later: an MCP server whose `preview` returns an image.
+4. Done: `catalog`, each style with what it looks like, what it suits, its
+   shapes and whether it moves.
+5. Done: the public types carry their own notes, so an editor or an agent
+   reading a `.d.ts` sees each option's words, default and meaning.
+6. Later: an MCP server whose `preview` returns an image.
 
 ## What changed inside
+
+A history of the 2026-11-04 rewrite, for those who knew the names before it;
+none of this is the current API.
 
 - Every style's layout works around any set of areas instead of one title
   box, and routes art behind `behind` areas. Styles that moved the title
@@ -408,6 +474,8 @@ toPng(generate({ ...launch, ...formats.og, areas: [{ place: "bottom-left", size:
 - Every style is checked at every size and place, both themes, five seeds,
   and over 13,000 random inputs: the text reads, nothing lands on kept
   content, and no cover is near blank.
-- `ogCover`, `titleBox`, `inkClass`, `renderLayers`, `renderSvg`, `USES`,
-  `TEXT_PLACES` and the public `hash` and `STYLES` exports go; `catalog`,
-  `formats`, `PLACES`, `toHtml`, `toSvg`, `toPng` and `validate` come in.
+- `ogCover`, `titleBox`, `inkClass`, `renderLayers`, `renderSvg`,
+  `TEXT_PLACES` and the public `hash` and `STYLES` exports went; `catalog`,
+  `formats`, `PLACES`, `toHtml`, `toSvg`, `toPng` and `validate` came in.
+  (`USES` went too, and came back with brands, as the list of a brand's
+  uses.)

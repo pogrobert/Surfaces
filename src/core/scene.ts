@@ -175,6 +175,12 @@ export type TextLayer = {
   tone: Tone
   align: "start" | "middle" | "end"
   lines: { text: string; x: number; y: number; width: number }[]
+  // Ground laid softly round the letters themselves, where the art under
+  // them is too strong for the words: as strong as `opacity`, at full `reach`
+  // ems out from each letter's edge and softened over `soft` ems beyond.
+  // Shaped by the letters, so it reads as their own shadow or glow and the
+  // art shows right up to them, not as a patch laid over the art.
+  halo?: { opacity: number; reach: number; soft: number }
 }
 
 export type Layer =
@@ -237,43 +243,59 @@ export type Layer =
       motion?: Motion
     }
 
+/** An area of the cover, resolved: where to lay content over the art, in output pixels, and the colour that reads there. */
 export type SceneArea = {
-  // How it was asked for: a place and size, or null for an exact box.
+  /** How it was asked for: a place and size, or null for an exact box. */
   place: string | null
   size: string | null
   art: "around" | "behind"
-  // Whether the art keeps out of the area. Content around the art sits on it
-  // either way: a large area in the middle has the art pass behind it under
-  // a clearing of ground, so it is not kept clear.
+  /**
+   * Whether the art keeps out of the area. Content around the art sits on it
+   * either way: a large area in the middle has the art pass behind it under
+   * a clearing of ground, so it is not kept clear.
+   */
   clear: boolean
-  // The colour content on the art reads in there; with both themes, a CSS
-  // variable that follows whichever shows.
+  /**
+   * The colour content reads in there, as CSS. A hex colour, except on a
+   * cover drawn for both themes (`theme: "auto"`), where it is a CSS
+   * `var(…, #hex)` that follows whichever shows: for an image renderer, which
+   * can't read a variable, use `scene.ink`, always hex.
+   */
   ink: string
+  /** Left edge, in pixels of the output (`scene.output`). */
   x: number
+  /** Top edge, in pixels of the output. */
   y: number
   width: number
   height: number
 }
 
+/** A drawn cover as plain data: no SVG, no functions. Render it with `toHtml`, `toSvg`, `toPng` or `toJpeg`. */
 export type Scene = {
   format: 1
   style: string
   recipe: number
   seed: string
-  // Every coordinate is in these units. A canvas always has the same area, so
-  // a cover drawn at 1200x630 and at 2400x1260 is the same drawing.
+  /**
+   * The canvas the layers are drawn on, in the library's own units, not
+   * pixels: every canvas has the same area, so a cover drawn at 1200x630 and
+   * at 2400x1260 is the same drawing. For pixels, use `output`.
+   */
   size: { w: number; h: number }
-  // The size that was asked for, written on the SVG.
+  /** The size that was asked for, in pixels: what `areas` are measured in. */
   output: { w: number; h: number }
   palette: Palette
-  // The colour content on the art reads in, on `palette` already.
+  /** The colour content on the art reads in, as hex: dark on a light cover, light on a dark one. */
   ink: string
-  // Where content goes, as asked, in output pixels. The art keeps clear of an
-  // area it goes around, and runs on under one it goes behind.
+  /**
+   * Where content goes, as asked, in output pixels. The art keeps clear of an
+   * area it goes around, and runs on under one it goes behind. The first is
+   * a brand cover's place for its title.
+   */
   areas: SceneArea[]
-  // The approved shape this cover drew, when its style has a choice of them.
+  /** The shape this cover drew, when its style has a choice of them. */
   shape?: string
-  // The box the art's one subject keeps inside, when it has one.
+  /** The box the art's one subject keeps inside, in the units of `size`, when it has one. */
   subject?: Box
   layers: Layer[]
   // A cover drawn for both themes carries its dark side too. Light and dark
@@ -282,6 +304,13 @@ export type Scene = {
   // `inkVar` is the CSS variable the cover's rules set to whichever ink shows,
   // which an area's `ink` reads.
   dark?: { palette: Palette; ink: string; layers: Layer[]; inkVar: string }
+}
+
+// The words a cover has drawn into it, as they read: what a picture of text
+// has to say to someone who can't see it.
+export function titleOf(scene: Pick<Scene, "layers">): string | undefined {
+  const title = scene.layers.find((layer) => layer.kind === "text" && layer.id === "title")
+  return title?.kind === "text" ? title.lines.map((line) => line.text).join(" ") : undefined
 }
 
 // How a pool's colour falls off, shared so every renderer draws the same pool.

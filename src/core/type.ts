@@ -190,6 +190,17 @@ export function setTitle(text: string, box: Box, place: string | null, font: Tit
   }
 }
 
+// The part of the canvas each line of a title's letters covers, from the top
+// of its capitals to the foot of its descenders: where the title is read.
+export function lineBoxes(text: TextLayer): Box[] {
+  return text.lines.map((line) => ({
+    x: text.align === "middle" ? line.x - line.width / 2 : text.align === "end" ? line.x - line.width : line.x,
+    y: line.y - text.size * 0.76,
+    w: line.width,
+    h: text.size * 1.02,
+  }))
+}
+
 // Where each character of a run starts, in ems from the run's start, kerned
 // and tracked as `width` measures it: for drawing a line's outlines.
 export function positions(text: string, font: TitleFace, tracking = 0) {
