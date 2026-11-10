@@ -14,7 +14,7 @@ const ABOUT: Record<StyleName, { looks: string; suits: string }> = {
   riso: { looks: "A two-ink stencil print whose layers don't quite line up.", suits: "Playful, indie, print-flavoured covers." },
   moire: { looks: "Fine fringes of light breaking from a soft mass, in heavy grain.", suits: "Near-monochrome, cinematic covers." },
   strata: { looks: "Bands of colour like a horizon at dusk, cut to a disc.", suits: "Warm, graphic covers in two hues." },
-  mezzotint: { looks: "A still life burnished out of a velvet-black plate: a pear, a jug or a glass on a lit ledge; on paper, a print with its plate mark.", suits: "Quiet, considered covers; dark in both themes." },
+  mezzotint: { looks: "A still life burnished out of a velvet-black plate: a pear, a jug or a glass on a lit ledge.", suits: "Quiet, considered covers; dark in both themes." },
   marbling: { looks: "Marbled paper: inks floated and combed into veins, as a sheet, a disc, or a whole cover under paper labels.", suits: "Crafted, bookish covers in two hues." },
   linework: { looks: "Hairline diagrams in one ink on a near-plain ground.", suits: "Technical and product covers." },
   dither: { looks: "A smooth form in one ink through a pixel dither.", suits: "Retro, screen-flavoured covers." },

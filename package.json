@@ -1,10 +1,37 @@
 {
   "name": "@pogrobert/surfaces",
-  "version": "0.0.0",
-  "description": "Gorgeous covers and backgrounds generated from a seed.",
-  "private": true,
+  "version": "0.1.0",
+  "description": "Generative art for the pictures a site repeats: covers, link previews and headers, drawn from one brand and the same on every build.",
+  "keywords": [
+    "generative-art",
+    "cover",
+    "og-image",
+    "open-graph",
+    "link-preview",
+    "social-card",
+    "banner",
+    "svg",
+    "brand",
+    "deterministic",
+    "react",
+    "agents"
+  ],
+  "homepage": "https://surfaces.pogrobert.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pogrobert/surfaces.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pogrobert/surfaces/issues"
+  },
+  "author": {
+    "name": "Robert Poghosyan",
+    "url": "https://pogrobert.com"
+  },
   "license": "MIT-0",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -34,9 +61,13 @@
     "LICENSE",
     "AGENTS.md",
     "README.md",
+    "CHANGELOG.md",
     "llms.txt",
     "docs/api.md"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
     "build": "pnpm clean && tsc -p tsconfig.build.json && tsc -p tsconfig.cli.json && node scripts/schema.ts",
@@ -51,7 +82,7 @@
     "bench:motion": "pnpm build && node scripts/bench-motion.ts"
   },
   "engines": {
-    "node": ">=24"
+    "node": ">=20"
   },
   "devDependencies": {
     "@fontsource-variable/atkinson-hyperlegible-mono": "^5.3.0",

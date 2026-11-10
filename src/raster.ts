@@ -32,12 +32,15 @@ function loadNative() {
   return native
 }
 
-// resvg's WebAssembly starts once per process, from whatever it is given.
-function loadWasm(source: WasmSource | Promise<WasmSource>) {
+// resvg's WebAssembly starts once per process, from whatever it is given, or
+// from what `source` fetches once the package itself has loaded: asked for
+// any sooner, a fetch that fails where the package isn't installed would be
+// a promise nobody is waiting on, and Node stops a process over one.
+function loadWasm(source: WasmSource | (() => Promise<WasmSource>)) {
   const name = WASM
   wasm ??= import(name).then(
     async (module: { Resvg: Resvg; initWasm(source: unknown): Promise<void> }) => {
-      await module.initWasm(await source)
+      await module.initWasm(typeof source === "function" ? await source() : await source)
       return module.Resvg
     },
     (error) => {
@@ -64,7 +67,7 @@ async function renderer(source?: WasmSource): Promise<Resvg> {
     return await loadNative()
   } catch {
     try {
-      return await loadWasm(wasmOnDisk())
+      return await loadWasm(wasmOnDisk)
     } catch {
       wasm = undefined
       throw new Error(HOW)

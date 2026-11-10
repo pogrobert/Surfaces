@@ -68,8 +68,24 @@ export function dashes(frame: Frame, subject: Subject, p: DashParams): Art {
   // area, so a thin strip is no denser than a card.
   const pitch = subject === "field" ? Math.sqrt(w * h) / p.rows : side / p.rows
   const cell = pitch * 1.9
-  const clear = [...(titled ? inflate(keep, pitch * 1.5) : []), ...inflate(frame.calm, pitch)]
+  // Where words go, no dash is drawn. Round it the drawing thins out as it
+  // does at a form's own edges: over a few rows fewer and fewer dashes are
+  // drawn, and more of those that are become pale specks, so the words stand
+  // in a clearing with a ragged edge of the drawing's own making, and not in
+  // a box cut out of it. `beside` is how far in that goes at a point: 0 at
+  // the words, 1 where the drawing is whole.
+  const clear = [...(titled ? inflate(keep, pitch * 0.5) : []), ...inflate(frame.calm, pitch * 0.5)]
   const onTitle = (x0: number, x1: number, y: number) => clear.some((b) => x1 > b.x && x0 < b.x + b.w && y > b.y - pitch * 0.5 && y < b.y + b.h)
+  const fade = pitch * 9
+  const beside = (x: number, y: number) => {
+    let most = 1
+    for (const b of clear) {
+      const dx = Math.max(b.x - x, 0, x - (b.x + b.w))
+      const dy = Math.max(b.y - y, 0, y - (b.y + b.h))
+      most = Math.min(most, smoothstep(clamp(Math.sqrt(dx * dx + dy * dy) / fade, 0, 1)))
+    }
+    return most
+  }
 
   // How high the form stands at a point, 0 to 1: the dashes follow it.
   let height: (x: number, y: number) => number
@@ -159,7 +175,13 @@ export function dashes(frame: Frame, subject: Subject, p: DashParams): Art {
   // dash a little longer or shorter than its neighbour.
   const drift = wander(draw.fork("drift"), Math.max(region.w, region.h) * 0.7, 2)
   const jitter = draw.fork("jitter")
+  // Which dashes thin out beside the words: a stream of its own, drawn from
+  // for every dash whether or not there are words, so a title thins the
+  // drawing round it and moves nothing else in it.
+  const thin = draw.fork("thin")
   const rows = WEIGHTS.map(() => [] as number[])
+  const specks: number[] = []
+  const speck = pitch * 0.14
   const top = Math.max(region.y, 0)
   const foot = Math.min(region.y + region.h, h)
   const left = Math.max(region.x, 0)
@@ -171,22 +193,35 @@ export function dashes(frame: Frame, subject: Subject, p: DashParams): Art {
     for (let x = left - cell * 2 + (((shift % cell) + cell) % cell); x < right; x += cell) {
       const mx = x + cell / 2 + jitter.between([-0.14, 0.14]) * cell
       const level = height(mx, y)
-      if (level < 0.08) {
+      const chance = thin.next()
+      const whole = beside(mx, y)
+      // Nearer the words, fewer are drawn at all.
+      if (level < 0.08 || chance > whole) {
         jitter.next()
         continue
       }
-      const length = cell * clamp((0.18 + level * 0.74) * jitter.between([0.7, 1.15]), 0.12, 0.96)
+      // And of those, the nearer ones are specks: short, thin and pale.
+      const faint = chance > whole * whole
+      const length = cell * (faint ? 0.14 + whole * 0.2 : clamp((0.18 + level * 0.74) * jitter.between([0.7, 1.15]), 0.12, 0.96))
+      if (faint) jitter.next()
       const x0 = Math.max(mx - length / 2, 0)
       const x1 = Math.min(mx + length / 2, w)
       if (x1 - x0 < pitch * 0.2 || onTitle(x0, x1, y)) continue
+      if (faint) {
+        specks.push(Math.round(x0 * 2) / 2, Math.round((y - speck / 2) * 2) / 2, Math.round((x1 - x0) * 2) / 2)
+        continue
+      }
       const k = level < 0.36 ? 0 : level < 0.7 ? 1 : 2
       const thick = pitch * WEIGHTS[k]!.share
       rows[k]!.push(Math.round(x0 * 2) / 2, Math.round((y - thick / 2) * 2) / 2, Math.round((x1 - x0) * 2) / 2)
     }
   }
-  const marks: Mark[] = WEIGHTS.flatMap(({ tone, share }, k): Mark[] =>
-    rows[k]!.length ? [{ kind: "shapes", id: `dashes-${tone}`, paint: { type: "solid", tone, opacity: 1 }, shapes: [{ type: "blocks", h: pitch * share, points: rows[k]! }] }] : []
-  )
+  const marks: Mark[] = [
+    ...(specks.length ? [{ kind: "shapes", id: "dashes-specks", paint: { type: "solid", tone: "body", opacity: 0.55 }, shapes: [{ type: "blocks", h: speck, points: specks }] } satisfies Mark] : []),
+    ...WEIGHTS.flatMap(({ tone, share }, k): Mark[] =>
+      rows[k]!.length ? [{ kind: "shapes", id: `dashes-${tone}`, paint: { type: "solid", tone, opacity: 1 }, shapes: [{ type: "blocks", h: pitch * share, points: rows[k]! }] }] : []
+    ),
+  ]
 
   return {
     under: [{ kind: "fill", id: "ground", tone: "ground" }],

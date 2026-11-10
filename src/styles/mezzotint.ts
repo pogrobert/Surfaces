@@ -7,10 +7,9 @@ import { mezzotint, STILL_LIFES } from "../layouts/mezzotint.ts"
 import type { StillLife } from "../layouts/mezzotint.ts"
 
 // A still life burnished out of a velvet-black plate. The plate is dark in
-// both themes: on black it is the whole cover, and on paper it is a print
-// with a margin of paper round it and the plate's pressed edge, its lights
-// the paper itself. So the ground is the plate, the strongest tone is the
-// light, and content on it reads in a pale ink either way.
+// both themes and is the whole cover, edge to edge, its lights a pale paper
+// tone. So the ground is the plate, the strongest tone is the light, and
+// content on it reads in a pale ink either way.
 const PALETTE: PaletteSpec = {
   ...BASE_PALETTE,
   maxChroma: 0.06,
@@ -18,7 +17,7 @@ const PALETTE: PaletteSpec = {
     ground: { l: [0.13, 0.155], c: [0.2, 0.35], turn: -20 },
     quiet: { l: [0.2, 0.23], c: [0.3, 0.45], turn: -20 },
     soft: { l: [0.34, 0.4], c: [0.5, 0.7] },
-    // The paper round the plate.
+    // The lights, in the tone of the paper the plate is printed on.
     body: { l: [0.95, 0.965], c: [0.15, 0.25], turn: -40 },
     strong: { l: [0.95, 0.965], c: [0.15, 0.25], turn: -40 },
     ink: { l: [0.96, 0.975], c: [0.1, 0.18], turn: -40 },
@@ -27,7 +26,6 @@ const PALETTE: PaletteSpec = {
     ground: { l: [0.1, 0.12], c: [0.35, 0.5], turn: 8 },
     quiet: { l: [0.17, 0.2], c: [0.45, 0.6], turn: 8 },
     soft: { l: [0.3, 0.36], c: [0.6, 0.75] },
-    // On a dark page there is no paper: the margin is the plate's own black.
     body: { l: [0.1, 0.12], c: [0.35, 0.5], turn: 8 },
     strong: { l: [0.88, 0.92], c: [0.45, 0.6], turn: -10 },
     ink: { l: [0.96, 0.98], c: [0.08, 0.14] },

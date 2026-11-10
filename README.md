@@ -13,7 +13,15 @@ input gives the same bytes on every build, in Node, an edge runtime or the
 browser. A picture of one particular thing, a product, a person or a place,
 is a photo's job, or an image model's.
 
-Not published yet. The whole design is in [docs/api.md](docs/api.md).
+```sh
+npm install @pogrobert/surfaces
+```
+
+It has no dependencies and runs on Node 20 or later, in the browser and on
+an edge runtime. PNG and JPEG export go through resvg, which you install
+when you want them: `npm install @resvg/resvg-js`. Try every style on your
+own brand at [surfaces.pogrobert.com](https://surfaces.pogrobert.com); the
+whole design is in [docs/api.md](docs/api.md).
 
 ## Set up a site
 

@@ -235,34 +235,6 @@ export function mezzotint(frame: Frame, kind: StillLife, p: MezzotintParams): Ar
   }
   const sway = rng.fork("motion").next()
 
-  // On paper, the print sits inside its plate mark with a margin of paper,
-  // as wide as the content's own distance from the edge allows. Light and
-  // dark are one drawing, so the margin is drawn in both, in the tone the
-  // palette makes paper on a light page and plate on a dark one.
-  const paperMarks: Mark[] = []
-  {
-    const room = Math.min(...[...keep, ...frame.calm].flatMap((box) => (box.w > 0 ? [box.x, box.y, w - box.x - box.w, h - box.y - box.h] : [])), Infinity)
-    const paper = Math.min(unit * 0.045, room - unit * 0.015)
-    if (paper >= unit * 0.02) {
-      const band = (x: number, y: number, bw: number, bh: number): Shape => ({ type: "rect", x, y, w: bw, h: bh, radii: [0, 0, 0, 0] })
-      // Bands round the plate, `inset` short of it.
-      const round = (inset: number, width: number) => {
-        const near = paper - inset
-        return [
-          band(near - width, near - width, w - (near - width) * 2, width),
-          band(near - width, h - near, w - (near - width) * 2, width),
-          band(near - width, near, width, h - near * 2),
-          band(w - near, near, width, h - near * 2),
-        ]
-      }
-      // The paper, and between it and the plate a line where the plate
-      // pressed the paper down, a shade darker.
-      const mark = Math.max(1, unit * 0.0025)
-      const paperTone = (opacity: number): Paint => ({ type: "solid", tone: "body", opacity })
-      paperMarks.push(shapes("pressed", paperTone(0.8), round(0, mark)), shapes("paper", paperTone(1), round(mark, paper - mark + margin)))
-    }
-  }
-
   return {
     under: [
       { kind: "fill", id: "ground", tone: "ground" },
@@ -297,7 +269,7 @@ export function mezzotint(frame: Frame, kind: StillLife, p: MezzotintParams): Ar
           second: drawn.front.flatMap((thing) => thing.marks),
         }
       : null),
-    over: paperMarks,
+    over: [],
     subject: boxOf(),
     ...(moves ? { moves } : null),
   }

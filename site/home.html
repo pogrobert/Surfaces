@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Surfaces, the main page</title>
+<style>
+  /* The main page: the plate as its first screen (chosen on 2026-11-10), and
+     under it only a paragraph, how to install, and the way to the studio
+     (chosen on 2026-11-11). Everything you can choose lives on the studio
+     page, so the main page carries no controls but the plate's stepper. */
+  @font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 200 800; font-display: swap; src: url(/fonts/atkinson-hyperlegible-next-latin-wght-normal.woff2) format("woff2"); }
+  @font-face { font-family: "Atkinson Hyperlegible Mono"; font-weight: 200 800; font-display: swap; src: url(/fonts/atkinson-hyperlegible-mono-latin-wght-normal.woff2) format("woff2"); }
+  :root {
+    color-scheme: light dark;
+    --paper: light-dark(#fbfbfa, #0b0b0a);
+    --sheet: light-dark(#ffffff, #1b1b19);
+    --ink: light-dark(#121212, #ededea);
+    --body: light-dark(#3d3d39, #c4c3bd);
+    --quiet: light-dark(#66665f, #94938b);
+    --rule: light-dark(#e8e8e5, #262624);
+    --action: light-dark(#0f766e, #2dd4bf);
+    --mono: "Atkinson Hyperlegible Mono", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.5 "Atkinson Hyperlegible Next", Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; cursor: default; }
+  a { color: inherit; text-decoration: none; }
+  :focus-visible { outline: 2px solid var(--action); outline-offset: 3px; border-radius: 4px; }
+  h1, p { margin: 0; }
+
+  .pic { position: relative; overflow: hidden; container-type: inline-size; background: color-mix(in srgb, var(--ink) 5%, transparent); }
+  .pic > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  .words { position: absolute; display: flex; flex-direction: column; justify-content: flex-end; font-weight: 680; letter-spacing: -0.035em; line-height: 0.98; text-wrap: balance; font-size: clamp(34px, 5cqw, 84px); }
+  .words small { display: block; margin-top: 0.7em; font-size: max(15px, 0.24em); font-weight: 500; letter-spacing: -0.005em; line-height: 1.35; opacity: 0.8; }
+  .go { border: 0; border-radius: 9px; padding: 9px 14px; background: var(--ink); color: var(--paper); font-weight: 600; font-size: 14px; white-space: nowrap; }
+  .quiet { border: 0; background: none; color: var(--body); padding: 8px 10px; border-radius: 9px; font-size: 14px; white-space: nowrap; }
+  @media (hover: hover) { .quiet:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); color: var(--ink); } }
+
+  /* The plate. */
+  .plate { position: relative; height: 100svh; min-height: 520px; }
+  .plate > .pic { position: absolute; inset: 0; }
+  .plate .top { position: absolute; left: 0; right: 0; top: 0; display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; }
+  .plate .top nav { display: flex; gap: 4px; }
+  .plate .top .quiet { color: inherit; opacity: 0.85; }
+  .name { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; }
+  .plate .foot { position: absolute; right: 24px; bottom: 22px; display: flex; align-items: center; gap: 12px; }
+  .plate .step { display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: 11px; background: var(--sheet); box-shadow: 0 0 0 1px var(--rule); }
+  .plate .step button { width: 30px; height: 30px; border: 0; border-radius: 8px; background: none; }
+  .plate .step span { min-width: 132px; text-align: center; font: 13px var(--mono); }
+  .plate .foot .quiet { background: var(--sheet); box-shadow: 0 0 0 1px var(--rule); }
+  @media (hover: hover) { .plate .step button:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); } }
+
+  /* What follows, in one measure. */
+  .sheet { max-width: 1240px; margin: 0 auto; padding: 96px 24px 72px; }
+  .lede { max-width: 54ch; font-size: 21px; line-height: 1.42; letter-spacing: -0.008em; color: var(--body); text-wrap: pretty; }
+  .lede b { color: var(--ink); font-weight: 600; }
+  .lines { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 40px; margin-top: 44px; }
+  .lines p { color: var(--body); margin-bottom: 8px; }
+  .line { display: flex; align-items: center; gap: 10px; font: 13.5px/1.5 var(--mono); padding: 11px 14px; border-radius: 10px; background: color-mix(in srgb, var(--ink) 4.5%, transparent); }
+  .line span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .line button { border: 0; background: none; font: 13px "Atkinson Hyperlegible Next", sans-serif; color: var(--quiet); padding: 2px 4px; border-radius: 6px; }
+  .studio { display: inline-flex; margin-top: 28px; font-size: 17px; font-weight: 600; border-bottom: 1px solid currentColor; padding-bottom: 2px; }
+  .foot-links { margin-top: 96px; padding-top: 18px; border-top: 1px solid var(--rule); display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 14px; color: var(--quiet); }
+
+  @media (max-width: 860px) {
+    .plate { height: 86svh; }
+    .plate .top nav { display: none; }
+    .plate .foot { left: 24px; flex-wrap: wrap; }
+    .lines { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<section class="plate">
+  <div class="pic" data-plate></div>
+  <div class="top"><b class="name" data-ink>Surfaces</b><nav data-ink><a class="quiet" href="/studio">Studio</a><a class="quiet" href="#">Docs</a><a class="quiet" href="#">GitHub</a></nav></div>
+  <div class="foot">
+    <div class="step"><button type="button" data-step="-1" aria-label="The style before">‹</button><span data-count></span><button type="button" data-step="1" aria-label="The next style">›</button></div>
+    <a class="quiet" href="/studio">See all thirty in the studio</a>
+    <button class="go" type="button" data-copy="prompt">Copy prompt</button>
+  </div>
+</section>
+
+<div class="sheet">
+  <p class="lede"><b>Surfaces draws the pictures a site repeats</b>: the cover of each post, the preview of each link, the header of each profile. One colour in, one look out, and the same title always gets the same picture. The words stay yours, in your own type. No image model, no API key, nothing to pay.</p>
+  <div class="lines">
+    <div><p>Ask your coding agent.</p><div class="line"><span data-prompt></span><button type="button" data-copy="prompt">Copy</button></div></div>
+    <div><p>Or run it yourself.</p><div class="line"><span>npx @pogrobert/surfaces init</span><button type="button" data-copy="init">Copy</button></div></div>
+  </div>
+  <a class="studio" href="/studio">Every style and every choice, in the studio →</a>
+  <div class="foot-links"><span>Surfaces · MIT No Attribution</span><a href="/studio">Studio</a><a href="#">Docs</a><a href="#">GitHub</a><a href="#">npm</a></div>
+</div>
+
+<script type="module">
+import { createBrand, generate, toSvg } from "/dist/index.js"
+import { KINDS, SAMPLES } from "/wall.js"
+
+const $ = (selector, root = document) => root.querySelector(selector)
+const $$ = (selector, root = document) => [...root.querySelectorAll(selector)]
+const make = (tag, props = {}, ...children) => {
+  const el = Object.assign(document.createElement(tag), props)
+  el.append(...children)
+  return el
+}
+const ORDER = KINDS.flatMap(([, styles]) => styles)
+const NAME = (style) => style[0].toUpperCase() + style.slice(1)
+const SAY = "Pictures for every page of your site, drawn from one colour."
+const SUB = "Post covers, link previews, headers. Thirty styles, each yours to tune."
+const PROMPT = "Add @pogrobert/surfaces to this site: run npx @pogrobert/surfaces init, then follow its AGENTS.md."
+const COPY = { prompt: PROMPT, init: "npx @pogrobert/surfaces init" }
+// Each style in a colour of its own, so the range shows in colour too.
+const COLOUR = (i) => SAMPLES[i % SAMPLES.length].color
+let at = ORDER.indexOf("riso")
+const brandAt = (i) => createBrand({ name: SAMPLES[i % SAMPLES.length].name, color: COLOUR(i), style: ORDER[i] })
+
+// Each plate drawn once, kept by what was asked for.
+const made = new Map()
+function url(input) {
+  const key = JSON.stringify(input)
+  if (!made.has(key)) {
+    const scene = generate(input)
+    made.set(key, { scene, src: URL.createObjectURL(new Blob([toSvg(scene)], { type: "image/svg+xml" })) })
+  }
+  return made.get(key)
+}
+
+function plate() {
+  const holder = $("[data-plate]")
+  const box = holder.getBoundingClientRect()
+  const height = Math.max(600, Math.min(2400, Math.round((2400 * box.height) / Math.max(box.width, 1))))
+  const { scene, src } = url({ ...brandAt(at).input("post", { title: SAY, id: "home", text: "bottom-left" }), width: 2400, height })
+  let img = $(":scope > img", holder)
+  if (!img) holder.prepend((img = make("img", { alt: "", decoding: "async" })))
+  img.src = src
+  // The words go in the area the art kept for them, in the ink that reads there.
+  $(".words", holder)?.remove()
+  const area = scene.areas[0]
+  const { w, h } = scene.output
+  const words = make("h1", { className: "words" }, SAY, make("small", { textContent: SUB }))
+  Object.assign(words.style, { left: `${(area.x / w) * 100}%`, top: `${(area.y / h) * 100}%`, width: `${(area.width / w) * 100}%`, height: `${(area.height / h) * 100}%`, color: area.ink })
+  holder.append(words)
+  for (const el of $$("[data-ink]")) el.style.color = area.ink
+  $("[data-count]").textContent = `${NAME(ORDER[at])}  ${String(at + 1).padStart(2, "0")}/${ORDER.length}`
+}
+const step = (by) => ((at = (at + by + ORDER.length) % ORDER.length), plate())
+
+$("[data-prompt]").textContent = PROMPT
+addEventListener("click", (event) => {
+  const by = event.target.closest("[data-step]")?.dataset.step
+  if (by) return step(Number(by))
+  const copy = event.target.closest("[data-copy]")
+  if (copy) {
+    navigator.clipboard?.writeText(COPY[copy.dataset.copy]).catch(() => {})
+    const was = copy.textContent
+    copy.textContent = "Copied"
+    setTimeout(() => (copy.textContent = was), 1200)
+  }
+})
+addEventListener("keydown", (event) => {
+  if (event.target.closest?.("input, textarea")) return
+  if (event.key === "ArrowRight") step(1)
+  if (event.key === "ArrowLeft") step(-1)
+})
+let resizing
+addEventListener("resize", () => {
+  clearTimeout(resizing)
+  resizing = setTimeout(plate, 200)
+})
+plate()
+</script>
+</body>
+</html>

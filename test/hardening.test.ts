@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { execFileSync } from "node:child_process"
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -118,4 +119,14 @@ test("the command line says what's wrong with an odd project or command, never a
   const { code, out } = await run(loop, "init", "--dry-run")
   assert.equal(code, 0, out)
   assert.match(out, /Read 1 files/)
+})
+
+test("the command runs when called through a link named for it, as an installed one is", () => {
+  // npm links node_modules/.bin/surfaces to the program, so the name it is
+  // called by is the command's and not the file's. Called that way it once
+  // did nothing at all, and said nothing.
+  const link = join(root, "surfaces")
+  symlinkSync(join(import.meta.dirname, "../src/cli.ts"), link)
+  const out = execFileSync(process.execPath, [link, "--help"], { encoding: "utf8" })
+  assert.match(out, /^Usage: surfaces <command>/)
 })

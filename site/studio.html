@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Surfaces, the studio</title>
+<style>
+  /* The studio: where every choice the library has can be seen and made.
+     The main page only has to be beautiful; this page has to show
+     everything. Laid out as a desk (chosen on 2026-11-11): the styles in a
+     list, one large picture, every choice beside it, the code under it. */
+  @font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 200 800; font-display: swap; src: url(/fonts/atkinson-hyperlegible-next-latin-wght-normal.woff2) format("woff2"); }
+  @font-face { font-family: "Atkinson Hyperlegible Mono"; font-weight: 200 800; font-display: swap; src: url(/fonts/atkinson-hyperlegible-mono-latin-wght-normal.woff2) format("woff2"); }
+  :root {
+    color-scheme: light dark;
+    --paper: light-dark(#fbfbfa, #0b0b0a);
+    --sheet: light-dark(#ffffff, #1b1b19);
+    --ink: light-dark(#121212, #ededea);
+    --body: light-dark(#3d3d39, #c4c3bd);
+    --quiet: light-dark(#66665f, #94938b);
+    --rule: light-dark(#e8e8e5, #262624);
+    --action: light-dark(#0f766e, #2dd4bf);
+    --mono: "Atkinson Hyperlegible Mono", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.5 "Atkinson Hyperlegible Next", Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: default; }
+  a { color: inherit; text-decoration: none; }
+  :focus-visible { outline: 2px solid var(--action); outline-offset: 3px; border-radius: 4px; }
+  h3, p { margin: 0; }
+
+  .pic { position: relative; overflow: hidden; container-type: inline-size; background: color-mix(in srgb, var(--ink) 5%, transparent); border-radius: 3px; }
+  .pic > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  .words { position: absolute; display: flex; flex-direction: column; justify-content: flex-end; font-weight: 680; letter-spacing: -0.03em; line-height: 1; text-wrap: balance; overflow-wrap: anywhere; font-size: 5.4cqw; }
+
+  /* The top: the name, the way home, and what this page is. */
+  .bar { display: flex; align-items: center; gap: 18px; padding: 16px 24px; border-bottom: 1px solid var(--rule); }
+  .bar .name { font-weight: 700; }
+  .bar .here { color: var(--quiet); }
+  .bar nav { margin-left: auto; display: flex; gap: 18px; color: var(--body); font-size: 14px; }
+
+  /* A choice: a row of words, one pressed. */
+  .field { display: grid; gap: 7px; }
+  .field > span { font-size: 13px; color: var(--quiet); }
+  .seg { display: flex; flex-wrap: wrap; gap: 4px; }
+  .seg button { border: 0; border-radius: 8px; padding: 5px 10px; background: color-mix(in srgb, var(--ink) 5%, transparent); font-size: 14px; }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  @media (hover: hover) { .seg button[aria-pressed="false"]:hover { background: color-mix(in srgb, var(--ink) 10%, transparent); } }
+  .swatches { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .swatches button { width: 26px; height: 26px; border-radius: 50%; border: 0; padding: 0; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12); }
+  .swatches button[aria-pressed="true"] { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .swatches input[type="color"] { width: 30px; height: 30px; padding: 0; border: 0; background: none; }
+  .title-input { width: 100%; padding: 8px 11px; border: 1px solid var(--rule); border-radius: 9px; background: var(--sheet); font-size: 14px; }
+  .about { color: var(--body); max-width: 62ch; text-wrap: pretty; }
+  .about b { color: var(--ink); font-weight: 600; }
+  .code { position: relative; font: 13px/1.6 var(--mono); padding: 14px 72px 14px 16px; border-radius: 10px; background: color-mix(in srgb, var(--ink) 4.5%, transparent); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .code button { position: absolute; right: 8px; top: 8px; border: 0; background: var(--sheet); box-shadow: 0 0 0 1px var(--rule); border-radius: 7px; padding: 3px 9px; font: 13px "Atkinson Hyperlegible Next", sans-serif; }
+
+  /* The desk. */
+  .desk { display: grid; grid-template-columns: 200px minmax(0, 1fr) 300px; gap: 32px; padding: 24px; align-items: start; }
+  .list { position: sticky; top: 16px; display: grid; gap: 18px; max-height: calc(100svh - 32px); overflow: auto; }
+  .list h3 { font-size: 12.5px; font-weight: 500; color: var(--quiet); margin-bottom: 4px; }
+  .list button { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; border: 0; background: none; padding: 3px 8px 3px 3px; border-radius: 7px; text-align: left; color: var(--body); }
+  .list .thumb { display: block; width: 36px; aspect-ratio: 4 / 3; border-radius: 2px; }
+  .list button small { font: 12px var(--mono); color: var(--quiet); }
+  .list button[aria-pressed="true"] { background: color-mix(in srgb, var(--ink) 7%, transparent); color: var(--ink); font-weight: 600; }
+  .desk main { display: grid; gap: 18px; }
+  .ways { position: sticky; top: 16px; display: grid; gap: 18px; }
+
+  /* Narrower, the styles run in one row to scroll sideways, a picture over
+     each name, then the large picture, the code and the choices. */
+  @media (max-width: 1100px) {
+    .desk { grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 16px; }
+    .list { position: static; max-height: none; display: flex; gap: 20px; overflow-x: auto; padding-bottom: 8px; margin: 0 -16px; padding-inline: 16px; scrollbar-width: thin; }
+    .list > div { display: flex; gap: 4px; align-items: start; flex: none; }
+    .list h3 { writing-mode: vertical-rl; transform: rotate(180deg); margin: 0 4px 0 0; align-self: stretch; text-align: right; }
+    .list button { grid-template-columns: 1fr; width: 86px; gap: 5px; padding: 4px; font-size: 13px; }
+    .list .thumb { width: 100%; }
+    .list button small { display: none; }
+    .ways { position: static; }
+  }
+  @media (max-width: 640px) {
+    .bar { padding: 14px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar"><a class="name" href="/home">Surfaces</a><span class="here">Studio</span><nav><a href="#">Docs</a><a href="#">GitHub</a></nav></header>
+
+<div class="desk">
+  <aside class="list" data-list aria-label="Styles"></aside>
+  <main>
+    <div class="pic" data-hero></div>
+    <p class="about" data-about></p>
+    <div class="code" data-code></div>
+  </main>
+  <aside class="ways" data-ways></aside>
+</div>
+
+<script type="module">
+import { catalog, createBrand, generate, toSvg } from "/dist/index.js"
+import { KINDS, SAMPLES } from "/wall.js"
+
+const $ = (selector, root = document) => root.querySelector(selector)
+const $$ = (selector, root = document) => [...root.querySelectorAll(selector)]
+const make = (tag, props = {}, ...children) => {
+  const el = Object.assign(document.createElement(tag), props)
+  el.append(...children)
+  return el
+}
+const ABOUT = Object.fromEntries(catalog.map((entry) => [entry.style, entry]))
+const NAME = (word) => word[0].toUpperCase() + word.slice(1)
+const USES = [["post", "Post cover", 1600, 900], ["og", "Link preview", 1200, 630], ["hero", "Page header", 2400, 1200], ["x", "X header", 1500, 500], ["linkedin", "LinkedIn banner", 1584, 396], ["email", "Email header", 1200, 400]]
+const BANNERS = new Set(["x", "linkedin", "email"])
+const CALL = { post: "brand.cover({ title })", og: "brand.og({ title })", hero: "brand.hero({ title })", x: 'brand.banner({ for: "x" })', linkedin: 'brand.banner({ for: "linkedin" })', email: 'brand.banner({ for: "email" })' }
+
+const state = {
+  style: "riso", name: SAMPLES[0].name, color: SAMPLES[0].color,
+  shape: null, mood: null, grain: "natural", theme: "light", use: "post",
+  title: "What we shipped in March",
+}
+const look = () => ({ name: state.name, color: state.color, style: state.style, theme: state.theme, grain: state.grain, ...(state.shape ? { shape: state.shape } : null), ...(state.mood ? { mood: state.mood } : null) })
+
+// Each picture drawn once, kept by what was asked for.
+const made = new Map()
+function url(input) {
+  const key = JSON.stringify(input)
+  if (!made.has(key)) {
+    if (made.size > 200) made.clear()
+    const scene = generate(input)
+    made.set(key, { scene, src: URL.createObjectURL(new Blob([toSvg(scene)], { type: "image/svg+xml" })) })
+  }
+  return made.get(key)
+}
+// The list's pictures are drawn a few at a time, so the page never stalls.
+const later = []
+let working = false
+function soon(job) {
+  later.push(job)
+  if (!working) ((working = true), setTimeout(work))
+}
+function work() {
+  const until = performance.now() + 8
+  while (later.length && performance.now() < until) later.shift()()
+  if (later.length) setTimeout(work, 4)
+  else working = false
+}
+function paint(holder, input) {
+  const { scene, src } = url(input)
+  let img = $(":scope > img", holder)
+  if (!img) holder.prepend((img = make("img", { alt: "", decoding: "async" })))
+  if (img.src !== src) img.src = src
+  return scene
+}
+// Words in the area the art kept for them, made smaller until they fit.
+function setIn(holder, scene, text) {
+  $(".words", holder)?.remove()
+  const area = scene.areas[0]
+  if (!area || !text) return
+  const { w, h } = scene.output
+  const line = make("span", { textContent: text })
+  const el = make("div", { className: "words" }, line)
+  Object.assign(el.style, { left: `${(area.x / w) * 100}%`, top: `${(area.y / h) * 100}%`, width: `${(area.width / w) * 100}%`, height: `${(area.height / h) * 100}%`, color: area.ink, justifyContent: /top/.test(area.place ?? "") ? "flex-start" : /^(left|center|right)$/.test(area.place ?? "") ? "center" : "flex-end" })
+  holder.append(el)
+  let size = parseFloat(getComputedStyle(el).fontSize)
+  while (size > 11 && (line.offsetHeight > el.clientHeight + 1 || line.offsetWidth > el.clientWidth + 1)) ((size *= 0.92), (el.style.fontSize = `${size}px`))
+}
+// The chosen use of the brand, at a size the page can hold, its title set in.
+function hero() {
+  const holder = $("[data-hero]")
+  const [, , w, h] = USES.find(([use]) => use === state.use)
+  holder.style.aspectRatio = `${w} / ${h}`
+  const brand = createBrand(look())
+  const input = BANNERS.has(state.use) ? brand.input(state.use) : brand.input(state.use, { title: state.title, id: "studio", ...(state.use === "post" ? { text: "bottom-left" } : null) })
+  const k = Math.min(1, 1600 / input.width)
+  const scene = paint(holder, { ...input, width: Math.round(input.width * k), height: Math.round(input.height * k), motion: "none" })
+  setIn(holder, scene, BANNERS.has(state.use) ? "" : state.title)
+}
+
+function snippet() {
+  const options = Object.entries(look()).filter(([key, value]) => !(key === "grain" && value === "natural") && !(key === "theme" && value === "light"))
+  return `const brand = createBrand({ ${options.map(([key, value]) => `${key}: ${JSON.stringify(value)}`).join(", ")} })\n${CALL[state.use]}`
+}
+function words() {
+  const entry = ABOUT[state.style]
+  $("[data-about]").replaceChildren(make("b", { textContent: `${NAME(state.style)}. ` }), entry.looks, ` Suits ${entry.suits[0].toLowerCase()}${entry.suits.slice(1)}`)
+  const button = make("button", { type: "button", textContent: "Copy" })
+  button.dataset.copy = ""
+  $("[data-code]").replaceChildren(snippet(), button)
+}
+
+// The choices, built from the catalog so they never drift from the library.
+function seg(label, key, options) {
+  const row = make("div", { className: "seg", role: "group" })
+  row.setAttribute("aria-label", label)
+  for (const [value, text] of options) {
+    const button = make("button", { type: "button", textContent: text })
+    button.dataset.set = key
+    button.dataset.value = value ?? ""
+    button.setAttribute("aria-pressed", String((state[key] ?? "") === (value ?? "")))
+    row.append(button)
+  }
+  return make("div", { className: "field" }, make("span", { textContent: label }), row)
+}
+function colour() {
+  const row = make("div", { className: "swatches" })
+  for (const sample of SAMPLES) {
+    const button = make("button", { type: "button", title: sample.color })
+    button.style.background = sample.color
+    button.dataset.sample = sample.name
+    button.setAttribute("aria-label", `Colour ${sample.color}`)
+    button.setAttribute("aria-pressed", String(state.color === sample.color))
+    row.append(button)
+  }
+  const pick = make("input", { type: "color", value: state.color, title: "Any colour" })
+  pick.dataset.pick = ""
+  row.append(pick)
+  return make("div", { className: "field" }, make("span", { textContent: "Colour" }), row)
+}
+function ways() {
+  const entry = ABOUT[state.style]
+  const title = make("input", { className: "title-input", value: state.title, maxLength: 90 })
+  title.dataset.titleInput = ""
+  return [
+    colour(),
+    entry.shapes.length ? seg("Shape", "shape", [[null, "Any"], ...entry.shapes.map((shape) => [shape, NAME(shape)])]) : make("div", { className: "field" }, make("span", { textContent: "Shape" }), make("p", { className: "about", textContent: "One form; the title's seed varies it." })),
+    seg("Mood", "mood", [[null, "Either"], ["calm", "Calm"], ["bold", "Bold"]]),
+    seg("Grain", "grain", [["smooth", "Smooth"], ["natural", "Natural"], ["heavy", "Heavy"]]),
+    seg("Theme", "theme", [["light", "Light"], ["dark", "Dark"]]),
+    seg("Size", "use", USES.map(([use, text]) => [use, text])),
+    make("label", { className: "field" }, make("span", { textContent: "Title" }), title),
+  ]
+}
+// A redraw replaces the choices; the keyboard keeps its place in them.
+function keepFocus(rebuild) {
+  const was = document.activeElement
+  const mark = was && (was.dataset.set ? `[data-set="${was.dataset.set}"][data-value="${was.dataset.value}"]` : was.dataset.sample ? `[data-sample="${was.dataset.sample}"]` : was.matches?.("[data-title-input]") ? "[data-title-input]" : null)
+  const at = was?.selectionStart
+  rebuild()
+  const again = mark && $(mark)
+  if (again && document.activeElement !== again) {
+    again.focus({ preventScroll: true })
+    if (at != null && again.setSelectionRange) again.setSelectionRange(at, at)
+  }
+}
+
+function draw() {
+  const list = $("[data-list]")
+  if (!list.firstChild) {
+    for (const [kind, styles] of KINDS) {
+      list.append(make("div", {}, make("h3", { textContent: kind }), ...styles.map((style) => {
+        const button = make("button", { type: "button" }, make("span", { className: "pic thumb" }), NAME(style), make("small", { textContent: ABOUT[style].shapes.length || "" }))
+        button.dataset.style = style
+        return button
+      })))
+    }
+  }
+  for (const button of $$("[data-style]", list)) {
+    button.setAttribute("aria-pressed", String(button.dataset.style === state.style))
+    // Each style's picture in the list, in the colour and theme chosen, so
+    // the list shows what a change of colour does to every style at once.
+    const thumb = $(".thumb", button)
+    const key = `${state.color} ${state.theme}`
+    if (thumb.dataset.key === key) continue
+    thumb.dataset.key = key
+    const brand = createBrand({ name: state.name, color: state.color, style: button.dataset.style, theme: state.theme })
+    soon(() => thumb.dataset.key === key && paint(thumb, { ...brand.input("card", { title: "Surfaces", id: "list" }), width: 160, height: 120 }))
+  }
+  hero()
+  words()
+  keepFocus(() => $("[data-ways]").replaceChildren(...ways()))
+}
+
+addEventListener("click", (event) => {
+  const target = event.target
+  const style = target.closest("[data-style]")?.dataset.style
+  if (style) return (Object.assign(state, { style, shape: null }), draw())
+  const sample = target.closest("[data-sample]")?.dataset.sample
+  if (sample) {
+    const found = SAMPLES.find((entry) => entry.name === sample)
+    return (Object.assign(state, { name: found.name, color: found.color }), draw())
+  }
+  const set = target.closest("[data-set]")
+  if (set) return ((state[set.dataset.set] = set.dataset.value || null), draw())
+  const copy = target.closest("[data-copy]")
+  if (copy) {
+    navigator.clipboard?.writeText(snippet()).catch(() => {})
+    copy.textContent = "Copied"
+    setTimeout(() => (copy.textContent = "Copy"), 1200)
+  }
+})
+let typing
+addEventListener("input", (event) => {
+  if (event.target.matches("[data-pick]")) state.color = event.target.value
+  else if (event.target.matches("[data-title-input]")) state.title = event.target.value
+  else return
+  clearTimeout(typing)
+  typing = setTimeout(draw, 140)
+})
+let resizing
+addEventListener("resize", () => {
+  clearTimeout(resizing)
+  resizing = setTimeout(draw, 200)
+})
+draw()
+</script>
+</body>
+</html>

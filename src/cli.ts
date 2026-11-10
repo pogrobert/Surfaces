@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs"
 import { dirname, join, relative } from "node:path"
+import { fileURLToPath } from "node:url"
 import { createBrand, directions } from "./brand.ts"
 import { hash } from "./core/random.ts"
 import { STYLES } from "./styles/index.ts"
@@ -516,8 +517,9 @@ async function kitCommand(root: string, args: Args, log: (line: string) => void)
   const png = async (scene: Scene) => (await rasterize(toSvg(scene, { target: "resvg", outlines: outlinePath }), scene.output.w)).asPng()
 
   const og = served(publicDir, pointed, brand.name) ?? join(publicDir, "og.jpg")
+  const preview = title ? flat.og({ title, drawTitle: font ? { font } : true }) : flat.og({ id: "home", text: "none" })
   const assets: { path: string; what: string; make: () => Promise<Uint8Array> }[] = [
-    { path: og, what: title ? `link preview, "${title}"` : "link preview", make: () => { const scene = title ? flat.og({ title, drawTitle: font ? { font } : true }) : flat.og({ id: "home", text: "none" }); return /\.png$/i.test(og) ? png(scene) : jpeg(scene) } },
+    { path: og, what: title ? `link preview, "${title}"` : "link preview", make: () => (/\.png$/i.test(og) ? png(preview) : jpeg(preview)) },
     { path: join(publicDir, "x-header.jpg"), what: "X header", make: () => jpeg(flat.banner({ for: "x" })) },
     { path: join(publicDir, "linkedin-banner.jpg"), what: "LinkedIn banner", make: () => jpeg(flat.banner({ for: "linkedin" })) },
     { path: join(publicDir, "email-header.jpg"), what: "email header", make: () => jpeg(flat.banner({ for: "email" })) },
@@ -537,7 +539,8 @@ async function kitCommand(root: string, args: Args, log: (line: string) => void)
     }
   }
   if (drewPng) log(`The site's link preview is a PNG, about a megabyte with grain, which some chat apps won't show; og.jpg is a tenth of that: point og:image at it.`)
-  if (!pointed) log(`In the <head>: <meta property="og:image" content="https://${brand.name}/${relative(join(root, publicDir), join(root, og))}">`)
+  // The picture, and what it shows for whoever can't see it.
+  if (!pointed) log(`In the <head>: <meta property="og:image" content="https://${brand.name}/${relative(join(root, publicDir), join(root, og))}">\n               <meta property="og:image:alt" content="${describe(preview, title ? { title } : {}).replace(/"/g, "&quot;")}">`)
 }
 
 export async function main(argv: string[], root = process.cwd(), log: (line: string) => void = console.log): Promise<number> {
@@ -573,7 +576,18 @@ export async function main(argv: string[], root = process.cwd(), log: (line: str
   }
 }
 
-// Run when called as a program, not when imported by the tests.
-if (process.argv[1] && /cli\.(ts|js)$/.test(process.argv[1])) {
+// Run when called as a program, not when imported by the tests. Installed, a
+// program is called through a link in node_modules/.bin, named for the
+// command and not for this file, so it is the file each name leads to that
+// is compared, never the name.
+function calledAsProgram() {
+  if (!process.argv[1]) return false
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+  } catch {
+    return false
+  }
+}
+if (calledAsProgram()) {
   process.exitCode = await main(process.argv.slice(2))
 }

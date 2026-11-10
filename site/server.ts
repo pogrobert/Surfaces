@@ -5,7 +5,7 @@ import { createReadStream, existsSync, readFileSync, statSync } from "node:fs"
 import { createServer } from "node:http"
 import { extname, join, normalize } from "node:path"
 import { gzipSync } from "node:zlib"
-import { toHtml } from "../src/render/layers.ts"
+import { toSvg } from "../src/render/svg.ts"
 import { generate } from "../src/core/generate.ts"
 import { tiles, wall } from "./wall.js"
 
@@ -24,7 +24,7 @@ const FACES = ["atkinson-hyperlegible-next", "atkinson-hyperlegible-mono"]
 // The page with its wall in it, so it shows on the first paint
 // instead of after the library loads in the browser. Drawn once: it is the
 // same every time.
-const FIRST_WALL = wall(tiles(0), generate, toHtml)
+const FIRST_WALL = wall(tiles(0), generate, toSvg)
 // Each wall asked for, kept: a shuffle or a site's look always draws the same.
 const walls = new Map<string, { html: string; gzip: Uint8Array }>()
 function wallFor(query: URLSearchParams) {
@@ -36,14 +36,14 @@ function wallFor(query: URLSearchParams) {
   const key = JSON.stringify([shuffle, count, color])
   if (!walls.has(key)) {
     if (walls.size > 200) walls.clear()
-    const html = wall(tiles(shuffle, count), generate, toHtml, { drawn: count, ...(color ? { color } : null) })
+    const html = wall(tiles(shuffle, count), generate, toSvg, { drawn: count, ...(color ? { color } : null) })
     walls.set(key, { html, gzip: gzipSync(html) })
   }
   return walls.get(key)!
 }
 
 const page = () =>
-  readFileSync(join(ROOT, "site/index.html"), "utf8").replace(`<div class="wall" id="wall" aria-hidden="true"></div>`, `<div class="wall" id="wall" aria-hidden="true">${FIRST_WALL}</div>`)
+  readFileSync(join(ROOT, "site/index.html"), "utf8").replace(`<div class="wall arrive" id="wall" aria-hidden="true"></div>`, `<div class="wall arrive" id="wall" aria-hidden="true">${FIRST_WALL}</div>`)
 
 createServer(async (request, response) => {
   const url = new URL(request.url!, "http://localhost")
@@ -68,11 +68,15 @@ createServer(async (request, response) => {
   const path = normalize(decodeURIComponent(url.pathname))
   const file =
     path === "/next" ? join(ROOT, "site/next.html")
+    : path === "/mock" ? join(ROOT, "site/mock.html")
+    : path === "/first" ? join(ROOT, "site/first.html")
+    : path === "/home" ? join(ROOT, "site/home.html")
+    : path === "/studio" ? join(ROOT, "site/studio.html")
     : path === "/wall.js" ? join(ROOT, "site/wall.js")
     : path.startsWith("/dist/") ? join(ROOT, path)
     : path.startsWith("/fonts/") ? join(FONTS, FACES.find((face) => path.slice(7).startsWith(`${face}-`)) ?? "none", "files", path.slice(7))
     : ""
-  if (!file || !(file.startsWith(join(ROOT, "dist")) || file.startsWith(FONTS) || file === join(ROOT, "site/next.html") || file === join(ROOT, "site/wall.js")) || !existsSync(file) || statSync(file).isDirectory()) {
+  if (!file || !(file.startsWith(join(ROOT, "dist")) || file.startsWith(FONTS) || file === join(ROOT, "site/next.html") || file === join(ROOT, "site/mock.html") || file === join(ROOT, "site/first.html") || file === join(ROOT, "site/home.html") || file === join(ROOT, "site/studio.html") || file === join(ROOT, "site/wall.js")) || !existsSync(file) || statSync(file).isDirectory()) {
     response.writeHead(404).end("Not found")
     return
   }

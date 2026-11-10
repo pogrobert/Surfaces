@@ -45,21 +45,64 @@
      brands and shapes, with the words on a card over it. Typing a site turns
      the wall into that site's own. */
   .hero { position: relative; overflow: hidden; height: max(100svh, 640px); }
-  .wall { position: absolute; inset: 0 0 auto 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; padding: 10px; align-content: start; transition: opacity 0.35s ease; }
+  /* The wall comes with the page as a grid, so it shows without any script.
+     The script under it then stands it in columns, each a strip of tiles
+     that drifts slowly up or down, the other way from its neighbours, and
+     comes round again without a seam: more of what the library draws passes
+     by than one screen could hold. Until that script has run the wall is
+     kept out of sight, so it is never seen changing shape. */
+  .wall { position: absolute; inset: 0 0 auto 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; padding: 10px; align-content: start; transition: opacity 0.35s ease; visibility: hidden; }
   @media (max-width: 560px) { .wall { grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 8px; } }
+  .wall.cols { inset: 0; display: flex; align-items: flex-start; padding: 0 10px; visibility: visible; }
+  @media (max-width: 560px) { .wall.cols { padding: 0 8px; } }
+  .wall .col { flex: 1 1 0; min-width: 0; }
+  .wall .run { display: grid; gap: 10px; padding-bottom: 10px; }
+  @media (max-width: 560px) { .wall .run { gap: 8px; padding-bottom: 8px; } }
   .reading .wall { opacity: 0.45; }
-  @media (prefers-reduced-motion: reduce) { .wall { transition: none; } }
+  /* Each strip goes one whole set of its tiles (--loop) and starts again
+     where it began, which looks the same; an even pace, since it never
+     arrives anywhere. Every other one runs the other way. The strip under
+     the pointer holds still, so a tile can be read and pressed. */
+  @keyframes drift { to { transform: translateY(calc(var(--loop) * -1)); } }
+  @media (prefers-reduced-motion: no-preference) {
+    .wall .run { animation: drift var(--lap, 60s) linear infinite; }
+    .wall .col:nth-child(even) .run { animation-direction: reverse; }
+    @media (hover: hover) and (pointer: fine) { .wall .col:hover .run { animation-play-state: paused; } }
+  }
+  /* The wall's arrival, once: each column slides in along the way it will
+     keep going, the middle ones first (--k is how far from the middle a
+     column stands). Asked for less motion, the wall fades in and stays put. */
+  @keyframes col-in { from { opacity: 0; transform: translateY(var(--from, 40px)); } }
+  @keyframes wall-fade { from { opacity: 0; } }
+  @media (prefers-reduced-motion: no-preference) {
+    .wall.arrive .col { animation: col-in 0.9s var(--ease-out) both; animation-delay: calc(var(--k, 0) * 55ms); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .wall { transition: none; }
+    .wall.arrive { animation: wall-fade 0.25s ease both; }
+  }
   /* A screen arriving, from the landing to the explorer or back. */
   @keyframes arrive { from { opacity: 0; transform: translateY(8px); } }
   .arriving { animation: arrive 0.32s var(--ease-out) both; }
   @media (prefers-reduced-motion: reduce) { .arriving { animation: none; } }
   .wall .tile { all: unset; display: block; cursor: default; position: relative; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; background: color-mix(in srgb, var(--ink) 6%, transparent); }
   .wall .art { position: absolute; inset: 0; line-height: 0; }
-  .wall .art > span { position: absolute; inset: 0; }
+  .wall .art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+  /* A wall that changes keeps its tiles and changes their pictures: each new
+     one is laid over the last and takes its place. A shuffle spreads from
+     the button that asked for it, each picture easing down into its tile; a
+     colour, picked again and again, only fades across, quickly. Transitions,
+     so a second shuffle before the first is over carries on from where the
+     pictures are. */
+  .wall .art img.next { opacity: 1; transition: opacity 0.15s ease; }
+  @starting-style { .wall .art img.next { opacity: 0; } }
+  @media (prefers-reduced-motion: no-preference) {
+    .wall .art img.spread { transition: opacity 0.4s var(--ease-out), transform 0.4s var(--ease-out); }
+    @starting-style { .wall .art img.spread { opacity: 0; transform: scale(1.06); } }
+  }
   .wall .label { position: absolute; left: 8px; bottom: 8px; font-size: 12px; line-height: 1.2; padding: 4px 9px; border-radius: 999px; background: rgb(255 255 255 / 0.92); color: #111; opacity: 0; transition: opacity 0.15s ease; pointer-events: none; }
   @media (hover: hover) { .wall .tile:hover .label { opacity: 1; } }
-  /* The wall fades into the page under the card. */
-  .hero::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 12%; background: linear-gradient(transparent, color-mix(in srgb, var(--paper) 80%, transparent)); pointer-events: none; }
   .pitch { position: absolute; z-index: 2; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(620px, calc(100% - 32px)); background: var(--sheet); border-radius: 26px; padding: 26px 26px 18px; box-shadow: 0 0 0 1px var(--rule), 0 50px 90px -40px rgb(0 0 0 / 0.55); display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .pitch h1 { margin: 0; font-size: clamp(40px, 5vw, 58px); line-height: 1; letter-spacing: -0.02em; font-weight: 600; }
   .pitch p { margin: 0; font-size: 18px; line-height: 1.5; color: var(--body); text-wrap: pretty; }
@@ -98,7 +141,7 @@
 
   /* A picture with the site's words set over it in its own type. */
   .frame { position: relative; line-height: 0; overflow: hidden; container-type: inline-size; }
-  .frame > .art { position: absolute; inset: 0; }
+  .frame > .art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .frame .words { position: absolute; display: flex; flex-direction: column; line-height: 1.04; font-weight: 700; letter-spacing: -0.025em; text-wrap: balance; overflow-wrap: anywhere; }
   .frame .save { position: absolute; top: 10px; right: 10px; z-index: 2; line-height: 1.2; border: 0; border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: default; background: rgb(255 255 255 / 0.9); color: #111; box-shadow: 0 4px 14px -6px rgb(0 0 0 / 0.4); opacity: 0; transition: opacity 0.15s ease; }
   .frame:hover .save, .frame .save:focus-visible { opacity: 1; }
@@ -167,13 +210,18 @@
   .explore { display: grid; grid-template-columns: 210px minmax(0, 1fr) 300px; gap: 30px; align-items: start; }
   @media (max-width: 1180px) { .explore { grid-template-columns: 190px minmax(0, 1fr); } .side { grid-column: 1 / -1; } }
   @media (max-width: 760px) { .explore { grid-template-columns: 1fr; } }
-  .list { position: sticky; top: 16px; display: grid; gap: 4px; max-height: calc(100vh - 32px); overflow: auto; padding-right: 4px; }
+  /* The list and the side panel stay on screen as the page scrolls, each
+     scrolling within itself. They start lower than where they come to rest,
+     under the brand's bar, so each is as tall as the window has left below
+     wherever it is now (--panel-top, kept by fitPanels): its end can be
+     reached at any scroll, not only once the page has moved up. */
+  .list { position: sticky; top: 16px; display: grid; gap: 4px; max-height: calc(100dvh - var(--panel-top, 16px) - 16px); overflow: auto; padding-right: 4px; }
   @media (max-width: 760px) { .list { position: static; display: flex; overflow-x: auto; max-height: none; gap: 8px; padding-bottom: 6px; } .list h3 { display: none; } }
   .list h3 { margin: 12px 8px 4px; font-size: 12px; font-weight: 600; color: var(--quiet); }
   .list h3:first-child { margin-top: 0; }
   .list button { all: unset; cursor: default; display: grid; grid-template-columns: 40px 1fr; gap: 10px; align-items: center; padding: 5px 8px; border-radius: 10px; font-size: 15px; flex: none; }
   .list button .thumb { width: 40px; height: 40px; border-radius: 8px; overflow: hidden; position: relative; line-height: 0; box-shadow: 0 0 0 1px var(--rule); }
-  .list button .thumb > div { position: absolute; inset: 0; }
+  .list button .thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .list button[aria-pressed="true"] { background: var(--sheet); box-shadow: 0 0 0 1px var(--rule); font-weight: 600; }
   .list button:focus-visible { outline: 2px solid var(--action); }
   .main { display: grid; gap: 22px; min-width: 0; }
@@ -196,11 +244,21 @@
   .grid figure:focus-visible .frame { box-shadow: 0 0 0 2px var(--action); }
   .grid figcaption { font-size: 13px; color: var(--quiet); }
   .grid.sizes { grid-template-columns: 2fr 1fr 0.7fr 1.4fr; align-items: end; }
-  .side { position: sticky; top: 16px; display: grid; gap: 24px; max-height: calc(100vh - 32px); overflow: auto; }
+  .side { position: sticky; top: 16px; display: grid; gap: 24px; max-height: calc(100dvh - var(--panel-top, 16px) - 16px); overflow: auto; }
   @media (max-width: 1180px) { .side { position: static; max-height: none; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); } }
   .side pre { white-space: pre-wrap; overflow-wrap: anywhere; }
   .side code { font: 13px var(--mono); }
   .buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  /* What to hand an agent, shown whole so it is read before it is pasted,
+     and the one thing here to press. The code is for the few who wire it in
+     by hand, a step away. */
+  .prompt { background: var(--sheet); border-radius: 10px; box-shadow: 0 0 0 1px var(--rule); padding: 14px 16px; font-size: 14px; line-height: 1.5; color: var(--body); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .prompt code { font: 12.5px var(--mono); color: var(--ink); }
+  .side .go { border: 0; border-radius: 8px; padding: 8px 14px; background: var(--ink); color: var(--paper); font-weight: 600; font-size: 14px; }
+  .byhand { margin-top: 14px; }
+  .byhand summary { font-size: 14px; color: var(--body); padding: 4px 0; border-radius: 4px; width: fit-content; }
+  .byhand[open] summary { margin-bottom: 8px; }
+  @media (hover: hover) { .byhand summary:hover { color: var(--ink); } }
 
   /* Feedback in place of a pointer, as on the portfolio: whatever can be
      pressed lifts its ground or ring under the pointer, and gives a little
@@ -231,7 +289,7 @@
 <body>
 <p class="sr" role="status" id="said"></p>
 <section class="hero" id="hero">
-  <div class="wall" id="wall" aria-hidden="true"></div>
+  <div class="wall arrive" id="wall" aria-hidden="true"></div>
   <div class="pitch" id="pitch">
     <h1>Surfaces</h1>
     <p>Generative art for every picture your site shows: posts, docs, link previews, headers, empty states and slides. Thirty styles, drawn in your own colours.</p>
@@ -246,6 +304,69 @@
   </div>
 </section>
 
+<noscript><style>.wall { visibility: visible; }</style></noscript>
+<script>
+  // Run before the wall is first painted: it stands the wall's tiles in
+  // columns, each repeated until it is taller than the window by one whole
+  // set, so a column can drift a set's length and begin again unseen. A
+  // window made wider or narrower gets its columns made again, without the
+  // arrival.
+  (() => {
+    const grid = document.getElementById("wall")
+    const hero = document.getElementById("hero")
+    function columns(first) {
+      const own = [...grid.querySelectorAll(".tile:not([data-copy])")].sort((a, b) => a.dataset.i - b.dataset.i)
+      if (!own.length) return
+      // Back to the grid the page came with, to ask it how many columns fit.
+      grid.classList.remove("cols")
+      grid.replaceChildren(...own)
+      const count = getComputedStyle(grid).gridTemplateColumns.split(" ").length
+      // Only the first standing arrives; one made again is simply there.
+      if (!first) grid.classList.remove("arrive")
+      stand(own, count)
+    }
+    function stand(own, count) {
+      const cols = Array.from({ length: count }, (_, c) => {
+        const col = document.createElement("div")
+        col.className = "col"
+        // The middle columns arrive first, each from the side it drifts toward.
+        col.style.setProperty("--k", Math.abs(c - (count - 1) / 2).toFixed(1))
+        col.style.setProperty("--from", c % 2 ? "-40px" : "40px")
+        const run = document.createElement("div")
+        run.className = "run"
+        col.append(run)
+        return col
+      })
+      own.forEach((tile, i) => cols[i % count].firstChild.append(tile))
+      grid.replaceChildren(...cols)
+      grid.classList.add("cols")
+      const tall = hero.clientHeight
+      cols.forEach((col, c) => {
+        const run = col.firstChild
+        const set = run.getBoundingClientRect().height
+        if (!set) return
+        const mine = [...run.children]
+        // Sets enough to cover the window while one whole set goes by.
+        for (let sets = 1; sets * set < tall + set; sets++) {
+          for (const tile of mine) {
+            const copy = tile.cloneNode(true)
+            copy.dataset.copy = "true"
+            run.append(copy)
+          }
+        }
+        run.style.setProperty("--loop", `${set}px`)
+        // About a tile every ten seconds, and no two columns quite in step.
+        run.style.setProperty("--lap", `${Math.round((set / (13 + ((c * 7) % 5))) * 10) / 10}s`)
+      })
+    }
+    columns(true)
+    let again
+    addEventListener("resize", () => {
+      clearTimeout(again)
+      again = setTimeout(() => !hero.hidden && columns(false), 200)
+    })
+  })()
+</script>
 <main class="work" id="work" hidden>
   <section class="read" aria-label="Your brand">
     <a class="home" id="home" href="/">Surfaces</a>
@@ -335,12 +456,19 @@
     <aside class="side" aria-label="Use it">
       <div class="group">
         <h3>Use this one</h3>
-        <pre id="code"></pre>
+        <div class="prompt" id="prompt"></div>
         <div class="buttons">
-          <button class="plain" type="button" id="copy">Copy the code</button>
-          <button class="plain" type="button" id="copyAgent">Copy for your agent</button>
+          <button class="go" type="button" id="copyAgent">Copy for your agent</button>
         </div>
-        <p class="note">In a project, <code>npx @pogrobert/surfaces init</code> reads the same things from its files and writes this brand in. Titles stay in your own font.</p>
+        <p class="note">Paste it into your coding agent, in your project. It sets this brand up from the site's own files; titles stay in your own font.</p>
+        <details class="byhand">
+          <summary>Or write it yourself</summary>
+          <pre id="code"></pre>
+          <div class="buttons">
+            <button class="plain" type="button" id="copy">Copy the code</button>
+          </div>
+          <p class="note">In a project, <code>npx @pogrobert/surfaces init</code> reads the same things from its files and writes this brand in.</p>
+        </details>
       </div>
       <div class="group">
         <h3>Logo</h3>
@@ -362,9 +490,9 @@
 </main>
 
 <script type="module">
-import { createBrand, generate, toHtml, catalog } from "/dist/index.js"
+import { createBrand, generate, toSvg, catalog } from "/dist/index.js"
 import { toPngInBrowser } from "/dist/png.js"
-import { KINDS, SAMPLES, scene, tiles, wall, TILES } from "/wall.js"
+import { KINDS, SAMPLES, scene, tiles, wall, picture, TILES } from "/wall.js"
 
 const $ = (selector) => document.querySelector(selector)
 // Says something aloud to a screen reader, where what happened shows only to
@@ -390,30 +518,28 @@ let shuffle = 0
 let walled = JSON.stringify({ shuffle: 0, color: null })
 // The colour the wall is painted in: the one picked, or each tile its sample's.
 const wallColour = () => state.chosen.color
+// A tile stands in the wall more than once, since its column repeats: every
+// copy of it is one tile to the eye, so all of them are drawn together.
+const standing = (index) => document.querySelectorAll(`#wall .tile[data-i="${index}"]`)
 const unseen = new IntersectionObserver((entries) => {
   for (const entry of entries) {
     if (!entry.isIntersecting) continue
-    unseen.unobserve(entry.target)
     const index = Number(entry.target.dataset.i)
     const tile = tiles(shuffle, index + 1)[index]
+    let drawn = ""
     try {
-      entry.target.querySelector(".art > span").innerHTML = toHtml(scene(tile, generate, wallColour()), { fill: true })
+      drawn = picture(toSvg(scene(tile, generate, wallColour())))
     } catch (error) {
       console.warn(error.message)
+    }
+    for (const copy of standing(index)) {
+      unseen.unobserve(copy)
+      if (!copy.querySelector(".art").firstChild) copy.querySelector(".art").innerHTML = drawn
     }
   }
 }, { rootMargin: "200px" })
 function watchWall() {
-  for (const tile of document.querySelectorAll("#wall .tile")) if (!tile.querySelector(".art > span").firstChild) unseen.observe(tile)
-}
-// How many tiles fill the landing at this window's size: every column of
-// every row it shows, so no row stops short.
-function needed() {
-  const grid = $("#wall")
-  const columns = getComputedStyle(grid).gridTemplateColumns.split(" ").length
-  const first = grid.querySelector(".tile")
-  const step = first ? first.getBoundingClientRect().height + parseFloat(getComputedStyle(grid).rowGap) : 140
-  return columns * Math.ceil($("#hero").clientHeight / step)
+  for (const tile of document.querySelectorAll("#wall .tile")) if (!tile.querySelector(".art").firstChild) unseen.observe(tile)
 }
 // A wall other than the first is drawn by the server, which the page only
 // swaps in, and the next shuffle is fetched while this one shows, so a
@@ -421,7 +547,7 @@ function needed() {
 // here, as it comes into view.
 const fetched = new Map()
 function wallUrl(n) {
-  const query = new URLSearchParams({ shuffle: String(n), count: String(Math.max(TILES, needed())) })
+  const query = new URLSearchParams({ shuffle: String(n), count: String(TILES) })
   if (wallColour()) query.set("color", wallColour())
   return `/wall?${query}`
 }
@@ -433,40 +559,65 @@ function prefetch(n) {
   }
   return fetched.get(url)
 }
-async function drawWall() {
+// `from` is what asked for the change, when it should be seen to spread from
+// there, as a shuffle does from its button; without it the wall only fades
+// across, as it does for a colour.
+async function drawWall(from) {
   const color = wallColour()
   const key = JSON.stringify({ shuffle, color: color ?? null })
-  if (key === walled) return fillWall()
+  if (key === walled) return
   walled = key
   const html = await prefetch(shuffle)
   // Something else was asked for while this one came.
   if (key !== walled) return
-  $("#wall").innerHTML = html ?? wall(tiles(shuffle, Math.max(TILES, needed())), generate, toHtml, { drawn: 0, color })
+  swapWall(html ?? wall(tiles(shuffle), generate, toSvg, { drawn: 0, color }), from)
   watchWall()
-  fillWall()
   prefetch(shuffle + 1)
 }
-// A window larger than the drawn wall gets the tiles it is missing, drawn as
-// the rest are.
-function fillWall() {
-  const grid = $("#wall")
-  const have = grid.children.length
-  const want = needed()
-  if (want <= have) return
-  grid.insertAdjacentHTML("beforeend", wall(tiles(shuffle, want).slice(have), generate, toHtml, { drawn: 0, color: wallColour() }))
-  watchWall()
+// The wall given new pictures: every tile stays where it is and takes the
+// picture, the style and the name of the one that now stands there. The new
+// picture goes over the old, which is taken away once the new one is in.
+function swapWall(html, from) {
+  const next = document.createElement("template")
+  next.innerHTML = html
+  const origin = from?.getBoundingClientRect()
+  const far = Math.sqrt(innerWidth * innerWidth + innerHeight * innerHeight)
+  for (const tile of next.content.children) {
+    const drawn = tile.querySelector("img")
+    for (const kept of standing(tile.dataset.i)) {
+      kept.dataset.style = tile.dataset.style
+      kept.setAttribute("aria-label", tile.getAttribute("aria-label"))
+      kept.querySelector(".label").textContent = tile.querySelector(".label").textContent
+      const art = kept.querySelector(".art")
+      // Not drawn yet: it will be, here, as it comes into view.
+      if (!drawn) {
+        art.replaceChildren()
+        continue
+      }
+      const picture = drawn.cloneNode()
+      picture.className = origin ? "next spread" : "next"
+      if (origin) {
+        const box = kept.getBoundingClientRect()
+        const dx = box.left + box.width / 2 - (origin.left + origin.width / 2)
+        const dy = box.top + box.height / 2 - (origin.top + origin.height / 2)
+        picture.style.transitionDelay = `${Math.round((Math.sqrt(dx * dx + dy * dy) / far) * 320)}ms`
+      }
+      art.append(picture)
+      // Whatever is under it goes when it is in; or after a moment, where a
+      // browser has no way of saying so.
+      const settle = () => {
+        while (art.firstChild && art.firstChild !== picture && picture.isConnected) art.firstChild.remove()
+      }
+      picture.addEventListener("transitionend", settle, { once: true })
+      setTimeout(settle, 1200)
+    }
+  }
 }
 watchWall()
-fillWall()
 prefetch(1)
-let refilling
-addEventListener("resize", () => {
-  clearTimeout(refilling)
-  refilling = setTimeout(fillWall, 150)
-})
 $("#shuffle").addEventListener("click", () => {
   shuffle += 1
-  drawWall()
+  drawWall($("#shuffle"))
 })
 
 // ---- The brand's colour, picked on the landing ----
@@ -531,6 +682,8 @@ function show(screen) {
   arriving.classList.remove("arriving")
   void arriving.offsetWidth
   arriving.classList.add("arriving")
+  // Once it has arrived and stands where it will: the arrival slides it up.
+  arriving.addEventListener("animationend", fitPanels, { once: true })
 }
 function open() {
   if (location.hash !== "#explore") history.pushState(null, "", "#explore")
@@ -602,8 +755,12 @@ function redraw() {
     say(error.message)
     return
   }
-  // The wall repaints in the brand: the page becomes the site's own.
-  drawWall()
+  // Whatever an earlier drawing still had to do is dropped: this one asks
+  // for all it needs, and what was made before is kept (see `pictured`).
+  later.length = 0
+  // The wall repaints in the brand, when it is next looked at: the page
+  // becomes the site's own.
+  if (!$("#hero").hidden) drawWall()
   drawBrand(brand)
   drawList(brand)
   drawHead(brand)
@@ -657,24 +814,42 @@ function drawBrand(brand) {
 
 // Every style, each a thumbnail in the brand's own colour, by kind.
 function drawList(brand) {
-  $("#list").replaceChildren(
-    ...KINDS.flatMap(([kind, styles]) => [
-      make("h3", { textContent: kind }),
-      ...styles.map((style) => {
-        const thumb = make("span", { className: "thumb" })
-        const art = make("div")
-        art.innerHTML = toHtml(flatOf(createBrand({ ...choices(), style, shape: undefined })).card({ id: "thumb" }), { fill: true })
-        thumb.append(art)
-        const button = make("button", { type: "button" }, thumb, NAMES[style])
-        button.setAttribute("aria-pressed", String(style === brand.look.style))
-        button.addEventListener("click", () => step(() => {
-          state.chosen = { ...state.chosen, style }
-          delete state.chosen.shape
-        }))
-        return button
-      }),
-    ])
-  )
+  const list = $("#list")
+  // Made once and kept: picking a style changes which is pressed, and
+  // nothing else in the list.
+  if (!list.firstChild) {
+    list.append(
+      ...KINDS.flatMap(([kind, styles]) => [
+        make("h3", { textContent: kind }),
+        ...styles.map((style) => {
+          const button = make("button", { type: "button" }, make("span", { className: "thumb" }, make("img", { alt: "", decoding: "async" })), NAMES[style])
+          button.dataset.style = style
+          return button
+        }),
+      ])
+    )
+    list.addEventListener("click", (event) => {
+      const style = event.target.closest("button")?.dataset.style
+      if (!style) return
+      step(() => {
+        state.chosen = { ...state.chosen, style }
+        delete state.chosen.shape
+      })
+    })
+  }
+  // A thumbnail is the style in the brand's own look, so it is drawn again
+  // only when that look changes, never for the style or the shape chosen.
+  const { style: _, shape: __, logo: ___, ...look } = choices()
+  const key = JSON.stringify([look, state.logoUrl, seenTheme()])
+  for (const button of list.querySelectorAll("button")) {
+    const style = button.dataset.style
+    button.setAttribute("aria-pressed", String(style === brand.look.style))
+    if (button.dataset.key === key) continue
+    soon(() => {
+      button.querySelector("img").src = pictured(flatOf(createBrand({ ...choices(), style, shape: undefined })).input("card", { id: "thumb" })).url
+      button.dataset.key = key
+    })
+  }
 }
 
 function drawHead(brand) {
@@ -689,14 +864,86 @@ function drawHead(brand) {
 
 // A picture with words set over it in the site's own face, where the art
 // keeps room for them, and a way to keep the art.
-function frame(target, scene, words, face, file) {
+// Every picture in the explorer is an image: its SVG behind an address, made
+// once for each input and kept, so a look that has been seen shows again at
+// once, and the page holds one element for it where a drawing set inline is
+// hundreds, laid out and painted with everything round them.
+const pictures = new Map()
+function pictured(input) {
+  // A logo is named by its address here; its bytes would be the whole key.
+  const key = JSON.stringify(input, (name, value) => (name === "logo" && value ? [state.logoUrl, value.place] : value))
+  let made = pictures.get(key)
+  if (made) pictures.delete(key)
+  else {
+    const scene = generate(input)
+    made = { scene, url: URL.createObjectURL(new Blob([toSvg(scene)], { type: "image/svg+xml" })) }
+    // The longest unused goes when there are many: nothing showing is that old.
+    if (pictures.size >= 400) {
+      const [oldest, gone] = pictures.entries().next().value
+      URL.revokeObjectURL(gone.url)
+      pictures.delete(oldest)
+    }
+  }
+  pictures.set(key, made)
+  return made
+}
+
+// What is below the first picture is drawn a little at a time, between
+// frames, so a click is answered at once and the rest follows it down the
+// page. A tile keeps the picture it had until its new one is made.
+const later = []
+let working = false
+function soon(job) {
+  later.push(job)
+  if (working) return
+  working = true
+  setTimeout(work)
+}
+function work() {
+  const until = performance.now() + 8
+  while (later.length && performance.now() < until) later.shift()()
+  if (later.length) setTimeout(work)
+  else working = false
+}
+
+// A frame holds one picture, the same element from one drawing to the next,
+// with the title set over it where the art keeps room, and a way to keep the
+// art. A picture with words is drawn at once, since where its words go is
+// the picture's to say; any other in its turn.
+function frame(target, input, words, face, file) {
   const holder = typeof target === "string" ? $(target) : target
-  holder.style.aspectRatio = `${scene.output.w} / ${scene.output.h}`
-  const art = make("div", { className: "art" })
-  art.innerHTML = toHtml(scene, { fill: true })
-  const parts = [art]
-  const area = scene.areas[0]
-  if (words && area && area.art === "around") {
+  holder.style.aspectRatio = `${input.width ?? 1600} / ${input.height ?? 900}`
+  let art = holder.querySelector(":scope > .art")
+  if (!art) holder.prepend((art = make("img", { className: "art", alt: "", decoding: "async" })))
+  if (file && !holder.querySelector(":scope > .save")) {
+    const save = make("button", { type: "button", className: "save", textContent: "Download" })
+    save.setAttribute("aria-label", "Download this picture as a PNG")
+    save.addEventListener("click", async (event) => {
+      event.stopPropagation()
+      if (!holder.scene) return
+      const blob = await toPngInBrowser(holder.scene)
+      const link = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `${state.name}-${holder.dataset.file}.png` })
+      link.click()
+      setTimeout(() => URL.revokeObjectURL(link.href), 1000)
+    })
+    holder.append(save)
+  }
+  if (file) holder.dataset.file = file
+  const show = () => {
+    const made = pictured(input)
+    if (art.getAttribute("src") !== made.url) art.src = made.url
+    holder.scene = made.scene
+    holder.querySelector(":scope > .words")?.remove()
+    const area = made.scene.areas[0]
+    if (words && area && area.art === "around") art.after(worded(made.scene, area, words, face))
+  }
+  if (words) show()
+  else soon(show)
+}
+
+// The title over a picture, in the place and the colour its area gives.
+function worded(scene, area, words, face) {
+  {
     const { w, h } = scene.output
     const set = make("div", { className: "words" }, make("span", { textContent: words }))
     Object.assign(set.style, {
@@ -709,21 +956,8 @@ function frame(target, scene, words, face, file) {
       justifyContent: /top/.test(area.place ?? "") ? "flex-start" : /bottom/.test(area.place ?? "") ? "flex-end" : "center",
       textAlign: /right/.test(area.place ?? "") ? "right" : area.place === "center" || area.place === "top" || area.place === "bottom" ? "center" : "left",
     })
-    parts.push(set)
+    return set
   }
-  if (file) {
-    const save = make("button", { type: "button", className: "save", textContent: "Download" })
-    save.setAttribute("aria-label", "Download this picture as a PNG")
-    save.addEventListener("click", async (event) => {
-      event.stopPropagation()
-      const blob = await toPngInBrowser(scene)
-      const link = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `${state.name}-${file}.png` })
-      link.click()
-      setTimeout(() => URL.revokeObjectURL(link.href), 1000)
-    })
-    parts.push(save)
-  }
-  holder.replaceChildren(...parts)
 }
 
 // Each title set as large as its room allows, as a designer would size it.
@@ -744,12 +978,25 @@ function fit(words) {
 }
 function fitAll() {
   for (const words of document.querySelectorAll("#work .frame .words")) fit(words)
+  fitPanels()
 }
 let resizing
 addEventListener("resize", () => {
   clearTimeout(resizing)
   resizing = setTimeout(fitAll, 120)
 })
+
+// How far down the window the style list now starts, for the panels' height
+// (see .list). It starts under the brand's bar and rises to rest as the page
+// scrolls, so it is measured as it moves, and written only when it changes.
+let panelTop = -1
+function fitPanels() {
+  if ($("#work").hidden) return
+  const top = Math.max(16, Math.round($("#list").getBoundingClientRect().top))
+  if (top !== panelTop) $(".explore").style.setProperty("--panel-top", `${(panelTop = top)}px`)
+}
+addEventListener("scroll", fitPanels, { passive: true })
+addEventListener("resize", fitPanels)
 
 // The chosen style every way it can be drawn: the link preview with the
 // headline over it, then its feels, shapes, colours and sizes, each a click
@@ -759,51 +1006,71 @@ function drawVariations(brand) {
   const face = faceOf(brand)
   const title = titleOf()
   $("#title").value = state.title
-  frame("#lead", flat.og({ title, id: idOf(title) }), title, face, "og")
+  const about = { title, id: idOf(title) }
+  frame("#lead", flat.input("og", about), title, face, "og")
   const look = brand.look
-  const tile = (caption, change, scene) => {
-    const holder = make("div", { className: "frame" })
-    const figure = make("figure", {}, holder, make("figcaption", { textContent: caption }))
-    frame(holder, scene, "", face)
-    // A tile that changes nothing, such as a size, is a picture to look at:
-    // not a stop for the keyboard, and not a step to undo.
-    if (!Object.keys(change).length) return figure
-    const current = Object.entries(change).every(([key, value]) => (look[key] ?? undefined) === value)
-    // Pressed like a button, and said to be one.
-    figure.tabIndex = 0
-    figure.setAttribute("role", "button")
-    figure.setAttribute("aria-pressed", String(current))
-    if (current) figure.setAttribute("aria-current", "true")
-    const pick = () => choose(change)
-    figure.addEventListener("click", pick)
-    figure.addEventListener("keydown", (event) => (event.key === "Enter" || event.key === " ") && (event.preventDefault(), pick()))
-    return figure
-  }
-  const as = (change) => flatOf(createBrand({ ...choices(), ...change }))
-  $("#feel").replaceChildren(
-    ...[
-      ["Calm, light", { mood: "calm", theme: "light" }],
-      ["Bold, light", { mood: "bold", theme: "light" }],
-      ["Calm, dark", { mood: "calm", theme: "dark" }],
-      ["Bold, dark, heavy grain", { mood: "bold", theme: "dark", grain: "heavy" }],
-    ].map(([caption, change]) => tile(caption, change, as(change).og({ title, id: idOf(title) })))
-  )
+  const as = (change) => flatOf(createBrand({ ...choices(), ...change })).input("og", about)
+  row("#feel", look, face, [
+    ["Calm, light", { mood: "calm", theme: "light" }],
+    ["Bold, light", { mood: "bold", theme: "light" }],
+    ["Calm, dark", { mood: "calm", theme: "dark" }],
+    ["Bold, dark, heavy grain", { mood: "bold", theme: "dark", grain: "heavy" }],
+  ].map(([caption, change]) => [caption, change, as(change)]))
   const shapes = catalog.find((entry) => entry.style === look.style)?.shapes ?? []
   $("#shapeAxis").hidden = !shapes.length
-  $("#shapes").replaceChildren(...shapes.map((shape) => tile(shape[0].toUpperCase() + shape.slice(1), { shape }, as({ shape }).og({ title, id: idOf(title) }))))
-  // The brand's own colour beside a few others it could be.
+  row("#shapes", look, face, shapes.map((shape) => [shape[0].toUpperCase() + shape.slice(1), { shape }, as({ shape })]))
+  // The brand's own colour beside a few others it could be. The four stay
+  // where they are when one is picked: only a colour from elsewhere, such as
+  // the strip above, brings a new four.
   const current = look.color?.toLowerCase()
-  const others = [current, ...COLOURS.filter((color) => color !== current)].filter(Boolean).slice(0, 4)
-  $("#colours").replaceChildren(...others.map((color) => tile(color, { color }, as({ color }).og({ title, id: idOf(title) }))))
+  if (!colourRow.includes(current)) colourRow = [current, ...COLOURS.filter((color) => color !== current)].filter(Boolean).slice(0, 4)
+  row("#colours", look, face, colourRow.map((color) => [color, { color }, as({ color })]))
   const input = flat.input("card", { id: idOf(title) })
-  $("#sizes").replaceChildren(
-    ...[
-      ["Link preview", 1200, 630],
-      ["Square", 1000, 1000],
-      ["Story", 900, 1600],
-      ["Header", 1500, 500],
-    ].map(([caption, width, height]) => tile(caption, {}, generate({ ...input, width, height })))
-  )
+  row("#sizes", look, face, [
+    ["Link preview", 1200, 630],
+    ["Square", 1000, 1000],
+    ["Story", 900, 1600],
+    ["Header", 1500, 500],
+  ].map(([caption, width, height]) => [caption, {}, { ...input, width, height }]))
+}
+let colourRow = []
+
+// A row of tiles, kept from one drawing to the next: the same elements in
+// the same order, each given its new picture, so nothing jumps and the
+// keyboard keeps its place. A tile that changes something is pressed like a
+// button, and said to be one; one that changes nothing, such as a size, is a
+// picture to look at: not a stop for the keyboard, and not a step to undo.
+function row(selector, look, face, specs) {
+  const grid = $(selector)
+  if (!grid.dataset.wired) {
+    grid.dataset.wired = "true"
+    const pick = (event) => {
+      const change = event.target.closest("figure")?.change
+      if (!change || !Object.keys(change).length) return false
+      choose(change)
+      return true
+    }
+    grid.addEventListener("click", pick)
+    grid.addEventListener("keydown", (event) => (event.key === "Enter" || event.key === " ") && pick(event) && event.preventDefault())
+  }
+  while (grid.children.length > specs.length) grid.lastElementChild.remove()
+  specs.forEach(([caption, change, input], index) => {
+    let figure = grid.children[index]
+    if (!figure) grid.append((figure = make("figure", {}, make("div", { className: "frame" }), make("figcaption"))))
+    figure.lastElementChild.textContent = caption
+    figure.change = change
+    frame(figure.firstElementChild, input, "", face)
+    if (Object.keys(change).length) {
+      const current = Object.entries(change).every(([key, value]) => (look[key] ?? undefined) === value)
+      figure.tabIndex = 0
+      figure.setAttribute("role", "button")
+      figure.setAttribute("aria-pressed", String(current))
+      figure.toggleAttribute("aria-current", current)
+      if (current) figure.setAttribute("aria-current", "true")
+    } else {
+      for (const name of ["tabindex", "role", "aria-pressed", "aria-current"]) figure.removeAttribute(name)
+    }
+  })
 }
 
 // The link preview as X shows it, with the headline over the art.
@@ -829,7 +1096,7 @@ function drawFeature(brand) {
   $("#postHandle").textContent = `@${shown().at} · 2h`
   $("#ogFrom").textContent = `From ${shown().site}`
   badge(brand, $("#postFace"))
-  frame("#og", flat.og({ title, id: idOf(title) }), title, face, "og")
+  frame("#og", flat.input("og", { title, id: idOf(title) }), title, face, "og")
 }
 
 const POSTS = [
@@ -840,19 +1107,19 @@ function drawSet(brand) {
   const flat = flatOf(brand)
   const face = faceOf(brand)
   const name = shown().name
-  frame("#x", flat.banner({ for: "x", id: idOf("x") }), "", face, "x-header")
+  frame("#x", flat.input("x", { id: idOf("x") }), "", face, "x-header")
   badge(brand, $("#xFace"))
   $("#xName").textContent = name
   $("#xHandle").textContent = `@${shown().at}`
-  frame("#linkedin", flat.banner({ for: "linkedin", id: idOf("linkedin") }), "", face, "linkedin-banner")
+  frame("#linkedin", flat.input("linkedin", { id: idOf("linkedin") }), "", face, "linkedin-banner")
   badge(brand, $("#inFace"))
   $("#inName").textContent = name
-  frame("#email", flat.banner({ for: "email", id: idOf("email") }), "", face, "email-header")
+  frame("#email", flat.input("email", { id: idOf("email") }), "", face, "email-header")
   const posts = [[titleOf(), "Today"], ...POSTS]
   $("#blog").replaceChildren(
     ...posts.map(([title, when]) => {
       const pic = make("div", { className: "frame" })
-      frame(pic, flat.cover({ title, id: idOf(title) }), "", face, "cover")
+      frame(pic, flat.input("post", { title, id: idOf(title) }), "", face, "cover")
       const heading = make("h3", { textContent: title })
       heading.style.fontFamily = face.stack
       return make("article", {}, pic, heading, make("time", { textContent: when }))
@@ -869,6 +1136,24 @@ function drawSide(brand) {
   const parts = Object.entries({ name: state.name.trim() || "example.com", ...brand.look }).map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
   const logo = state.logo ? `,\n  logo: await readFile("public/logo.${typeof state.logo === "string" ? "svg" : "png"}"${typeof state.logo === "string" ? `, "utf8"` : ""})` : ""
   $("#code").textContent = `import { createBrand } from "@pogrobert/surfaces"\n\nexport const brand = createBrand({\n  ${parts.join(",\n  ")}${logo},\n})\n\n// On a page: the art, the title in your font\n<Cover brand={brand} title={post.title} />\n\n// A link preview file, its title drawn in\ntoJpeg(brand.og({ title, drawTitle: true }))`
+  // The prompt as it will be pasted, its code set as code.
+  $("#prompt").replaceChildren(...agentPrompt(brand.look).split("`").map((part, index) => (index % 2 ? make("code", { textContent: part }) : part)))
+}
+
+// What to hand a coding agent to put this brand into a project: the steps a
+// person would take, in the order the command line expects them, with the
+// look chosen here. Shown in the panel and copied as it is shown.
+function agentPrompt(look) {
+  const named = state.name.trim()
+  const chosen = JSON.stringify({ ...(named ? { name: named } : null), ...look })
+  return [
+    "Add @pogrobert/surfaces to this site, for its covers, link previews, headers and any other picture it repeats.",
+    "",
+    "1. Run `npx @pogrobert/surfaces init`, and install what it says to. It reads the site, writes the brand module, and adds its rules to AGENTS.md: follow them.",
+    `2. Set \`look\` in that brand module to \`${chosen}\`${named ? "" : ", keeping the site's own domain as its name"}.`,
+    "3. On pages, `<Cover brand={brand} title={title} />` from `@pogrobert/surfaces/react` shows the title on the art in the site's own font, so don't repeat the title beside it.",
+    "4. Run `npx @pogrobert/surfaces kit` for the link preview and profile headers, then `npx @pogrobert/surfaces check`.",
+  ].join("\n")
 }
 
 function segmented(selector, options, current, pick) {
@@ -946,21 +1231,22 @@ $("#logoNone").addEventListener("click", () => {
 })
 // A copy says it happened: on the button for a moment, for whoever is
 // looking, and aloud, for whoever isn't.
-function copied(button) {
-  const label = button.dataset.label ?? (button.dataset.label = button.textContent)
-  button.textContent = "Copied"
-  say("Copied")
-  clearTimeout(button.back)
-  button.back = setTimeout(() => (button.textContent = label), 1600)
+// And where a browser won't let a page copy, it says that instead: the words
+// are on the page to select.
+function copy(button, text) {
+  const tell = (short, aloud) => {
+    const label = button.dataset.label ?? (button.dataset.label = button.textContent)
+    button.textContent = short
+    say(aloud)
+    clearTimeout(button.back)
+    button.back = setTimeout(() => (button.textContent = label), 1600)
+  }
+  const refused = () => tell("Select it to copy", "This browser didn't allow the copy: select the text above and copy it.")
+  if (!navigator.clipboard) return refused()
+  navigator.clipboard.writeText(text).then(() => tell("Copied", "Copied"), refused)
 }
-$("#copy").addEventListener("click", () => navigator.clipboard?.writeText($("#code").textContent).then(() => copied($("#copy"))))
-$("#copyAgent").addEventListener("click", () => {
-  const look = createBrand(choices()).look
-  copied($("#copyAgent"))
-  navigator.clipboard?.writeText(
-    `Add Surfaces to this site for its covers, link previews, headers and any other picture it repeats. Run \`npx @pogrobert/surfaces init\`, then set the brand it writes to ${JSON.stringify({ ...(state.name.trim() ? { name: state.name.trim() } : null), ...look })}${state.name.trim() ? "" : ", with the site's own domain as its name"}. The pictures are art: set titles in the site's own font over them, with <Cover brand title /> from @pogrobert/surfaces/react, and use \`toJpeg(brand.og({ title, drawTitle: true }))\` only for link preview files. Then run \`npx @pogrobert/surfaces kit\` for the site's preview and headers.`
-  )
-})
+$("#copy").addEventListener("click", () => copy($("#copy"), $("#code").textContent))
+$("#copyAgent").addEventListener("click", () => copy($("#copyAgent"), agentPrompt(createBrand(choices()).look)))
 
 
 // The landing's colours, once everything they draw with is defined.

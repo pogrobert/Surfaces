@@ -64,14 +64,25 @@ export function scene(tile, generate, color) {
 const NAME = (style) => style[0].toUpperCase() + style.slice(1)
 export const label = (tile) => `${NAME(tile.style)}${tile.mood ? `, ${tile.mood}` : ""}${tile.theme === "dark" ? ", dark" : ""}`
 
+// A drawing as a picture: its SVG behind an <img>, in the address itself so
+// it comes with the page. Drawn inline, a tile is hundreds of elements under
+// filters, which a browser lays out with the page and draws again whenever
+// anything near it changes, a window's edge moving included; a picture is one
+// element, drawn once at its size and kept.
+// Only what an address or the attribute round it can't hold as it is gets
+// escaped (% # " & and line breaks), so the page stays close to the SVG's own
+// size on the wire.
+export const picture = (svg) =>
+  `<img alt="" decoding="async" src="data:image/svg+xml,${svg.replace(/[%#"&\n\r\t]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0")}`)}">`
+
 // The wall as HTML: the first `drawn` tiles with their art, the rest empty
 // until the page draws them.
 // Each tile is a button: it opens the explorer on its style.
-export function wall(list, generate, toHtml, { drawn = FIRST, color } = {}) {
+export function wall(list, generate, toSvg, { drawn = FIRST, color } = {}) {
   return list
     .map((tile) => {
-      const art = tile.i < drawn ? toHtml(scene(tile, generate, color), { fill: true }) : ""
-      return `<button type="button" tabindex="-1" class="tile" data-i="${tile.i}" data-style="${tile.style}" aria-label="${label(tile)}"><span class="art"><span>${art}</span></span><span class="label">${label(tile)}</span></button>`
+      const art = tile.i < drawn ? picture(toSvg(scene(tile, generate, color))) : ""
+      return `<button type="button" tabindex="-1" class="tile" data-i="${tile.i}" data-style="${tile.style}" aria-label="${label(tile)}"><span class="art">${art}</span><span class="label">${label(tile)}</span></button>`
     })
     .join("")
 }
