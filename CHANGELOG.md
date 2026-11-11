@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.1.1
+
+- **A brand's second colour.** `createBrand({ name, color, partner })`, or
+  `partner` in an input: the styles that set a second hue beside the brand's
+  take its hue instead of one chosen for them. Each keeps its own lightness,
+  so the colour given can't make a cover unreadable, and the drawing doesn't
+  change, only its colour.
+- **Underpaint's glow.** Underpaint has two shapes now: `aura`, as before,
+  and `glow`, the brand's colour alone in three shades, soft as haze and
+  filling the cover, for a card with content laid over it. The seed picks
+  either; give `shape` to keep one.
+- **One style alone.** `@pogrobert/surfaces/<style>` and
+  `@pogrobert/surfaces/<style>/react` are the same functions drawing only
+  that style, so a page that draws in the browser carries one style's code:
+  a `<Cover>` adds about 46 KB gzipped instead of 120. A brand made there is
+  in that style; another style throws and names the import that has it.
+- **`<Cover>` and `<Surface>` render in a React Server Component.** A still
+  cover is plain markup with no hooks, so it needs no client code at all; a
+  moving one gets a small client part that starts and rests its motion.
+- **`init` writes the brand module with its style's own import**, so a site
+  that draws in the browser ships that one style.
+- **A better second colour.** Each hue has two or three partners a printer
+  would pair with it (blue with a fluorescent pink, a coral or an aqua; teal
+  with a coral, a violet or a pink), instead of one for every brand of that
+  hue, and a brand picks one by its name and keeps it in `brand.look`.
+  `readPage` takes a site's own secondary or accent colour as its partner.
+- `catalog` says which styles use a `partner` (`partner: true`), and a
+  partner given to a one-hue style warns that it changes nothing.
+- The HTTP handler, given `jpeg`, serves JPEG to a URL without a `format`,
+  since an `og:image` can't be an SVG; and `?theme=` keeps the brand's logo.
+- The command is listed as `dist/cli.js`, as npm writes it.
+
 ## 0.1.0
 
 The first release.

@@ -1,5 +1,7 @@
-import { generate } from "./core/generate.ts"
+import { generate, generateWith, notHere } from "./core/generate.ts"
+import type { Recipes } from "./core/generate.ts"
 import { hash } from "./core/random.ts"
+import { partnerFor } from "./core/palette.ts"
 import type { SurfaceInput } from "./core/generate.ts"
 import { readLogo } from "./core/image.ts"
 import type { ImageInput } from "./core/image.ts"
@@ -12,8 +14,8 @@ import { coverage, HAIRLINE, worstTitleContrast } from "./core/judge.ts"
 import type { Scene } from "./core/scene.ts"
 import type { TitleFont } from "./type/fontfile.ts"
 import { nearest } from "./core/validate.ts"
-import { STILL, STYLES } from "./styles/index.ts"
-import type { StyleName } from "./styles/index.ts"
+import { isStyle, PARTNERED, SHAPES, STILL, STYLE_NAMES } from "./styles/names.ts"
+import type { StyleName } from "./styles/names.ts"
 import { checkFacts, choose, FACTS, leansOf, PLACING, styleReason, USES } from "./page.ts"
 import type { PageFacts, Use } from "./page.ts"
 
@@ -39,8 +41,10 @@ import type { PageFacts, Use } from "./page.ts"
 export type BrandChoices = PageFacts & {
   /** The brand's own name, such as its domain. It is in every seed, so two brands never share a drawing. */
   name: string
-  /** The brand colour, as hex. One colour: the others on a cover are chosen from it. */
+  /** The brand colour, as hex. The others on a cover are chosen from it. */
   color?: string
+  /** The brand's second colour, as hex, such as an accent its site uses beside `color`. The styles that set a second hue beside the first use its hue; left out, one is chosen to sit well with `color`. */
+  partner?: string
   /** The look, from `catalog`. */
   style?: StyleName
   /** "light", "dark", or "auto" to follow the reader on the site's own pages. Link previews and headers are files, so they are light under "auto". */
@@ -113,7 +117,7 @@ export type Content = {
 export type Brand = {
   name: string
   /** The decisions, as plain data: keep them to rebuild the brand exactly. */
-  look: { style: StyleName; color?: string; theme: Theme | "auto"; mood?: Mood; grain?: Grain; shape?: string; font?: Font }
+  look: { style: StyleName; color?: string; partner?: string; theme: Theme | "auto"; mood?: Mood; grain?: Grain; shape?: string; font?: Font }
   /** Why each decision that wasn't given was made, one sentence each. */
   why: string[]
   /** A post's cover, 1600x900: the art alone, its title set by the page. The use "post". */
@@ -134,7 +138,7 @@ export type Brand = {
   input(use: Use, content?: Content): SurfaceInput
 }
 
-const OPTIONS = ["name", "color", "style", "theme", "mood", "grain", "shape", "font", "logo", ...FACTS] as const
+const OPTIONS = ["name", "color", "partner", "style", "theme", "mood", "grain", "shape", "font", "logo", ...FACTS] as const
 
 // What a cover is given, and nothing else: a key that isn't one of these is
 // a mistake, and is said with where it belongs rather than dropped.
@@ -144,7 +148,7 @@ function misplaced(key: string, use: Use, called: string) {
   if (key === "slug" || key === "seed" || key === "key" || key === "name") return ` Use "id": it names the ${called}, so its art stays when the title is edited.`
   if (key === "width" || key === "height" || key === "size") return ` A ${called} has its own size; for another, draw its input at that size: ${spread}width, height }).`
   if (key === "shape") return ` Give the brand its "shape" for every cover, createBrand({ name, shape }), or one cover its own: ${spread}shape }).`
-  if (["style", "color", "theme", "mood", "grain", "font", "logo"].includes(key)) return ` That is the brand's own choice: createBrand({ name, ${key} }).`
+  if (["style", "color", "partner", "theme", "mood", "grain", "font", "logo"].includes(key)) return ` That is the brand's own choice: createBrand({ name, ${key} }).`
   if (key === "motion" || key === "detail" || key === "areas") return ` That is an option of the input: ${spread}${key} }).`
   if (key === "place" || key === "position" || key === "area" || key === "align") return ` Use "text" for where words go over the art: a place such as "bottom-left", or "none".`
   if (key === "for") return ` Only a banner is for somewhere: brand.banner({ for: "x" }).`
@@ -171,7 +175,7 @@ function check(choices: unknown): string[] {
         : (CONTENT as readonly string[]).includes(key) ? ` That belongs to a cover, not the brand: brand.cover({ ${key} }).`
         : key === "motion" ? ` A brand's hero moves by itself, where its style does; for any other cover, generate({ ...brand.input("post", { title }), motion: "once" }).`
         : key === "width" || key === "height" || key === "size" ? ` Each kind of cover has its own size; for another, generate({ ...brand.input("post", { title }), width, height }).`
-        : /^(secondary|accent|partner|second|color2|colour2|secondaryColor)$/i.test(key) ? ` A brand has one "color"; the second colour on a cover is chosen to sit well beside it.`
+        : /^(secondary|accent|second|color2|colour2|secondaryColor|secondaryColour)$/i.test(key) ? ` A brand's second colour is "partner": createBrand({ name, color, partner: "#3730a3" }).`
         : nearest(key, OPTIONS) || ` A brand's choices are ${OPTIONS.map((option) => `"${option}"`).join(", ")}.`
       errors.push(`Unknown choice "${key}".${hint}`)
     }
@@ -179,11 +183,14 @@ function check(choices: unknown): string[] {
   if (typeof given.name !== "string" || !given.name.trim()) {
     errors.push(`Missing "name": give the brand's name, such as its domain, so no other brand shares its drawings`)
   }
-  if (given.style !== undefined && !(String(given.style) in STYLES)) {
-    errors.push(`Unknown style "${String(given.style)}".${nearest(String(given.style), Object.keys(STYLES))} Use ${Object.keys(STYLES).map((style) => `"${style}"`).join(", ")}; \`catalog\` says what each looks like.`)
+  if (given.style !== undefined && !isStyle(given.style)) {
+    errors.push(`Unknown style "${String(given.style)}".${nearest(String(given.style), STYLE_NAMES)} Use ${STYLE_NAMES.map((style) => `"${style}"`).join(", ")}; \`catalog\` says what each looks like.`)
   }
   if (given.color !== undefined && (typeof given.color !== "string" || !/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(given.color))) {
     errors.push(`"color" should be the brand's hex colour, such as #635bff`)
+  }
+  if (given.partner !== undefined && (typeof given.partner !== "string" || !/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(given.partner))) {
+    errors.push(`"partner" should be the brand's second colour, as hex, such as #3730a3`)
   }
   for (const [name, values] of [["theme", [...THEMES, "auto"]], ["mood", MOODS], ["grain", GRAINS], ["font", FONTS]] as const) {
     if (given[name] !== undefined && !(values as readonly unknown[]).includes(given[name])) {
@@ -209,7 +216,7 @@ function check(choices: unknown): string[] {
 function resolve(choices: BrandChoices) {
   const errors = check(choices)
   if (errors.length) throw new Error(errors.join("\n"))
-  const { name, color, style, theme, mood, grain, shape, font, logo, ...facts } = choices
+  const { name, color, partner, style, theme, mood, grain, shape, font, logo, ...facts } = choices
   // What wasn't decided is chosen from the page; a given colour is a fact
   // like any other, and the first one the page uses.
   const page = { ...facts, colors: color ? [color, ...(facts.colors ?? [])] : facts.colors }
@@ -223,13 +230,14 @@ function resolve(choices: BrandChoices) {
   const look: Brand["look"] = {
     style: style ?? chosen.style,
     color: ink,
+    ...(partner ? { partner } : null),
     theme: theme ?? chosen.theme,
     ...((mood ?? chosen.mood) ? { mood: mood ?? chosen.mood } : null),
     ...((grain ?? chosen.grain) ? { grain: grain ?? chosen.grain } : null),
     ...(shape !== undefined ? { shape } : null),
     ...((font ?? chosen.font) !== "sans" ? { font: font ?? chosen.font } : null),
   }
-  const shapes = (STYLES[look.style].shapes ?? []) as readonly string[]
+  const shapes = SHAPES[look.style]
   if (shape !== undefined && !shapes.includes(shape)) {
     throw new Error(
       shapes.length
@@ -252,7 +260,20 @@ function resolve(choices: BrandChoices) {
  */
 export function createBrand(choices: BrandChoices): Brand {
   const { name, look, why, logo } = resolve(choices)
-  return build(name, look, why, logo)
+  return build(generate, name, look, why, logo)
+}
+
+// The same, drawing only with the recipes given, as a style's own import
+// does: a brand there is in that style unless it says otherwise, and one in
+// a style the import hasn't is told where to get it.
+export function createBrandWith(recipes: Recipes, choices: BrandChoices): Brand {
+  const here = STYLE_NAMES.filter((style) => recipes[style])
+  const asked = typeof choices === "object" && choices !== null ? (choices as { style?: unknown }).style : undefined
+  if (isStyle(asked) && !recipes[asked]) throw new Error(notHere(asked, recipes))
+  const given = asked === undefined && here.length === 1 && typeof choices === "object" && choices !== null ? { ...choices, style: here[0]! } : choices
+  const { name, look, why, logo } = resolve(given)
+  if (!recipes[look.style]) throw new Error(notHere(look.style, recipes))
+  return build((input) => generateWith(recipes, input), name, look, why, logo)
 }
 
 // The logo as an input takes it: one image, and one for dark covers.
@@ -332,7 +353,15 @@ function clipped(title: string) {
   return `${(word > MOST_TITLE / 2 ? cut.slice(0, word) : cut).replace(/[\s,.;:–—-]+$/, "")}…`
 }
 
-function build(name: string, look: Brand["look"], why: string[], logo?: Logo): Brand {
+// `draw` is every style's generate, or a style's own import's, which is why
+// it is given and never defaults: a default would bring every style along.
+function build(draw: (input: SurfaceInput) => Scene, name: string, given: Brand["look"], said: string[], logo?: Logo): Brand {
+  // A style that sets a second hue gets one partner for the whole brand,
+  // picked by its name among the hues that sit well beside its colour,
+  // unless the brand gave its own; it is in \`look\`, so it shows and is kept.
+  const pairs = PARTNERED.has(given.style) && !(given.style === "underpaint" && given.shape === "glow")
+  const look = pairs && !given.partner && given.color ? { ...given, partner: partnerFor(given.color, name) } : given
+  const why = look === given ? said : [...said, `partner ${look.partner}: a second colour a printer would pair with ${look.color}, picked by the brand's name`]
   const input = (use: Use, content: Content = {}): SurfaceInput => {
     const placing = placingOf(use)
     if (typeof content !== "object" || content === null || Array.isArray(content)) {
@@ -368,6 +397,7 @@ function build(name: string, look: Brand["look"], why: string[], logo?: Logo): B
       style: look.style,
       seed: `${name}/${about.trim()}`,
       ...(look.color ? { color: look.color } : null),
+      ...(look.partner ? { partner: look.partner } : null),
       ...placing.size,
       ...(areas.length ? { areas } : null),
       // A picture handed to another site is a file, and a file has one
@@ -383,28 +413,42 @@ function build(name: string, look: Brand["look"], why: string[], logo?: Logo): B
       ...(logoFor(logo, use, name, drawn ? content.title : undefined) ? { logo: logoFor(logo, use, name, drawn ? content.title : undefined) } : null),
     }
   }
-  const draw = (use: Use) => (content: Content) => generate(input(use, content))
+  const of = (use: Use) => (content: Content) => draw(input(use, content))
 
-  return {
+  const brand: Brand = {
     name,
     look,
     why,
-    cover: draw("post"),
-    card: draw("card"),
-    hero: draw("hero"),
-    og: draw("og"),
+    cover: of("post"),
+    card: of("card"),
+    hero: of("hero"),
+    og: of("og"),
     banner: ({ for: where, ...content }) => {
       if (!["x", "linkedin", "email"].includes(where)) throw new Error(`Unknown banner "${String(where)}". Use "x", "linkedin" or "email".`)
-      return generate(input(where, content))
+      return draw(input(where, content))
     },
     input,
   }
+  made.set(brand, { draw, logo })
+  return brand
+}
+
+// What a brand was made with beyond its look: the logo, which is an image
+// and so not in `look`, and what it draws with. Kept so the brand can be
+// drawn again in one theme with both, as the HTTP handler's ?theme= does.
+const made = new WeakMap<Brand, { draw: (input: SurfaceInput) => Scene; logo?: Logo }>()
+
+/** The same brand in one theme, its logo and its import's styles kept. */
+export function inTheme(brand: Brand, theme: Theme): Brand {
+  const own = made.get(brand)
+  if (!own) throw new Error(`Expected a brand made by createBrand()`)
+  return build(own.draw, brand.name, { ...brand.look, theme }, brand.why, own.logo)
 }
 
 // The mark every cover with a tag makes, picked by the tag so it stays when
 // posts come and go; nothing for a style without shapes.
 function familyShape(style: StyleName, name: string, tag: string) {
-  const shapes = (STYLES[style].shapes ?? []) as readonly string[]
+  const shapes = SHAPES[style]
   return shapes.length ? { shape: shapes[hash(`${name}/tag/${tag.toLowerCase()}`) % shapes.length]! } : null
 }
 
@@ -431,7 +475,7 @@ const TRIALS = ["Hello", "What we learned from ten thousand bookings in our firs
 function holds(name: string, look: Brand["look"]) {
   const themes = look.theme === "auto" ? (["light", "dark"] as const) : [look.theme]
   for (const theme of themes) {
-    const brand = build(name, { ...look, theme }, [])
+    const brand = build(generate, name, { ...look, theme }, [])
     for (const [index, title] of TRIALS.entries()) {
       for (const draw of [brand.cover, brand.og]) {
         const scene = draw({ title })
@@ -476,7 +520,7 @@ export function directions(choices: BrandChoices, { count = 6 }: { count?: numbe
     // The same style, each time with a different mark it always makes, then
     // quieter, louder, cleaner and rougher. A mark shows at a glance; mood and
     // grain only tune the same drawing.
-    const shapes = decided.shape === undefined ? ((STYLES[look.style].shapes ?? []) as readonly string[]) : []
+    const shapes = decided.shape === undefined ? SHAPES[look.style] : []
     const turns: Partial<Brand["look"]>[] = [
       ...shapes.map((shape) => ({ shape })),
       { mood: "calm" },
@@ -501,7 +545,7 @@ export function directions(choices: BrandChoices, { count = 6 }: { count?: numbe
   const chosen: Brand[] = []
   for (const candidate of looks) {
     if (chosen.length >= count) break
-    if (holds(name, candidate.look)) chosen.push(build(name, candidate.look, candidate.why, logo))
+    if (holds(name, candidate.look)) chosen.push(build(generate, name, candidate.look, candidate.why, logo))
   }
   return chosen
 }

@@ -86,6 +86,75 @@ export const COMPOSITIONS: readonly (readonly PoolPlan[])[] = [
   ],
 ]
 
+// Glow, the one-colour shape: the brand's colour alone, in three shades, a
+// light, the colour and its deep shade, as one hue seen through haze. The
+// pools are larger and softer than the aura's and reach every edge, so the
+// colour fills the cover, as a card behind other content wants it to.
+export const GLOW: readonly (readonly PoolPlan[])[] = [
+  // drift: light falling into colour, deepest in the far corner.
+  [
+    { tone: "soft", x: 26, y: 4, rx: 74, ry: 62 },
+    { tone: "body", x: 74, y: 46, rx: 68, ry: 72 },
+    { tone: "strong", x: 98, y: 98, rx: 58, ry: 60 },
+    { tone: "quiet", x: 40, y: 16, rx: 34, ry: 30, strength: 0.6 },
+  ],
+  // split: deep and light meeting along a soft diagonal.
+  [
+    { tone: "strong", x: 102, y: 8, rx: 60, ry: 64 },
+    { tone: "soft", x: 28, y: 30, rx: 72, ry: 58 },
+    { tone: "body", x: 80, y: 78, rx: 66, ry: 62 },
+    { tone: "quiet", x: 50, y: 20, rx: 30, ry: 28, strength: 0.6 },
+  ],
+  // veil: a wide light over colour that pools low on the far side.
+  [
+    { tone: "soft", x: 46, y: -8, rx: 98, ry: 66 },
+    { tone: "body", x: 92, y: 56, rx: 58, ry: 72 },
+    { tone: "strong", x: 102, y: 104, rx: 60, ry: 46 },
+  ],
+  // halo: one lit centre ringed in its colour.
+  [
+    { tone: "body", x: 74, y: 34, rx: 74, ry: 86 },
+    { tone: "soft", x: 72, y: 28, rx: 42, ry: 52 },
+    { tone: "strong", x: 106, y: 94, rx: 50, ry: 58 },
+    { tone: "quiet", x: 70, y: 26, rx: 18, ry: 24, strength: 0.8 },
+  ],
+  // edge: colour held to the far side, light spilling over the top.
+  [
+    { tone: "body", x: 108, y: 40, rx: 56, ry: 92 },
+    { tone: "strong", x: 112, y: 92, rx: 42, ry: 58 },
+    { tone: "soft", x: 66, y: -10, rx: 62, ry: 52 },
+  ],
+  // wash: three bands of one colour, light to deep, from corner to corner.
+  [
+    { tone: "soft", x: 18, y: -10, rx: 82, ry: 62 },
+    { tone: "body", x: 60, y: 32, rx: 80, ry: 70 },
+    { tone: "strong", x: 92, y: 82, rx: 70, ry: 70 },
+  ],
+]
+
+// One hue throughout: the tones barely turn, there is no partner, and the
+// ground is a tint of the colour rather than paper.
+const GLOW_PALETTE = {
+  ...BASE_PALETTE,
+  maxChroma: 0.22,
+  light: {
+    ...BASE_PALETTE.light,
+    ground: { l: [0.93, 0.95], c: [0.32, 0.42] },
+    quiet: { l: [0.965, 0.98], c: [0.08, 0.14], turn: -6 },
+    soft: { l: [0.86, 0.9], c: [0.55, 0.7], turn: -8 },
+    body: { l: [0.7, 0.76], c: [0.95, 1] },
+    strong: { l: [0.48, 0.54], c: [0.9, 1], turn: 10 },
+  },
+  dark: {
+    ...BASE_PALETTE.dark,
+    ground: { l: [0.15, 0.18], c: [0.38, 0.48], turn: 6 },
+    quiet: { l: [0.82, 0.86], c: [0.55, 0.7], turn: -6 },
+    soft: { l: [0.72, 0.78], c: [0.85, 1], turn: -8 },
+    body: { l: [0.6, 0.66], c: [0.95, 1] },
+    strong: { l: [0.34, 0.4], c: [0.9, 1], turn: 10 },
+  },
+} satisfies PaletteSpec
+
 // Bright and more than one hue: the shade turns cool and the light warm, the
 // partner sits beside them, and the glow is nearly the paper's own white.
 const PALETTE = {
@@ -138,11 +207,19 @@ export const underpaint = defineRecipe({
   // Too soft or busy for a ruler and label: detail "micro" adds the marks alone.
   marksOnly: true,
   palette: PALETTE,
+  // Aura in several hues, glow in the brand's colour alone.
+  shapes: ["aura", "glow"],
+  palettes: { glow: GLOW_PALETTE },
 
-  layout: (context) => pools(context, COMPOSITIONS, context.p),
-  finish: (art, { p, rng }) =>
+  // Glow's pools are wider and almost all falloff, and its grain is half the
+  // aura's, so the colour reads as haze rather than as pools.
+  layout: (context) =>
+    context.shape === "glow"
+      ? pools(context, GLOW, { ...context.p, core: context.p.core * 0.3, spread: context.p.spread * 1.15 })
+      : pools(context, COMPOSITIONS, context.p),
+  finish: (art, { p, rng, shape }) =>
     film(art, {
-      amount: p.grain,
+      amount: shape === "glow" ? p.grain * 0.5 : p.grain,
       scale: p.grainScale,
       seed: rng.fork("grain").int(1, 9999),
     }),

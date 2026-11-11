@@ -14,18 +14,41 @@ import {
   STYLE_NAMES,
   TITLE_PLACES,
   titleAt,
+  seeds,
 } from "./support/inputs.ts"
 import { coverage, keptBoxes, worstTitleContrast } from "../src/core/judge.ts"
 
-// 1,000 seeds, each through every style with a random colour, use or size,
-// mood and theme.
-const INPUTS = randomInputs(1000)
-// Made again for each test that reads them rather than all held at once: a
-// thousand scenes of the densest styles together outgrow a modest heap.
-const scenes = {
-  *[Symbol.iterator]() {
-    for (const input of INPUTS) yield { input, scene: generate(input) }
-  },
+// Seeds, each through every style with a random colour, use or size, mood
+// and theme: 100 on every run, 1,000 under pnpm test:full.
+const INPUTS = randomInputs(seeds(100, 1000))
+// Each scene is drawn once and every check below run on it, rather than
+// drawn again for each test (that was six sweeps of thirty thousand covers),
+// and none is kept afterwards: a thousand scenes of the densest styles held
+// at once outgrow a modest heap. Each check is still its own test, failing
+// with the first few covers it failed on.
+type Check = (input: (typeof INPUTS)[number], scene: Scene) => void
+const checks = new Map<string, Check>()
+let failures: Map<string, string[]> | undefined
+function sweep() {
+  if (failures) return failures
+  const found = new Map([...checks.keys()].map((name) => [name, [] as string[]]))
+  for (const input of INPUTS) {
+    const scene = generate(input)
+    for (const [name, run] of checks) {
+      const these = found.get(name)!
+      if (these.length >= 5) continue
+      try {
+        run(input, scene)
+      } catch (error) {
+        these.push((error as Error).message)
+      }
+    }
+  }
+  return (failures = found)
+}
+function check(name: string, run: Check) {
+  checks.set(name, run)
+  test(name, () => assert.deepEqual(sweep().get(name), [], name))
 }
 const label = (input: unknown) => JSON.stringify(input)
 
@@ -87,18 +110,16 @@ function tonesUsed(layers: Layer[]): string[] {
   })
 }
 
-test("every scene is finite and every tone resolves", () => {
-  for (const { input, scene } of scenes) {
-    assert.doesNotThrow(() => JSON.stringify(scene))
-    everyNumber(scene, (number) =>
-      assert.ok(Number.isFinite(number), label(input))
-    )
-    for (const tone of TONES) {
-      assert.match(scene.palette[tone], /^#[0-9a-f]{6}$/, label(input))
-    }
-    for (const tone of tonesUsed(scene.layers)) {
-      assert.ok(tone in scene.palette, label(input))
-    }
+check("every scene is finite and every tone resolves", (input, scene) => {
+  assert.doesNotThrow(() => JSON.stringify(scene))
+  everyNumber(scene, (number) =>
+    assert.ok(Number.isFinite(number), label(input))
+  )
+  for (const tone of TONES) {
+    assert.match(scene.palette[tone], /^#[0-9a-f]{6}$/, label(input))
+  }
+  for (const tone of tonesUsed(scene.layers)) {
+    assert.ok(tone in scene.palette, label(input))
   }
 })
 
@@ -144,24 +165,20 @@ function span(scene: Scene) {
   return w > 0 && h > 0 ? (w * h) / (scene.size.w * scene.size.h) : 0
 }
 
-test("every SVG is well formed, self-contained and small", () => {
-  for (const { input, scene } of scenes) {
-    const name = label(input)
-    const svg = toSvg(scene)
-    assert.doesNotMatch(svg, BROKEN, name)
-    assertWellFormed(svg, name)
-    assertReferencesResolve(svg, name)
-    assert.ok(svg.length < MAX_SVG_BYTES, `${name}: ${svg.length} bytes`)
-    const packed = gzipSync(svg).length
-    assert.ok(packed < MAX_GZIP_BYTES, `${name}: ${packed} bytes compressed`)
-  }
+check("every SVG is well formed, self-contained and small", (input, scene) => {
+  const name = label(input)
+  const svg = toSvg(scene)
+  assert.doesNotMatch(svg, BROKEN, name)
+  assertWellFormed(svg, name)
+  assertReferencesResolve(svg, name)
+  assert.ok(svg.length < MAX_SVG_BYTES, `${name}: ${svg.length} bytes`)
+  const packed = gzipSync(svg).length
+  assert.ok(packed < MAX_GZIP_BYTES, `${name}: ${packed} bytes compressed`)
 })
 
-test("every title clears 4.5:1 across the whole safe zone", () => {
-  for (const { input, scene } of scenes) {
-    const worst = worstTitleContrast(scene)
-    assert.ok(worst >= 4.5, `${label(input)}: ${worst.toFixed(2)}:1`)
-  }
+check("every title clears 4.5:1 across the whole safe zone", (input, scene) => {
+  const worst = worstTitleContrast(scene)
+  assert.ok(worst >= 4.5, `${label(input)}: ${worst.toFixed(2)}:1`)
 })
 
 test("every style holds a title in every brand colour and theme", () => {
@@ -178,14 +195,12 @@ test("every style holds a title in every brand colour and theme", () => {
   }
 })
 
-test("every area stays inside the canvas, and subjects stay out of them", () => {
-  for (const { input, scene } of scenes) {
-    for (const box of keptBoxes(scene)) {
-      const { x, y, w, h } = box
-      assert.ok(x >= 0 && y >= 0, label(input))
-      assert.ok(x + w <= scene.size.w && y + h <= scene.size.h, label(input))
-      if (scene.subject) assert.ok(!boxesTouch(scene.subject, box), label(input))
-    }
+check("every area stays inside the canvas, and subjects stay out of them", (input, scene) => {
+  for (const box of keptBoxes(scene)) {
+    const { x, y, w, h } = box
+    assert.ok(x >= 0 && y >= 0, label(input))
+    assert.ok(x + w <= scene.size.w && y + h <= scene.size.h, label(input))
+    if (scene.subject) assert.ok(!boxesTouch(scene.subject, box), label(input))
   }
 })
 
@@ -253,24 +268,25 @@ test("every approved shape holds", () => {
   }
 })
 
-test("no cover is blank, and none is all art", () => {
-  for (const { input, scene } of scenes) {
-    if (HAIRLINE.has(scene.style)) {
-      const spanned = span(scene)
-      assert.ok(spanned > 0.05, `${label(input)}: drawing spans ${spanned}`)
-      continue
-    }
-    // A dark marbled sheet's veins are the pale ink, where a light one's are
-    // the paper: open ground either way.
-    const veins = scene.style === "marbling" && input.theme === "dark" ? [scene.palette.ink] : []
-    const covered = coverage(scene, 37, veins)
-    assert.ok(covered > 0.05, `${label(input)}: ${covered} covered`)
-    // A wall leaves content nowhere to stand. Where the art runs on behind
-    // an area for words, that area is theirs: the ground under them is only
-    // as strong as they need, so the art may still show there.
-    const walled = covered < 0.98 ? covered : coverage(scene, 37, veins, true)
-    assert.ok(walled < 0.98, `${label(input)}: ${covered} covered`)
+check("no cover is blank, and none is all art", (input, scene) => {
+  if (HAIRLINE.has(scene.style)) {
+    const spanned = span(scene)
+    assert.ok(spanned > 0.05, `${label(input)}: drawing spans ${spanned}`)
+    return
   }
+  // A dark marbled sheet's veins are the pale ink, where a light one's are
+  // the paper: open ground either way.
+  const veins = scene.style === "marbling" && input.theme === "dark" ? [scene.palette.ink] : []
+  const covered = coverage(scene, 37, veins)
+  assert.ok(covered > 0.05, `${label(input)}: ${covered} covered`)
+  // A wall leaves content nowhere to stand. Where the art runs on behind
+  // an area for words, that area is theirs: the ground under them is only
+  // as strong as they need, so the art may still show there.
+  // Underpaint's glow fills the cover on purpose, for a card with content
+  // over it; given an area for words, the title checks hold it.
+  if (scene.style === "underpaint" && scene.shape === "glow" && !keptBoxes(scene).length) return
+  const walled = covered < 0.98 ? covered : coverage(scene, 37, veins, true)
+  assert.ok(walled < 0.98, `${label(input)}: ${covered} covered`)
 })
 
 function rects(scene: Scene) {
@@ -281,77 +297,73 @@ function rects(scene: Scene) {
   )
 }
 
-test("Endpaper keeps its composition rules", () => {
+check("Endpaper keeps its composition rules", (input, scene) => {
   // Every row of the wall has cells, and both its ends are filled.
-  for (const { input, scene } of scenes) {
-    if (scene.style !== "endpaper") continue
-    const shapes = rects(scene)
-    const narrow = Math.min(...shapes.map((shape) => shape.w))
-    // Rows are a fixed distance apart; the closest two show it.
-    const rows = [...new Set(shapes.map((shape) => shape.y))].sort((a, b) => a - b)
-    const pitch = Math.min(...rows.slice(1).map((y, i) => y - rows[i]!))
-    const wide = shapes.filter((shape) => shape.w > narrow * 1.5)
-    for (const one of wide) {
-      for (const other of wide) {
-        const below = Math.abs(other.y - one.y - pitch) < 1
-        const overlaps = one.x < other.x + other.w && other.x < one.x + one.w
-        assert.ok(!(below && overlaps), `stacked wide cells: ${label(input)}`)
-      }
+  if (scene.style !== "endpaper") return
+  const shapes = rects(scene)
+  const narrow = Math.min(...shapes.map((shape) => shape.w))
+  // Rows are a fixed distance apart; the closest two show it.
+  const rows = [...new Set(shapes.map((shape) => shape.y))].sort((a, b) => a - b)
+  const pitch = Math.min(...rows.slice(1).map((y, i) => y - rows[i]!))
+  const wide = shapes.filter((shape) => shape.w > narrow * 1.5)
+  for (const one of wide) {
+    for (const other of wide) {
+      const below = Math.abs(other.y - one.y - pitch) < 1
+      const overlaps = one.x < other.x + other.w && other.x < one.x + one.w
+      assert.ok(!(below && overlaps), `stacked wide cells: ${label(input)}`)
     }
-    // The wall's ends stay full wherever they are clear of the title; near
-    // it the wall thins out on purpose.
-    const left = Math.min(...shapes.map((shape) => shape.x))
-    const right = Math.max(...shapes.map((shape) => shape.x + shape.w))
-    const clear = (x: number, y: number) =>
-      !keptBoxes(scene).length || distanceFrom(keptBoxes(scene), x, y + narrow / 2) >= pitch * 2.6
-    for (let y = rows[0]!; y <= rows[rows.length - 1]! + 1; y += pitch) {
-      const row = shapes.filter((shape) => Math.abs(shape.y - y) < 1)
-      if (clear(left + pitch / 2, y)) {
-        assert.ok(row.some((shape) => Math.abs(shape.x - left) < 1), `an open left end: ${label(input)}`)
-      }
-      if (clear(right - pitch / 2, y)) {
-        assert.ok(
-          row.some((shape) => Math.abs(shape.x + shape.w - right) < 1),
-          `an open right end: ${label(input)}`
-        )
-      }
-    }
-    // And nothing of the wall lies on the title.
-    if (keptBoxes(scene).length) {
-      for (const shape of shapes) {
-        assert.ok(!boxesTouch(shape, keptBoxes(scene)), `a cell on the title: ${label(input)}`)
-      }
-    }
-    const accents = scene.layers.find(
-      (layer) => layer.kind === "shapes" && layer.id === "accent"
-    )
-    assert.ok(
-      accents?.kind === "shapes" && accents.shapes.length <= 1,
-      `more than one accent: ${label(input)}`
-    )
   }
+  // The wall's ends stay full wherever they are clear of the title; near
+  // it the wall thins out on purpose.
+  const left = Math.min(...shapes.map((shape) => shape.x))
+  const right = Math.max(...shapes.map((shape) => shape.x + shape.w))
+  const clear = (x: number, y: number) =>
+    !keptBoxes(scene).length || distanceFrom(keptBoxes(scene), x, y + narrow / 2) >= pitch * 2.6
+  for (let y = rows[0]!; y <= rows[rows.length - 1]! + 1; y += pitch) {
+    const row = shapes.filter((shape) => Math.abs(shape.y - y) < 1)
+    if (clear(left + pitch / 2, y)) {
+      assert.ok(row.some((shape) => Math.abs(shape.x - left) < 1), `an open left end: ${label(input)}`)
+    }
+    if (clear(right - pitch / 2, y)) {
+      assert.ok(
+        row.some((shape) => Math.abs(shape.x + shape.w - right) < 1),
+        `an open right end: ${label(input)}`
+      )
+    }
+  }
+  // And nothing of the wall lies on the title.
+  if (keptBoxes(scene).length) {
+    for (const shape of shapes) {
+      assert.ok(!boxesTouch(shape, keptBoxes(scene)), `a cell on the title: ${label(input)}`)
+    }
+  }
+  const accents = scene.layers.find(
+    (layer) => layer.kind === "shapes" && layer.id === "accent"
+  )
+  assert.ok(
+    accents?.kind === "shapes" && accents.shapes.length <= 1,
+    `more than one accent: ${label(input)}`
+  )
 })
 
-test("Halftone leaves no orphan cells", () => {
-  for (const { input, scene } of scenes) {
-    if (scene.style !== "halftone") continue
-    const shapes = rects(scene)
-    const centres = shapes.map((shape) => ({
-      x: shape.x + shape.w / 2,
-      y: shape.y + shape.h / 2,
-    }))
-    // The screen's pitch, from the gap between its rows: not from the dots,
-    // which a screen lightening toward a title never draws at full size.
-    const rows = [...new Set(centres.map((centre) => Math.round(centre.y)))].sort((a, b) => a - b)
-    const pitch = Math.min(...rows.slice(1).map((y, index) => y - rows[index]!))
-    for (const tile of centres) {
-      const near = centres.some(
-        (other) =>
-          other !== tile &&
-          Math.abs(other.x - tile.x) < pitch * 1.1 &&
-          Math.abs(other.y - tile.y) < pitch * 1.1
-      )
-      assert.ok(near, `orphan cell: ${label(input)}`)
-    }
+check("Halftone leaves no orphan cells", (input, scene) => {
+  if (scene.style !== "halftone") return
+  const shapes = rects(scene)
+  const centres = shapes.map((shape) => ({
+    x: shape.x + shape.w / 2,
+    y: shape.y + shape.h / 2,
+  }))
+  // The screen's pitch, from the gap between its rows: not from the dots,
+  // which a screen lightening toward a title never draws at full size.
+  const rows = [...new Set(centres.map((centre) => Math.round(centre.y)))].sort((a, b) => a - b)
+  const pitch = Math.min(...rows.slice(1).map((y, index) => y - rows[index]!))
+  for (const tile of centres) {
+    const near = centres.some(
+      (other) =>
+        other !== tile &&
+        Math.abs(other.x - tile.x) < pitch * 1.1 &&
+        Math.abs(other.y - tile.y) < pitch * 1.1
+    )
+    assert.ok(near, `orphan cell: ${label(input)}`)
   }
 })

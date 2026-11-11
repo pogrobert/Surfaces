@@ -58,7 +58,7 @@ test("a cover is given only what a cover takes, and says where the rest belongs"
   assert.throws(() => brand.cover({ title: "Hi", slug: "hi" } as never), /Unknown option "slug" for a cover\. Use "id"/)
   assert.throws(() => brand.cover({ titel: "Hi" } as never), /Unknown option "titel" for a cover\. Did you mean "title"\?/)
   assert.throws(() => brand.og({ title: "Hi", color: "#000" } as never), /That is the brand's own choice/)
-  assert.throws(() => createBrand({ name: "a.dev", secondary: "#f00" } as never), /Unknown choice "secondary"\. A brand has one "color"/)
+  assert.throws(() => createBrand({ name: "a.dev", secondary: "#f00" } as never), /Unknown choice "secondary"\. A brand's second colour is "partner"/)
   assert.throws(() => createBrand({ name: "a.dev", style: "light-trails" as never }), /Unknown style "light-trails"\. Use "underpaint"/)
 })
 

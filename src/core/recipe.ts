@@ -95,6 +95,9 @@ export type Recipe<R extends Ranges = Ranges> = {
   // The shapes this recipe has been judged with. The seed picks one unless the
   // caller does.
   shapes?: readonly string[]
+  // A palette of its own for a shape that is coloured differently, as a
+  // one-colour version of a style is; the rest keep `palette`.
+  palettes?: Readonly<Record<string, PaletteSpec>>
   // The art goes round a large area in the middle, as it does any other,
   // instead of passing behind it under a clearing of ground: for a pattern
   // that frames the area already, or art with lines of its own that would

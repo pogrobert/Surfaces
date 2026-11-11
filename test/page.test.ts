@@ -54,7 +54,7 @@ test("a developer tool gets a technical style in its own colour, dark", () => {
 
 test("a warm community site gets paint through a stencil, cut paper, or an aura", () => {
   const looks = ["commonground.org", "a.org", "b.org", "c.org"].map((name) => lookOf(name, NONPROFIT).look)
-  for (const look of looks) assert.deepEqual({ ...look, style: ["stencil", "underpaint", "papercut"].includes(look.style) ? "-" : look.style }, { style: "-", color: "#f59e0b", theme: "light", font: "serif" })
+  for (const { partner: _, ...look } of looks) assert.deepEqual({ ...look, style: ["stencil", "underpaint", "papercut"].includes(look.style) ? "-" : look.style }, { style: "-", color: "#f59e0b", theme: "light", font: "serif" })
   // Sites that read alike don't all get the same one.
   assert.ok(new Set(looks.map((look) => look.style)).size > 1)
 })
@@ -78,7 +78,9 @@ test("a page with nothing to go on still gets a good look", () => {
   // A print, in a risograph ink picked by the name, never the pale violet
   // wash a page nobody designed gets.
   const plain = createBrand({ name: "about.me" })
-  assert.deepEqual(plain.look, { style: "riso", color: "#f15060", theme: "light" })
+  // Riso prints in two inks, so it picks a second by the name too.
+  assert.deepEqual(plain.look, { style: "riso", color: "#f15060", theme: "light", partner: plain.look.partner })
+  assert.match(plain.look.partner ?? "", /^#[0-9a-f]{6}$/)
   assert.match(plain.why.join("\n"), /color #f15060: the page gave no colour of its own, so a risograph ink/)
   assert.notEqual(createBrand({ name: "hello.dev" }).look.color, createBrand({ name: "notes.page" }).look.color)
   // Greys only: the deepest of them, not the background.

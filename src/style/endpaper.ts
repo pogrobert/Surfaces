@@ -1,0 +1,20 @@
+// Written by scripts/style-entries.ts, which `pnpm build` runs; edit that instead.
+// Surfaces with Endpaper alone: the same functions as "@pogrobert/surfaces",
+// drawing only endpaper, so a page that uses it carries none of the other
+// styles. A brand made here is in endpaper without saying so.
+import { createBrandWith } from "../brand.ts"
+import type { Brand, BrandChoices } from "../brand.ts"
+import { generateWith } from "../core/generate.ts"
+import type { SurfaceInput } from "../core/generate.ts"
+import type { Scene } from "../core/scene.ts"
+import { endpaper } from "../styles/endpaper.ts"
+
+const recipes = { endpaper }
+
+/** Draws one endpaper cover as a `Scene`, as `generate` from "@pogrobert/surfaces" does. Another style throws, naming the import that has it. */
+export const generate = (input: SurfaceInput & { style: "endpaper" }): Scene => generateWith(recipes, input)
+
+/** A site's brand, in endpaper: `createBrand({ name, color })`. Its covers draw with endpaper alone. */
+export const createBrand = (choices: BrandChoices & { style?: "endpaper" }): Brand => createBrandWith(recipes, choices)
+
+export * from "../shared.ts"

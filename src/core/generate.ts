@@ -11,11 +11,12 @@ import { logoColours, readLogo } from "./image.ts"
 import type { ImageInput } from "./image.ts"
 import { micrographics } from "../overlays/micro.ts"
 import { STYLES } from "../styles/index.ts"
+import { STYLE_NAMES } from "../styles/names.ts"
 import { lineBoxes, setTitle, useFont } from "./type.ts"
 import type { TitleFont } from "../type/fontfile.ts"
 import type { Font } from "./type.ts"
 import { validate } from "./validate.ts"
-import type { StyleName } from "../styles/index.ts"
+import type { StyleName } from "../styles/names.ts"
 
 /**
  * One exact cover. Every value is a word from a fixed list or a size; a
@@ -27,8 +28,10 @@ export type SurfaceInput = {
   style: StyleName
   /** A stable name for this one drawing, such as the page's slug. The same seed always draws the same art. */
   seed: string | number
-  /** The brand colour, as hex: "#635bff" or "#63f". The only colour given; the rest are chosen from it. Default "#5b5bd6". */
+  /** The brand colour, as hex: "#635bff" or "#63f". The rest are chosen from it. Default "#5b5bd6". */
   color?: string
+  /** The brand's second colour, as hex, for the styles that set a second hue beside the first. Its hue and strength are used; each style keeps its own lightness. Left out, one is chosen to sit well with `color`. */
+  partner?: string
   /** Output width in pixels, given with `height`. Default 1600 by 900. The art only cares about the shape. */
   width?: number
   /** Output height in pixels, given with `width`. */
@@ -91,10 +94,28 @@ const warned = new Set<string>()
  * input throws, all at once, each problem with its fix.
  */
 export function generate(input: SurfaceInput): Scene {
+  return generateWith(STYLES, input)
+}
+
+/** Recipes by style name: every style, or the one a style's own import draws. */
+export type Recipes = Partial<Readonly<Record<StyleName, Recipe>>>
+
+// The same, drawing only with the recipes given: a style's own import gives
+// its one, so a page that draws with it carries none of the others.
+export function generateWith(recipes: Recipes, input: SurfaceInput): Scene {
   const { errors, warnings } = validate(input)
   if (errors.length) throw new Error(errors.join("\n"))
+  const recipe = recipes[input.style]
+  if (!recipe) throw new Error(notHere(input.style, recipes))
   for (const warning of warnings) warn(warning)
-  return draw(input)
+  return draw(input, false, recipe)
+}
+
+// A style the library has but this import doesn't, said with both ways to
+// get it.
+export function notHere(style: StyleName, recipes: Recipes) {
+  const here = STYLE_NAMES.filter((name) => recipes[name])
+  return `Style "${style}" isn't in this import, which draws ${here.join(", ")} alone. Import from "@pogrobert/surfaces/${style}" for ${style} alone, or from "@pogrobert/surfaces" for every style.`
 }
 
 // Says a warning once: a page of covers with one trivial seed says it once.
@@ -109,7 +130,7 @@ function warn(warning: string) {
 // The art filling the whole canvas, composed to its middle, with no areas,
 // for a mark cut from it, such as a round one. The input is checked by the
 // caller.
-export const drawFilled = (input: SurfaceInput) => draw(input, true)
+export const drawFilled = (input: SurfaceInput) => draw(input, true, STYLES[input.style])
 
 // A cover from a recipe that isn't a style, such as a combination of the
 // grammar's parts being judged before it is offered. Unchecked, and only for
@@ -117,12 +138,12 @@ export const drawFilled = (input: SurfaceInput) => draw(input, true)
 export const drawRecipe = (recipe: Recipe, input: Omit<SurfaceInput, "style">) =>
   draw({ ...input, style: recipe.style as StyleName }, false, recipe)
 
-function draw(input: SurfaceInput, fill = false, recipe: Recipe = STYLES[input.style]): Scene {
+function draw(input: SurfaceInput, fill: boolean, recipe: Recipe): Scene {
   if (input.theme === "auto") {
     const light = draw({ ...input, theme: "light" }, fill, recipe)
     const dark = draw({ ...input, theme: "dark" }, fill, recipe)
     // Named for the drawing, so two covers on one page never share it.
-    const inkVar = `--surface-ink-${hash(`${input.style}:${input.seed}:${input.color ?? DEFAULT_COLOR}`).toString(36)}`
+    const inkVar = `--surface-ink-${hash(`${input.style}:${input.seed}:${input.color ?? DEFAULT_COLOR}${input.partner ? `:${input.partner}` : ""}`).toString(36)}`
     return {
       ...light,
       areas: light.areas.map((area) => ({ ...area, ink: `var(${inkVar}, ${light.ink})` })),
@@ -195,16 +216,19 @@ function draw(input: SurfaceInput, fill = false, recipe: Recipe = STYLES[input.s
     p[name] = lerp(low, high, paramRng.next())
   }
 
-  const palette = makePalette(
-    color,
-    theme,
-    recipe.palette,
-    root.fork(`palette:${theme}`)
-  )
-
   // The draw is taken either way, so choosing a shape moves nothing else.
   const seeded = recipe.shapes && root.fork("shape").pick(recipe.shapes)
   const shape = input.shape ?? seeded
+
+  // Each draw is a fork of its own, so the shape is known first and a shape
+  // coloured differently takes its own palette, with nothing else moved.
+  const palette = makePalette(
+    color,
+    theme,
+    (shape && recipe.palettes?.[shape]) || recipe.palette,
+    root.fork(`palette:${theme}`),
+    input.partner
+  )
 
   const context = {
     w,

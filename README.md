@@ -10,8 +10,9 @@ the same art.
 The pictures are art. The words on them are yours, set in your own font.
 There is no API key, no cost per image and no model that drifts: the same
 input gives the same bytes on every build, in Node, an edge runtime or the
-browser. A picture of one particular thing, a product, a person or a place,
-is a photo's job, or an image model's.
+browser. It is meant to replace a site's covers as they are now, hand-made,
+stock or placeholder; only a picture of one particular thing, a product, a
+person or a place, stays a photo's job, or an image model's.
 
 ```sh
 npm install @pogrobert/surfaces
@@ -108,46 +109,52 @@ soft ground under the area, as weak as it can be.
 
 ## Link previews
 
-A link preview is an image, so its title has to be in it. The best way is
-an image renderer that takes your font, with the art as its background, as
-Next.js's `ImageResponse` (Satori) does:
-
-```tsx
-import { ImageResponse } from "next/og"
-import { toPng } from "@pogrobert/surfaces/png"   // needs @resvg/resvg-js installed
-import { brand } from "@/surfaces"                // your brand module, as `init` writes it
-
-const yourFontFile = await fetch(new URL("./Brand.ttf", import.meta.url)).then((file) => file.arrayBuffer())
-
-export async function GET(request: Request) {
-  const title = new URL(request.url).searchParams.get("title") ?? "Acme"
-  const scene = brand.og({ title })
-  const art = `data:image/png;base64,${Buffer.from(await toPng(scene)).toString("base64")}`
-  const { x, y, width, height, ink } = scene.areas[0]!
-  return new ImageResponse(
-    <div style={{ display: "flex", width: 1200, height: 630, position: "relative" }}>
-      <img src={art} width={1200} height={630} style={{ position: "absolute" }} />
-      <div style={{ position: "absolute", left: x, top: y, width, height, display: "flex", alignItems: "flex-end", color: ink, fontSize: 64, fontFamily: "Your Font" }}>
-        {title}
-      </div>
-    </div>,
-    { width: 1200, height: 630, fonts: [{ name: "Your Font", data: yourFontFile }] }
-  )
-}
-```
-
-Where that can't be done, `drawTitle` sets the title into the image itself,
-drawn from the font's own outlines, so nothing needs installing anywhere.
-Give it the site's font file, a TTF, a WOFF or a WOFF2:
+A link preview is an image, so its title has to be in it. `drawTitle` sets
+it into the image itself, drawn from the font's own outlines, so nothing
+needs installing anywhere. Give it the site's font file, a TTF, a WOFF or a
+WOFF2:
 
 ```ts
 import { readFile } from "node:fs/promises"
 import { loadFont } from "@pogrobert/surfaces"
-import { toJpeg } from "@pogrobert/surfaces/png"
+import { toJpeg } from "@pogrobert/surfaces/png"   // needs @resvg/resvg-js installed
 
 const font = await loadFont(await readFile("public/fonts/Brand.woff2"))
 const jpeg = await toJpeg(brand.og({ title: post.title, drawTitle: { font } }))
 ```
+
+In Next.js, as a route's `opengraph-image.ts`, on the Node runtime:
+
+```ts
+import { readFile } from "node:fs/promises"
+import { join } from "node:path"
+import { loadFont } from "@pogrobert/surfaces"
+import { toJpeg } from "@pogrobert/surfaces/png"
+import { brand } from "@/surfaces"                 // your brand module, as `init` writes it
+
+export const size = { width: 1200, height: 630 }
+export const contentType = "image/jpeg"
+const font = readFile(join(process.cwd(), "public/fonts/Brand.woff2")).then(loadFont)
+
+export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
+  const post = await getPost((await params).slug)
+  return new Response(await toJpeg(brand.og({ title: post.title, drawTitle: { font: await font } })))
+}
+```
+
+and in `next.config`, `serverExternalPackages: ["@resvg/resvg-js"]`, since
+resvg is a native module. Without a server (Vite, a static site), write the
+files in a build script, one after another, and point `og:image` at them
+in HTML served as it is, since crawlers don't run JavaScript:
+
+```ts
+for (const post of posts) writeFileSync(`public/og/${post.slug}.jpg`, await toJpeg(brand.og({ title: post.title, drawTitle: { font } })))
+```
+
+To lay the title out yourself instead, as with Satori, draw the art alone
+(`brand.og({ title })`) and set the words over `scene.areas[0]`, its box
+and its `ink`; make it a JPEG, since a PNG of grainy art is too large for
+chat apps to show.
 
 `init` finds the file the site's headings use (next/font/local, an
 `@font-face` or an `@fontsource` package), and writes its path into the
@@ -209,11 +216,21 @@ bold, smooth, natural or heavy grain, and any colour.
 
 `catalog` lists every style with what it looks like, what it suits, its
 shapes and whether it moves. A brand picks one from the site's own type,
-words and colour; give `style` to choose.
+words and colour; give `style` to choose. A page that draws in the browser
+with one style can import that style alone, `@pogrobert/surfaces/underpaint`
+and `@pogrobert/surfaces/underpaint/react`: the same functions and the same
+pictures, with only that style's code.
 
-A cover is drawn from one colour, the brand's: its ground, its shades and
-the second colour beside it are chosen from that, so there is no second
-colour or background to give, and no transparent ground. `mood` keeps a
+A cover is drawn from the brand's colour: its ground and its shades are
+chosen from it, and so is the second colour beside it, unless the brand
+has its own: `createBrand({ name, color, partner: "#3730a3" })`. Its hue and
+strength are used and each style keeps its own lightness, so it can't make
+a cover unreadable. Only the styles with `partner: true` in `catalog` set a
+second hue; the rest are one hue and ignore it. `readPage` takes the site's
+own secondary or accent colour when it has one; otherwise the brand picks a
+partner by its name, among the colours a printer would pair with its own,
+and keeps it in `brand.look`. There is no
+background to give, and no transparent ground. `mood` keeps a
 style to its quiet end (`"calm"`) or its loud one (`"bold"`); `grain:
 "smooth"` is a little grain, never none.
 
@@ -229,15 +246,18 @@ picture of words, so it reads the title out without being told.
 ## Link previews from a URL
 
 ```ts
+import { generate } from "@pogrobert/surfaces"
 import { createHandler, signUrl } from "@pogrobert/surfaces/http"
 import { toJpeg } from "@pogrobert/surfaces/png"
 
-export const GET = createHandler({ brand, jpeg: (input) => toJpeg(generate(input)), secret: process.env.OG_SECRET })
-// <meta property="og:image" content={await signUrl(`https://acme.dev/og?title=${encodeURIComponent(title)}&format=jpeg`, secret)}>
+const secret = process.env.OG_SECRET
+export const GET = createHandler({ brand, jpeg: (input) => toJpeg(generate(input)), secret })
+// <meta property="og:image" content={await signUrl(`https://acme.dev/og?title=${encodeURIComponent(title)}`, secret)}>
 ```
 
-With a brand, a URL says only what the picture is about: `title`, `id`, `use`
-and `format`, and the title is drawn in, in `font` when the handler is given
+With a brand, a URL says only what the picture is about: `title`, `id`,
+`tag`, `use` and `format`, which is a JPEG when the handler is given `jpeg`
+(an `og:image` can't be an SVG), and the title is drawn in, in `font` when the handler is given
 one from `loadFont`. With a `secret`, only signed URLs
 are drawn, so no one else can have it draw what they like.
 
@@ -253,6 +273,7 @@ const scene = generate({
   style: "riso",                 // see `catalog`
   seed: "my-post",               // the page's slug or id; never 42 or "test"
   color: "#635bff",              // the brand colour, as hex
+  partner: "#f59e0b",            // optional: the brand's second colour, as hex
   width: 1600, height: 900,      // optional; default 1600 by 900
   areas: [{ place: "bottom-left", size: "lg" }],  // where content goes
   theme: "light",                // "light", "dark" or "auto" (follows the reader)

@@ -1,11 +1,11 @@
-import { STILL, STYLES } from "./styles/index.ts"
-import type { StyleName } from "./styles/index.ts"
+import { PARTNERED, SHAPES, STILL, STYLE_NAMES } from "./styles/names.ts"
+import type { StyleName } from "./styles/names.ts"
 
 // Every style, said plainly, so a person or an agent can choose one by what it
 // looks like. The shapes come from the style's
 // own recipe, so this never drifts from what the library draws.
 const ABOUT: Record<StyleName, { looks: string; suits: string }> = {
-  underpaint: { looks: "An aura: pools of the brand's colour, its deeper and lighter shades and its partner hue, run together under grain.", suits: "Product launches, AI and software, any page that wants colour without a picture." },
+  underpaint: { looks: "An aura: pools of the brand's colour, its deeper and lighter shades and its partner hue, run together under grain; or, as glow, the brand's colour alone, soft as haze, filling the cover.", suits: "Product launches, AI and software, any page that wants colour without a picture." },
   halftone: { looks: "A field of print dots that grow with the tone.", suits: "Editorial, print-flavoured covers." },
   endpaper: { looks: "A dense repeating pattern, like the paper inside a book's cover.", suits: "Quiet backgrounds and tiles." },
   aquatint: { looks: "One clear subject in grainy monochrome light.", suits: "Covers that need a single strong image." },
@@ -48,12 +48,15 @@ export type CatalogEntry = {
   shapes: readonly string[]
   /** Whether it moves when asked to (`motion: "once"` or `"loop"`, drawn by `toHtml`). A still style stays as it is. */
   moves: boolean
+  /** Whether it sets a second hue beside the brand's, which a brand's `partner` colour recolours. The rest are one hue and ignore it, as does underpaint's glow. */
+  partner: boolean
 }
 
 /** Every style: what it looks like and suits, in plain words to search, its shapes, and whether it moves. */
-export const catalog: readonly CatalogEntry[] = (Object.keys(STYLES) as StyleName[]).map((style) => ({
+export const catalog: readonly CatalogEntry[] = STYLE_NAMES.map((style) => ({
   style,
   ...ABOUT[style],
-  shapes: (STYLES[style].shapes ?? []) as readonly string[],
+  shapes: SHAPES[style],
   moves: !STILL.has(style),
+  partner: PARTNERED.has(style),
 }))

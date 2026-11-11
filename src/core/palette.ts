@@ -1,5 +1,6 @@
 import { fromOklch, toOklch, turnToward } from "./color.ts"
 import { clamp, lerp } from "./math.ts"
+import { hash } from "./random.ts"
 import type { Range, Rng } from "./random.ts"
 import type { Palette, Tone } from "./scene.ts"
 import type { Theme } from "./intent.ts"
@@ -35,21 +36,47 @@ const COOL = 265
 const WARM = 85
 const RED = 40
 
-// Each stretch of the hue circle and the hue it looks best beside, judged by
-// eye rather than by the colour wheel: a true complement is often muddy.
-const PARTNERS: readonly (readonly [number, number])[] = [
-  [40, 195], // reds with teal
-  [75, 235], // oranges with slate blue
-  [125, 195], // yellows with teal
-  [165, 75], // greens with amber
-  [215, 45], // teals with rust
-  [280, 60], // blues with peach
-  [330, 35], // violets with coral
-  [360, 195], // magentas with teal
+// Each stretch of the hue circle and the hues that look best beside it, as
+// a printer would pair two inks: judged by eye, not by the colour wheel,
+// since a true complement is often muddy where the inks overlap. Blue takes
+// a fluorescent pink, a coral or an aqua; teal a coral, a violet or a pink;
+// green a pink, a blue or a coral. A brand's name picks one of them (see
+// partnerFor), so two blue brands are not alike. No yellow yet: drawn at the
+// lightness a style keeps for its partner, a yellow prints as khaki.
+const PARTNERS: readonly (readonly [number, readonly number[]])[] = [
+  [40, [255, 195]], // reds: blue, teal
+  [75, [300, 195, 350]], // oranges: violet, teal, pink
+  [125, [260, 300, 25]], // yellows: blue, violet, red
+  [165, [350, 255, 25]], // greens: pink, blue, coral
+  [215, [20, 300, 350]], // teals: coral, violet, pink
+  [280, [355, 25, 195]], // blues: fluorescent pink, coral, aqua
+  [330, [35, 185]], // violets: coral, teal
+  [360, [195, 250]], // magentas: teal, blue
 ]
 
-const partnerOf = (hue: number) =>
-  PARTNERS.find(([upTo]) => hue < upTo)?.[1] ?? 195
+/** The partner hues that sit well beside a colour, best first. A grey has no hue to pair against, so it pairs with amber or teal. */
+export function partnerHues(color: string): readonly number[] {
+  const brand = toOklch(color)
+  if (brand.c < 0.03) return [60, 195]
+  return PARTNERS.find(([upTo]) => brand.h < upTo)?.[1] ?? [195]
+}
+
+/**
+ * A partner for a colour, as hex, picked among the hues that sit well beside
+ * it by `key`: the brand's name, so a brand keeps one partner on all its
+ * covers. Each style draws it at its own lightness; this sets the hue and
+ * how strong it is.
+ */
+const pickHue = (color: string) => {
+  const hues = partnerHues(color)
+  return hues[hash(`${color.toLowerCase()}/partner`) % hues.length]!
+}
+
+export function partnerFor(color: string, key: string): string {
+  const hues = partnerHues(color)
+  const hue = hues[hash(`${key}/partner`) % hues.length]!
+  return fromOklch({ l: 0.7, c: 0.16, h: hue })
+}
 
 export const BASE_PALETTE: PaletteSpec = {
   maxChroma: 0.17,
@@ -95,11 +122,23 @@ function tone(
   return fromOklch({ l, c: chroma, h: fixedHue ?? h })
 }
 
+// A partner the brand gave: drawn at its own hue, as strong as it is (a grey
+// partner stays grey), at the lightness the style keeps for its partner. The
+// same fork as a chosen one, so giving one recolours and moves nothing else.
+function partnerGiven(partner: { c: number; h: number }, spec: ToneSpec, palette: PaletteSpec, rng: Rng) {
+  const grey = partner.c < 0.03
+  return tone(partner, spec, palette.maxChroma, rng.fork("partner"), partner.h, grey ? 0 : palette.partnerFloor ?? 0)
+}
+
 export function makePalette(
   color: string,
   theme: Theme,
   spec: PaletteSpec,
-  rng: Rng
+  rng: Rng,
+  // The brand's own second colour. Only its hue and how strong it is are
+  // used: each style keeps the lightness it was judged at, so a given colour
+  // can't make a seed unreadable.
+  given?: string
 ): Palette {
   const brand = toOklch(color)
   const tones = spec[theme]
@@ -130,14 +169,18 @@ export function makePalette(
     strong: make("strong"),
     accent,
     partner: tones.partner
-      ? tone(
+      ? given
+        ? partnerGiven(toOklch(given), tones.partner, spec, rng)
+        : tone(
           brand,
           tones.partner,
           spec.maxChroma,
           rng.fork("partner"),
-          // A grey brand has no hue to pair against, so it pairs with amber.
-          ((spec.partnerFloor && brand.c < 0.03 ? 60 : partnerOf(brand.h)) +
-            rng.fork("partner-hue").between([-10, 10]) +
+          // Without a brand to pick it, the colour does: the same colour
+          // always gets the same partner, a little further round or back on
+          // each cover. A grey brand pairs with amber or teal.
+          ((spec.partnerFloor && brand.c < 0.03 ? 60 : pickHue(color)) +
+            rng.fork("partner-hue").between([-8, 8]) +
             360) %
             360,
           spec.partnerFloor ?? 0

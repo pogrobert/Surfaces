@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Kbd } from "@/components/ui/kbd"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { INIT, LINKS, NAME, ORDER, PROMPT, sample } from "./data.ts"
-import { Code, CopyButton, GitHubMark, Mend, ThemeSwitch } from "./parts.tsx"
+import { Code, CopyButton, GitHubMark, NpmMark, Mend, ThemeSwitch } from "./parts.tsx"
 import { useTheme } from "@/lib/theme"
 import { behind, DARK_INK, halo, LIGHT_INK } from "@/lib/behind"
 import type { Behind } from "@/lib/behind"
@@ -39,6 +39,14 @@ const OVER = new Set<StyleName>(["marbling", "strata", "moire", "underpaint", "s
 // a plain ground of the art's own paper behind the text alone, like a label
 // pasted on a marbled sheet, and no halo.
 const LABEL = new Set<StyleName>(["marbling"])
+// What can hold focus and take the arrow keys for itself.
+const CONTROLS = "input, textarea, select, [contenteditable], button, a, [role=radiogroup], [role=group], [role=radio], [tabindex]:not([tabindex='-1'])"
+// A box in shares of the canvas, kept a twentieth of it at least and a
+// fiftieth in from its edges, as the library asks, however the plate measures.
+const keep = (at: number, size: number) => {
+  const from = Math.min(Math.max(at, 0.02), 0.93)
+  return [from, Math.min(Math.max(size, 0.05), 0.98 - from)] as const
+}
 
 // An element's own size, to the nearest 4px, so a change too small to see
 // draws nothing again. The plate is measured, not the window: a phone's
@@ -64,7 +72,7 @@ function Step({ by, label, keyName, children }: { by: number; label: string; key
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label={label} data-step={by} className="transition-[scale] hover:bg-(--on)/10 hover:text-(--on) pointer-coarse:size-11">
+        <Button variant="ghost" size="icon-sm" aria-label={label} data-step={by} className="transition-[scale] hover:bg-(--on)/10 hover:text-(--on) pointer-coarse:size-11 max-[860px]:pointer-coarse:size-10">
           {children}
         </Button>
       </TooltipTrigger>
@@ -103,9 +111,12 @@ function Plate() {
       if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return
       // A held key draws nothing more, and with a modifier an arrow is the
       // browser's (Alt or Cmd and ← is Back). Nor does a key step a plate
-      // that has been scrolled away, or one typed into a field.
+      // that has been scrolled away, or one typed into a field. Nor while a
+      // control has focus, as the theme switch, whose arrows are its own; the
+      // stepper's buttons are the one exception, being the plate's own.
       if (event.repeat || event.altKey || event.metaKey || event.ctrlKey || event.shiftKey) return
-      if ((event.target as Element).closest?.("input, textarea, select, [contenteditable]")) return
+      const held = [event.target, document.activeElement].some((node) => node instanceof Element && !node.closest("[data-step]") && node.closest(CONTROLS))
+      if (held) return
       if ((plate.current?.getBoundingClientRect().bottom ?? 0) <= 0) return
       step(event.key === "ArrowRight" ? 1 : -1)
     }
@@ -118,11 +129,16 @@ function Plate() {
   // buttons read from it.
   const { choice, dark } = useTheme()
   const w = size?.w ?? 1
-  // On a narrow window the stepper can't stand over the art beside the
-  // words, so the art stops short of it and it sits on the page below.
+  // On a phone the plate splits: the art alone at the top, drawn for that
+  // frame with nothing kept clear in it, and the words below it on the page,
+  // where they never have to be read over art. The header and the stepper
+  // stand on the art.
   const narrow = w < 860
-  const below = narrow ? 64 : 0
+  const below = 0
   const tall = Math.max((size?.h ?? 1) - below, 1)
+  // A plate measured at next to nothing, as while a pane opens, has no room
+  // for the words' box, so nothing is drawn until it has a size to draw at.
+  const sized = size !== null && w >= 200 && tall >= 200
   // Drawn to the plate's own shape, however tall a phone makes it.
   const height = Math.max(600, Math.min(8192, Math.round((2400 * tall) / w)))
   const style = ORDER[shown]!
@@ -160,14 +176,17 @@ function Plate() {
   // beside them. On a phone the art stands above the words either way.
   // A style that covers the whole plate runs on under the words, and they
   // are set over it with an ink and a halo read from the art behind them.
-  const over = OVER.has(style)
+  const over = !narrow && OVER.has(style)
   const fitted = narrow || COVERS.has(style)
   const high = fitted ? Math.min(room, Math.max(0.05, wordsH ? (wordsH + 8) / tall : 0.34)) : room
-  const wordsBox = { x: left, y: foot - high, w: across, h: high }
+  const [boxX, boxW] = keep(left, across)
+  const [boxY, boxH] = keep(foot - high, high)
+  const wordsBox = { x: boxX, y: boxY, w: boxW, h: boxH }
 
   const [art, setArt] = useState<Behind>({ ink: DARK_INK, glow: LIGHT_INK, halo: 0.6 })
   // The text as drawn, its lines and not their room, for the scrim to follow.
-  const [text, setText] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
+  // With the size of the art's box it is measured in, for the label to keep within.
+  const [text, setText] = useState<{ x: number; y: number; w: number; h: number; across: number; down: number } | null>(null)
   useLayoutEffect(() => {
     if (!over || !words?.offsetParent) return setText(null)
     // Each line of text as drawn, and each button, together.
@@ -183,11 +202,11 @@ function Plate() {
     lines.width = Math.max(...parts.map((r) => r.right)) - lines.left
     lines.height = Math.max(...parts.map((r) => r.bottom)) - lines.top
     const frame = (words.offsetParent as HTMLElement).offsetParent?.getBoundingClientRect() ?? (words.offsetParent as HTMLElement).getBoundingClientRect()
-    const next = { x: Math.round(lines.left - frame.left), y: Math.round(lines.top - frame.top), w: Math.round(lines.width), h: Math.round(lines.height) }
-    setText((was) => (was && was.x === next.x && was.y === next.y && was.w === next.w && was.h === next.h ? was : next))
+    const next = { x: Math.round(lines.left - frame.left), y: Math.round(lines.top - frame.top), w: Math.round(lines.width), h: Math.round(lines.height), across: Math.floor(frame.width), down: Math.floor(frame.height) }
+    setText((was) => (was && was.x === next.x && was.y === next.y && was.w === next.w && was.h === next.h && was.across === next.across && was.down === next.down ? was : next))
   }, [over, words, shown, w, wordsH, art])
   useEffect(() => {
-    if (!over || !size) return
+    if (!over || !sized) return
     let gone = false
     const timer = setTimeout(() => {
       behind(input, w / tall, wordsBox, dark).then((read) => !gone && setArt(read), () => {})
@@ -212,19 +231,25 @@ function Plate() {
 
   // The studio opens on the style, shape and colour the plate shows.
   const studio = `/studio/?${new URLSearchParams({ style, ...(SHAPE[style] ? { shape: SHAPE[style] } : null), color: sample(shown).color })}`
-  const links = [["Studio", studio], ["GitHub", LINKS.github]] as const
+  const links = [["Studio", studio], ["GitHub", LINKS.github], ["npm", LINKS.npm]] as const
   const chip = "bg-(--off)/90 text-(--on) ring-1 ring-(--on)/15"
   return (
-    <section ref={plate} className="relative h-svh min-h-[max(520px,25vw)] max-[860px]:h-[86svh]">
-      {size && (
+    // Clipped across, as a last guard: nothing on the plate may widen the page.
+    <>
+    <section ref={plate} className="relative h-svh min-h-[max(520px,25vw)] overflow-x-clip max-[860px]:h-[56svh] max-[860px]:min-h-[340px]">
+      {sized && (
         <Mend
-          retry={shown}
+          // A style that failed at one size may draw at the next, so a resize tries again.
+          retry={`${shown} ${w}x${tall}`}
           fallback={
-            // A style that fails to draw leaves the words on plain ground.
+            // A style that fails to draw leaves the words on plain ground; on a
+            // phone they are below the art already.
             <div className="absolute inset-0 tint" style={{ bottom: below }}>
-              <div className="absolute" style={{ left: `${wordsBox.x * 100}%`, bottom: `${(1 - foot) * 100}%`, width: `${wordsBox.w * 100}%` }}>
-                <Words ink={{ on: "var(--ink)", off: "var(--paper)" }} studio={studio} />
-              </div>
+              {!narrow && (
+                <div className="absolute" style={{ left: `${wordsBox.x * 100}%`, bottom: `${(1 - foot) * 100}%`, width: `${wordsBox.w * 100}%` }}>
+                  <Words ink={{ on: "var(--ink)", off: "var(--paper)" }} studio={studio} />
+                </div>
+              )}
             </div>
           }
         >
@@ -234,7 +259,7 @@ function Plate() {
             height={height}
             css={{ position: "absolute", inset: 0, bottom: below, aspectRatio: "auto" }}
             areas={
-              over
+              over || narrow
                 ? []
                 : [
                     {
@@ -253,10 +278,21 @@ function Plate() {
             <div className="pointer-events-none absolute inset-0 [container-type:inline-size]" style={{ bottom: below }}>
               {/* For art too busy for a halo, a plain ground of its own paper
                   behind the text alone, close round the lines, with no blur
-                  and no rule round it. */}
-              {LABEL.has(style) && text && (
-                <div aria-hidden className="absolute rounded-[4px]" style={{ left: text.x - 32, top: text.y - 28, width: text.w + 64, height: text.h + 56, background: art.glow }} />
-              )}
+                  and no rule round it. It keeps an even margin round the
+                  words, as wide as the room allows up to 32px, and stays a
+                  little inside the art on every side, so on a phone it reads
+                  as a label on the sheet, not a band across it, and never
+                  widens the page or hangs over the stepper below. */}
+              {LABEL.has(style) && text && (() => {
+                const inside = 8
+                const room = Math.min(text.x, text.across - (text.x + text.w), text.down - (text.y + text.h)) - inside
+                const pad = Math.max(12, Math.min(32, room))
+                const left = Math.max(inside, text.x - pad)
+                const top = Math.max(inside, text.y - pad)
+                const right = Math.min(text.across - inside, text.x + text.w + pad)
+                const bottom = Math.min(text.down - inside, text.y + text.h + pad)
+                return <div aria-hidden className="absolute rounded-[4px]" style={{ left, top, width: Math.max(0, right - left), height: Math.max(0, bottom - top), background: art.glow }} />
+              })()}
               <div className="pointer-events-auto absolute flex flex-col justify-end" style={{ left: `${wordsBox.x * 100}%`, top: `${wordsBox.y * 100}%`, width: `${wordsBox.w * 100}%`, height: `${wordsBox.h * 100}%` }}>
                 <Words ink={ink} studio={studio} refer={setWords} color={art.ink} shadow={LABEL.has(style) ? "none" : halo(art)} shadowSmall={LABEL.has(style) ? "none" : halo(art, true)} />
               </div>
@@ -267,44 +303,61 @@ function Plate() {
       {/* The name and the links, on small solid chips over the art, as the
           stepper is: they need no area of their own, so the art runs under
           them and lays no glow of ground behind them to keep them legible. */}
-      <header className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between p-3.5 max-[860px]:p-3" style={{ "--on": ink.on, "--off": ink.off } as CSSProperties}>
-        <a href="/" className={`pointer-events-auto rounded-[10px] px-3 py-1.5 text-[15px] font-bold tracking-[-0.01em] ${chip}`}>Surfaces</a>
-        <nav className={`pointer-events-auto flex gap-0.5 rounded-[10px] p-0.5 ${chip}`}>
+      {/* On a phone the mark alone stands for GitHub, and under 360px the
+          divider goes and the buttons close up, so the two chips fit a 320px
+          screen apart. Under a finger the links are as tall as the chip. */}
+      {/* On a phone they are plain words in the page's ink, on a fade of the
+          page's ground that the art runs into at the top. */}
+      <header
+        className={`pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3.5 ${narrow ? "items-center bg-linear-to-b from-background/90 via-background/55 to-transparent px-2.5 pt-2.5 pb-8 text-ink" : ""}`}
+        style={narrow ? undefined : ({ "--on": ink.on, "--off": ink.off } as CSSProperties)}
+      >
+        <a href="/" className={`pointer-events-auto rounded-[10px] px-3 py-1.5 text-[15px] font-bold tracking-[-0.01em] ${narrow ? "px-1.5" : chip}`}>Surfaces</a>
+        <nav className={`pointer-events-auto flex items-center gap-0.5 rounded-[10px] p-0.5 ${narrow ? "[--on:var(--ink)]" : chip}`}>
           {links.map(([name, href]) => (
-            <Button key={name} variant="ghost" size="sm" asChild className="cursor-pointer text-current transition-[scale] hover:bg-(--on)/10 hover:text-current">
-              <a href={href}>
+            // npm is in the footer too, so on the narrowest phones the header leaves it there.
+            <Button key={name} variant="ghost" size="sm" asChild className={`cursor-pointer text-current transition-[scale] hover:bg-(--on)/10 hover:text-current pointer-coarse:h-auto max-[360px]:px-2 ${name === "npm" ? "max-[359px]:hidden" : ""}`}>
+              <a href={href} aria-label={name}>
                 {name === "GitHub" && <GitHubMark />}
-                {name}
+                {name === "npm" && <NpmMark className="size-3.5" />}
+                <span className={name === "Studio" ? undefined : "max-[480px]:hidden"}>{name}</span>
               </a>
             </Button>
           ))}
-          <span aria-hidden className="mx-0.5 my-1.5 w-px bg-(--on)/15" />
+          <span aria-hidden className="mx-0.5 my-1.5 w-px bg-(--on)/15 max-[400px]:hidden" />
           <ThemeSwitch />
         </nav>
       </header>
       <div
-        className="absolute right-6 bottom-[22px] max-[860px]:right-4 max-[860px]:bottom-3 max-[860px]:left-4"
+        className="absolute right-6 bottom-[22px] max-[860px]:right-auto max-[860px]:bottom-3 max-[860px]:left-3"
         onClick={(event) => {
           const by = (event.target as Element).closest<HTMLElement>("[data-step]")?.dataset.step
           if (by) step(Number(by))
         }}
       >
-        {/* Over the art it wears the words' colours; below it, on a phone, the page's. */}
+        {/* Over the art it wears the words' colours; on a phone, where the
+            words are on the page, the page's, on a face of its ground. */}
         <div
-          className={`flex w-fit items-center gap-0.5 rounded-xl p-1 ring-1 ${narrow ? "bg-background ring-border [--on:var(--ink)]" : "bg-(--off)/90 text-(--on) ring-(--on)/15"}`}
+          className={`flex w-fit items-center gap-0.5 rounded-xl p-1 ring-1 max-[860px]:rounded-[10px] max-[860px]:p-0.5 ${narrow ? "bg-background/90 text-ink ring-border [--on:var(--ink)]" : "bg-(--off)/90 text-(--on) ring-(--on)/15"}`}
           style={narrow ? undefined : ({ "--on": ink.on, "--off": ink.off } as CSSProperties)}
         >
           <Step by={-1} label="The style before" keyName="←">
             <ChevronLeft />
           </Step>
           {/* As wide as the longest name, so the arrows never move under the pointer. */}
-          <span className="w-[19ch] text-center font-mono text-[13px] whitespace-pre">{`${NAME(ORDER[at]!)}  ${String(at + 1).padStart(2, "0")}/${ORDER.length}`}</span>
+          <span className="w-[19ch] text-center font-mono text-[13px] whitespace-pre max-[860px]:w-[16ch] max-[860px]:text-[12px]">{`${NAME(ORDER[at]!)}  ${String(at + 1).padStart(2, "0")}/${ORDER.length}`}</span>
           <Step by={1} label="The next style" keyName="→">
             <ChevronRight />
           </Step>
         </div>
       </div>
     </section>
+    {narrow && (
+      <div className="px-4 pt-6 [container-type:inline-size]">
+        <Words ink={{ on: "var(--ink)", off: "var(--paper)" }} studio={studio} refer={setWords} />
+      </div>
+    )}
+    </>
   )
 }
 
@@ -312,7 +365,7 @@ function Home() {
   return (
     <TooltipProvider delayDuration={300}>
       <Plate />
-      <div className="mx-auto max-w-[1240px] px-6 pt-24 pb-[72px] max-[640px]:px-4">
+      <div className="mx-auto max-w-[1240px] px-6 pt-24 pb-[72px] max-[860px]:pt-16 max-[640px]:px-4">
         <p className="max-w-[54ch] text-[21px] leading-[1.42] tracking-[-0.008em] text-pretty text-body">
           <b className="font-semibold text-ink">Surfaces draws the pictures a site repeats</b>: the cover of each post, the preview of each link, the header of each profile. One colour in, one look out, and the same title always gets the same picture. The words stay yours, in your own type. No image model, no API key, nothing to pay.
         </p>
@@ -326,7 +379,7 @@ function Home() {
             <Code code={INIT} lang="bash" />
           </div>
         </div>
-        <Button variant="link" asChild className="mt-7 h-auto px-0 text-[17px] font-semibold text-ink underline decoration-1 underline-offset-[5px]">
+        <Button variant="link" asChild className="mt-7 h-auto px-0 text-[17px] font-semibold whitespace-normal text-ink underline decoration-1 underline-offset-[5px]">
           <a href="/studio/">Every style and every choice, in the studio →</a>
         </Button>
         <footer className="mt-24 flex flex-wrap gap-x-[22px] gap-y-2 border-t border-rule pt-[18px] text-sm text-quiet">
@@ -334,6 +387,7 @@ function Home() {
           <a href="/studio/">Studio</a>
           <a href={LINKS.github}>GitHub</a>
           <a href={LINKS.npm}>npm</a>
+          <a href={LINKS.maker} className="ml-auto max-[640px]:ml-0">Made by Robert Poghosyan</a>
         </footer>
       </div>
     </TooltipProvider>

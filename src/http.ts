@@ -1,4 +1,4 @@
-import { createBrand } from "./brand.ts"
+import { inTheme } from "./brand.ts"
 import type { Brand } from "./brand.ts"
 import type { TitleFont } from "./type/fontfile.ts"
 import { generate } from "./core/generate.ts"
@@ -27,7 +27,7 @@ import { toSvg } from "./render/svg.ts"
 // A URL can ask for no bigger a drawing than this, either way.
 const MOST_SIDE = 4096
 
-const PARAMETERS = ["style", "seed", "color", "width", "height", "area", "theme", "mood", "grain", "detail", "motion", "shape", "title", "font", "format"]
+const PARAMETERS = ["style", "seed", "color", "partner", "width", "height", "area", "theme", "mood", "grain", "detail", "motion", "shape", "title", "font", "format"]
 
 export type HandlerOptions = {
   // Fills in anything the URL leaves out, such as the brand colour.
@@ -37,7 +37,8 @@ export type HandlerOptions = {
   // fits here.
   png?: (input: SurfaceInput) => Promise<Uint8Array>
   // The same for ?format=jpeg, the size a link preview wants:
-  // (input) => toJpeg(generate(input)).
+  // (input) => toJpeg(generate(input)). Given, it is also what a URL without
+  // a format gets, since og:image can't be an SVG.
   jpeg?: (input: SurfaceInput) => Promise<Uint8Array>
   // A brand's covers instead of any input: the URL then says only what a
   // cover is about (see readBrand, below).
@@ -71,7 +72,8 @@ function readBrand(url: URL, brand: Brand, font?: TitleFont): SurfaceInput {
   if (!(USES as readonly string[]).includes(use)) throw new BadRequest(`Unknown use "${use}". Use ${USES.join(", ")}.`)
   const theme = query.get("theme")
   if (theme !== null && theme !== "light" && theme !== "dark") throw new BadRequest(`"theme" is light or dark, got "${theme}"`)
-  const themed = theme ? createBrand({ name: brand.name, ...brand.look, theme }) : brand
+  // Drawn again in the theme asked, keeping its logo.
+  const themed = theme ? inTheme(brand, theme) : brand
   const title = query.get("title") ?? undefined
   const id = query.get("id") ?? undefined
   const tag = query.get("tag") ?? undefined
@@ -143,8 +145,11 @@ function read(url: URL, defaults: Partial<SurfaceInput>): SurfaceInput {
     const value = query.get(key)
     if (value !== null) input[key] = value
   }
-  const color = query.get("color")
-  if (color !== null) input.color = /^[0-9a-f]+$/i.test(color) ? `#${color}` : color
+  // Hex with or without its #, which a query has to write as %23.
+  for (const key of ["color", "partner"] as const) {
+    const value = query.get(key)
+    if (value !== null) input[key] = /^[0-9a-f]+$/i.test(value) ? `#${value}` : value
+  }
   const width = size("width")
   const height = size("height")
   if (width !== undefined) input.width = width
@@ -175,7 +180,9 @@ async function respond<I>(request: Request, { read, draw, theme, png, jpeg }: Ro
     return new Response("Method not allowed", { status: 405, headers: { allow: "GET, HEAD" } })
   }
   const url = new URL(request.url)
-  const format = url.searchParams.get("format") ?? "svg"
+  // A link preview has to be an image a social site takes, which SVG is not,
+  // so with a JPEG to give, that is what a URL without a format gets.
+  const format = url.searchParams.get("format") ?? (jpeg ? "jpeg" : "svg")
   let input: I
   let svg: string
   try {

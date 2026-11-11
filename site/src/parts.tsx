@@ -98,7 +98,8 @@ export function CopyButton({ text, children, ...props }: { text: string; childre
 }
 
 // Something that failed to draw shows `fallback` in its place instead of
-// emptying the page, and tries again once `retry` changes.
+// emptying the page, and tries again once `retry` changes: put in it all that
+// could make the next try draw, such as a size.
 export class Mend extends Component<{ fallback: ReactNode; retry: unknown; children: ReactNode }, { failed: boolean }> {
   state = { failed: false }
   static getDerivedStateFromError() {
@@ -149,6 +150,7 @@ export function Code({ code, lang, className = "" }: { code: string; lang?: "typ
 
 // The page's theme: follow the system, or keep it light or dark. Three icons
 // in a row, the arrow keys moving along them, as every choice on the site is.
+// Under a finger they are 40px, and 32px under 360px, so a header fits a 320px phone.
 const THEMES = [
   ["system", "Follow the system", Monitor],
   ["light", "Light", Sun],
@@ -159,11 +161,21 @@ export function ThemeSwitch({ className = "" }: { className?: string }) {
   return (
     <ToggleGroup type="single" aria-label="Theme" spacing={0} value={choice} onValueChange={(next) => next && setTheme(next as ThemeChoice)} className={className}>
       {THEMES.map(([value, label, Icon]) => (
-        <ToggleGroupItem key={value} value={value} aria-label={label} title={label} size="sm" className="text-current opacity-70 hover:bg-current/10 hover:text-current data-[state=on]:bg-current/12 data-[state=on]:opacity-100 pointer-coarse:size-10">
+        <ToggleGroupItem key={value} value={value} aria-label={label} title={label} size="sm" className="text-current opacity-70 hover:bg-current/10 hover:text-current data-[state=on]:bg-current/12 data-[state=on]:opacity-100 min-[400px]:pointer-coarse:size-10 max-[400px]:pointer-coarse:size-8">
           <Icon />
         </ToggleGroupItem>
       ))}
     </ToggleGroup>
+  )
+}
+
+// npm's mark, beside the link to the package: its square "n", in the text's
+// colour as GitHub's is, rather than its red.
+export function NpmMark({ className = "size-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden className={className} fill="currentColor">
+      <path d="M1.763 0C.786 0 0 .786 0 1.763v20.474C0 23.214.786 24 1.763 24h20.474c.977 0 1.763-.786 1.763-1.763V1.763C24 .786 23.214 0 22.237 0zM5.13 5.323l13.837.019-.009 13.836h-3.464l.01-10.382h-3.456L12.04 19.17H5.113z" />
+    </svg>
   )
 }
 

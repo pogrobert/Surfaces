@@ -95,9 +95,11 @@ test("a brand's covers come from a URL that says only what each is about", async
   const ok = await handle(new Request("https://acme.dev/og?title=Notes%20on%20shipping&format=jpeg"))
   assert.equal(ok.status, 200)
   assert.equal(ok.headers.get("content-type"), "image/jpeg")
-  const svg = await (await handle(new Request("https://acme.dev/og?title=Notes&use=post"))).text()
+  // Without a format, a handler that can give a JPEG gives one: og:image can't be an SVG.
+  assert.equal((await handle(new Request("https://acme.dev/og?title=Notes"))).headers.get("content-type"), "image/jpeg")
+  const svg = await (await handle(new Request("https://acme.dev/og?title=Notes&use=post&format=svg"))).text()
   assert.match(svg, />Notes<\/tspan>/)
-  const card = await (await handle(new Request("https://acme.dev/og?title=Notes&use=card"))).text()
+  const card = await (await handle(new Request("https://acme.dev/og?title=Notes&use=card&format=svg"))).text()
   assert.doesNotMatch(card, /<text/)
   assert.match(await (await handle(new Request("https://acme.dev/og?style=riso"))).text(), /Unknown parameter "style"/)
 })

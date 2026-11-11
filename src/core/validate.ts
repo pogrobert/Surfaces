@@ -3,8 +3,8 @@ import type { Box } from "./scene.ts"
 import { FONTS, missing, useFont } from "./type.ts"
 import type { TitleFont } from "../type/fontfile.ts"
 import type { Font } from "./type.ts"
-import { STILL, STYLES } from "../styles/index.ts"
-import type { StyleName } from "../styles/index.ts"
+import { isStyle, PARTNERED, SHAPES, STILL, STYLE_NAMES } from "../styles/names.ts"
+import type { StyleName } from "../styles/names.ts"
 
 // Everything wrong with an input, each said with how to put it right, so a
 // person or an agent can fix it in one go. Nothing is ever quietly dropped or
@@ -15,6 +15,7 @@ const OPTIONS = [
   "style",
   "seed",
   "color",
+  "partner",
   "width",
   "height",
   "areas",
@@ -43,8 +44,9 @@ const ELSEWHERE: Record<string, string> = {
   drawTitle: ` Here a title is drawn by giving it: title: "…", with an area for it to sit in.`,
   background: ` The ground is made from "color" and "theme"; there is no separate background, and none that is transparent.`,
   transparent: ` Every cover has a ground, made from "color" and "theme"; there is no transparent one.`,
-  colors: ` One "color", the brand's, as hex; the colours beside it are chosen from it.`,
-  secondary: ` One "color", the brand's, as hex; the colour beside it is chosen to sit well with it.`,
+  colors: ` The brand's "color" as hex, and its second colour, if it has one, as "partner"; the rest are chosen from them.`,
+  secondary: ` A second colour is "partner", as hex: { color: "#f59e0b", partner: "#3730a3" }.`,
+  accent: ` A second colour is "partner", as hex: { color: "#f59e0b", partner: "#3730a3" }.`,
 }
 
 // Seeds people reach for when they don't mean one. They work, but every site
@@ -114,15 +116,17 @@ export function validate(input: unknown): Problems {
     }
   }
 
-  const styles = Object.keys(STYLES)
-  word("style", styles, true)
+  word("style", STYLE_NAMES, true)
   word("theme", [...THEMES, "auto"])
   word("mood", MOODS)
   word("grain", GRAINS)
   word("detail", DETAILS)
   word("motion", MOTIONS)
+  if (input.partner !== undefined && isStyle(input.style) && (!PARTNERED.has(input.style) || (input.style === "underpaint" && input.shape === "glow"))) {
+    warnings.push(`${input.style === "underpaint" ? "Underpaint's glow" : input.style} is one hue, so "partner" changes nothing. Styles that use it have partner: true in \`catalog\`, such as ${list(STYLE_NAMES.filter((style) => PARTNERED.has(style)).slice(0, 4))}.`)
+  }
   if ((input.motion === "once" || input.motion === "loop") && typeof input.style === "string" && STILL.has(input.style as StyleName)) {
-    warnings.push(`${input.style} is drawn still, so "motion" changes nothing. Styles that move have moves: true in \`catalog\`, such as ${list((Object.keys(STYLES) as StyleName[]).filter((style) => !STILL.has(style)).slice(0, 4))}.`)
+    warnings.push(`${input.style} is drawn still, so "motion" changes nothing. Styles that move have moves: true in \`catalog\`, such as ${list(STYLE_NAMES.filter((style) => !STILL.has(style)).slice(0, 4))}.`)
   }
   // A bundled face by name, or a font read by loadFont().
   const ownFont = isObject(input.font) && (input.font as { kind?: unknown }).kind === "font"
@@ -161,6 +165,10 @@ export function validate(input: unknown): Problems {
   if (color !== undefined && (typeof color !== "string" || !/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(color))) {
     errors.push(`"color" must be a hex colour such as "#635bff" or "#63f", got ${JSON.stringify(color)}.`)
   }
+  const partner = input.partner
+  if (partner !== undefined && (typeof partner !== "string" || !/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(partner))) {
+    errors.push(`"partner" must be a hex colour such as "#3730a3" or "#33a", got ${JSON.stringify(partner)}.`)
+  }
 
   const { width, height } = input
   let aspect = 1600 / 900
@@ -179,9 +187,8 @@ export function validate(input: unknown): Problems {
     }
   }
 
-  const style = typeof input.style === "string" ? STYLES[input.style as keyof typeof STYLES] : undefined
-  if (style && input.shape !== undefined) {
-    const shapes = (style.shapes ?? []) as readonly string[]
+  if (isStyle(input.style) && input.shape !== undefined) {
+    const shapes = SHAPES[input.style]
     if (typeof input.shape !== "string" || !shapes.includes(input.shape)) {
       errors.push(
         shapes.length

@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { test } from "node:test"
 import { createBrand, directions } from "../src/brand.ts"
 import { judge } from "../src/core/judge.ts"
+import { toOklch } from "../src/core/color.ts"
 import { readPage } from "../src/page.ts"
 import { toSvg } from "../src/render/svg.ts"
 
@@ -60,7 +61,9 @@ test("what a brand doesn't decide is chosen from its page, with why", () => {
   const brand = createBrand({ name: "commonground.org", ...facts })
   // One of the warm styles, the brand's name choosing between them.
   assert.ok(["stencil", "underpaint"].includes(brand.look.style), brand.look.style)
-  assert.deepEqual({ ...brand.look, style: "-" }, { style: "-", color: "#f59e0b", theme: "light", font: "serif" })
+  // A style with a second hue also picks a partner; which one is the partner test's to say.
+  const { partner: _, ...look } = brand.look
+  assert.deepEqual({ ...look, style: "-" }, { style: "-", color: "#f59e0b", theme: "light", font: "serif" })
   assert.match(brand.why.join("\n"), new RegExp(`^style ${brand.look.style}`, "m"))
   // A decision given is a decision made: no reason for it.
   const decided = createBrand({ name: "commonground.org", ...facts, style: "riso" })
@@ -134,7 +137,7 @@ test("a brand can always make one mark", () => {
   const brand = createBrand({ name: "acme.dev", style: "riso", shape: "arches" })
   assert.deepEqual([brand.cover({ title: "A" }), brand.og({ title: "B" }), brand.hero({ title: "C" })].map((scene) => scene.shape), ["arches", "arches", "arches"])
   assert.match(errorOf(() => createBrand({ name: "a", style: "riso", shape: "arch" })), /isn't a riso shape.*Did you mean "arches"\?/)
-  assert.match(errorOf(() => createBrand({ name: "a", style: "underpaint", shape: "disc" })), /no shapes to choose from/)
+  assert.match(errorOf(() => createBrand({ name: "a", style: "sfumato", shape: "disc" })), /no shapes to choose from/)
 })
 
 test("covers with one tag make one mark, and a tag never overrides a brand's own", () => {
@@ -148,7 +151,7 @@ test("covers with one tag make one mark, and a tag never overrides a brand's own
   // Without a tag, each title draws its own.
   assert.ok(new Set(["Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta"].map((title) => brand.cover({ title }).shape)).size > 1)
   assert.equal(createBrand({ name: "acme.dev", style: "riso", shape: "bars" }).cover({ title: "A", tag: "design" }).shape, "bars")
-  assert.equal(createBrand({ name: "acme.dev", style: "underpaint" }).cover({ title: "A", tag: "design" }).shape, undefined)
+  assert.equal(createBrand({ name: "acme.dev", style: "sfumato" }).cover({ title: "A", tag: "design" }).shape, undefined)
 })
 
 test("a brand makes the rest of the kit: banners for X, LinkedIn and email", () => {
@@ -239,4 +242,45 @@ test("the judge holds a logo to showing on what is under it", () => {
   assert.match(judge(scene).problems.join(";"), /the logo shows at [\d.]+:1/)
   // Drawn for itself, it reads.
   assert.ok(judge(createBrand({ name: "acme.dev", style: "halftone", color: "#10bcec", theme: "dark", logo: navy }).og({ title: "Hi" })).ok)
+})
+
+test("a brand's partner colour recolours its second hue and moves nothing else", () => {
+  const chosen = createBrand({ name: "meerlume.com", color: "#f59e0b", style: "screenprint" }).cover({ title: "A" })
+  const given = createBrand({ name: "meerlume.com", color: "#f59e0b", partner: "#3730a3", style: "screenprint" }).cover({ title: "A" })
+  assert.equal(given.shape, chosen.shape)
+  assert.equal(JSON.stringify(given.layers), JSON.stringify(chosen.layers))
+  assert.notEqual(given.palette.partner, chosen.palette.partner)
+  for (const tone of ["ground", "soft", "body", "strong", "accent", "ink"] as const) assert.equal(given.palette[tone], chosen.palette[tone], tone)
+  assert.match(errorOf(() => createBrand({ name: "a", partner: "iris" })), /"partner" should be the brand's second colour, as hex/)
+})
+
+test("underpaint's glow is the brand's colour alone, and the seed picks it or the aura", () => {
+  const brand = createBrand({ name: "acme.dev", color: "#f59e0b", style: "underpaint" })
+  const shapes = new Set(["Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta"].map((title) => brand.cover({ title }).shape))
+  assert.deepEqual([...shapes].sort(), ["aura", "glow"])
+  const glow = createBrand({ name: "acme.dev", color: "#f59e0b", style: "underpaint", shape: "glow" }).cover({ title: "A" })
+  // No partner hue of its own: the tone a style draws at the partner is the body.
+  assert.equal(glow.palette.partner, glow.palette.body)
+})
+
+test("a brand that sets a second hue picks one partner by its name, for every cover", () => {
+  const brand = createBrand({ name: "harbour.dev", color: "#0078bf", style: "riso" })
+  assert.match(brand.look.partner ?? "", /^#[0-9a-f]{6}$/)
+  assert.ok(brand.why.some((reason) => reason.startsWith(`partner ${brand.look.partner}`)))
+  // Each cover draws it at the style's own lightness, so its shade varies; its hue holds.
+  const hues = ["Alpha", "Beta", "Gamma"].map((title) => toOklch(brand.cover({ title }).palette.partner).h)
+  assert.ok(Math.max(...hues) - Math.min(...hues) < 4, hues.join(", "))
+  // The same colour, another brand: picked again by its own name, among the same few.
+  const others = new Set(["a.dev", "b.dev", "c.dev", "d.dev", "e.dev", "f.dev"].map((name) => createBrand({ name, color: "#0078bf", style: "riso" }).look.partner))
+  assert.ok(others.size > 1 && others.size <= 3)
+  assert.equal(createBrand({ name: "a.dev", color: "#0078bf", style: "halftone" }).look.partner, undefined)
+  assert.equal(createBrand({ name: "a.dev", color: "#0078bf", style: "underpaint", shape: "glow" }).look.partner, undefined)
+  assert.equal(createBrand({ name: "a.dev", color: "#f59e0b", partner: "#3730a3", style: "riso" }).look.partner, "#3730a3")
+})
+
+test("a site's own second colour is its brand's partner, and a pale accent or a shade is not", () => {
+  assert.equal(readPage("", ":root { --primary: #f59e0b; --secondary: #3730a3 }").partner, "#3730a3")
+  assert.equal(readPage("", ":root { --primary: 24 95% 53%; --accent: 240 4.8% 95.9% }").partner, undefined)
+  assert.equal(readPage("", ":root { --primary: #0078bf; --accent: #3d9be0 }").partner, undefined)
+  assert.equal(createBrand({ name: "meerlume.com", ...readPage("", ":root { --primary: #f59e0b; --secondary: #3730a3 }"), style: "riso" }).look.partner, "#3730a3")
 })

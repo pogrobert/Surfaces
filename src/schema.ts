@@ -25,6 +25,11 @@ export const inputSchema = {
       pattern: "^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
       description: "The brand colour, as hex.",
     },
+    partner: {
+      type: "string",
+      pattern: "^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+      description: "The brand's second colour, as hex. Its hue and strength are used where a style sets a second hue (partner: true in catalog); left out, one is chosen.",
+    },
     width: { type: "number", exclusiveMinimum: 0, description: "Output width in pixels; give height too. Default 1600." },
     height: { type: "number", exclusiveMinimum: 0, description: "Output height in pixels; give width too. Default 900." },
     areas: {

@@ -103,3 +103,36 @@ test("a wrong input says how to put it right", () => {
   assert.deepEqual(validate({ style: "riso", seed: "my-post", color: "#635bff" }), { errors: [], warnings: [] })
   assert.equal(validate({ style: "riso", seed: 42 }).warnings.length, 1)
 })
+
+// names.ts says each style's name, shapes and stillness without loading a
+// recipe, so a style's own import carries no other; it has to say what the
+// recipes really have.
+test("the styles as data match the recipes they stand for", async () => {
+  const { SHAPES, STYLE_NAMES: NAMES } = await import("../src/styles/names.ts")
+  assert.deepEqual([...NAMES], Object.keys(STYLES))
+  for (const style of NAMES) assert.deepEqual([...SHAPES[style]], [...((STYLES[style].shapes ?? []) as readonly string[])], style)
+})
+
+test("each style's own import is written from the current list", async () => {
+  const { execFileSync } = await import("node:child_process")
+  execFileSync(process.execPath, [new URL("../scripts/style-entries.ts", import.meta.url).pathname, "--check"], { stdio: "pipe" })
+})
+
+test("a style's own import draws as the full one does, and only its style", async () => {
+  const one = await import("../src/style/underpaint.ts")
+  const input = { style: "underpaint", seed: "one-style", partner: "#3730a3" } as const
+  assert.equal(JSON.stringify(one.generate(input)), JSON.stringify(generate(input)))
+  assert.equal(one.createBrand({ name: "acme.dev" }).look.style, "underpaint")
+  assert.throws(() => one.generate({ style: "riso", seed: "x" } as never), /isn't in this import, which draws underpaint alone\. Import from "@pogrobert\/surfaces\/riso"/)
+  assert.throws(() => one.createBrand({ name: "acme.dev", style: "riso" } as never), /Import from "@pogrobert\/surfaces\/riso"/)
+})
+
+test("the styles said to use a partner are the ones it recolours", async () => {
+  const { PARTNERED } = await import("../src/styles/names.ts")
+  for (const style of Object.keys(STYLES) as (keyof typeof STYLES)[]) {
+    // Underpaint's glow is one hue, so its aura stands for it.
+    const base = { style, seed: "partner", color: "#f59e0b", width: 320, height: 180, ...(style === "underpaint" ? { shape: "aura" } : null) }
+    const changes = toSvg(generate(base)) !== toSvg(generate({ ...base, partner: "#3730a3" }))
+    assert.equal(changes, PARTNERED.has(style), style)
+  }
+})

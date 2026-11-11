@@ -1,0 +1,26 @@
+// What every import of Surfaces offers alike, whichever styles it draws:
+// all of the public API but `generate`, `createBrand` and `directions`,
+// which index.ts gives for every style and each style's own import for its
+// one. See docs/api.md.
+export type { SurfaceInput } from "./core/generate.ts"
+export { validate } from "./core/validate.ts"
+export type { Problems } from "./core/validate.ts"
+export { describe } from "./core/describe.ts"
+export { catalog } from "./catalog.ts"
+export type { Brand, BrandChoices, Content } from "./brand.ts"
+export { readPage, USES } from "./page.ts"
+export type { PageFacts, Use } from "./page.ts"
+export { inputSchema } from "./schema.ts"
+export type { CatalogEntry } from "./catalog.ts"
+export { AREA_ART, AREA_SIZES, DETAILS, GRAINS, MOODS, MOTIONS, PLACES, THEMES, formats } from "./core/intent.ts"
+export type { Area, AreaArt, AreaSize, Detail, Grain, Mood, MotionLevel, Place, Theme } from "./core/intent.ts"
+export { MOST_IMAGE_BYTES } from "./core/image.ts"
+export type { ImageInput } from "./core/image.ts"
+export type { Scene, SceneArea } from "./core/scene.ts"
+export { toSvg } from "./render/svg.ts"
+export type { RenderOptions as SvgOptions } from "./render/svg.ts"
+export { toHtml } from "./render/layers.ts"
+export type { HtmlOptions } from "./render/layers.ts"
+export type { StyleName } from "./styles/names.ts"
+export { loadFont, MOST_FONT_BYTES } from "./type/fontfile.ts"
+export type { TitleFont } from "./type/fontfile.ts"

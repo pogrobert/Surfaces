@@ -1,6 +1,6 @@
 {
   "name": "@pogrobert/surfaces",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Covers, link previews and headers for every page of a site, drawn by code from one brand colour. No AI and no API key: the same title always gives the same picture.",
   "keywords": [
     "generative-art",
@@ -53,7 +53,15 @@
       "types": "./dist/react.d.ts",
       "default": "./dist/react.js"
     },
-    "./schema.json": "./dist/schema.json"
+    "./schema.json": "./dist/schema.json",
+    "./*/react": {
+      "types": "./dist/style/*/react.d.ts",
+      "default": "./dist/style/*/react.js"
+    },
+    "./*": {
+      "types": "./dist/style/*.d.ts",
+      "default": "./dist/style/*.js"
+    }
   },
   "files": [
     "dist",
@@ -70,11 +78,12 @@
   },
   "scripts": {
     "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
-    "build": "pnpm clean && tsc -p tsconfig.build.json && tsc -p tsconfig.cli.json && node scripts/schema.ts",
+    "build": "pnpm clean && node scripts/style-entries.ts && tsc -p tsconfig.build.json && tsc -p tsconfig.cli.json && node scripts/schema.ts",
     "prepack": "pnpm build",
     "typecheck": "tsc --noEmit",
-    "test": "pnpm build && node --test test/*.test.ts",
-    "golden": "UPDATE_GOLDEN=1 node --test test/determinism.test.ts",
+    "test": "pnpm build && node --test --test-concurrency=4 test/*.test.ts",
+    "test:full": "SURFACES_FULL=1 pnpm test",
+    "golden": "UPDATE_GOLDEN=1 node --test --test-concurrency=1 test/determinism.test.ts",
     "sheet": "pnpm build && node scripts/contact-sheet.ts",
     "sheet:serve": "node scripts/serve-sheet.ts",
     "studio": "pnpm build && node scripts/serve-sheet.ts",
@@ -117,6 +126,6 @@
   },
   "sideEffects": false,
   "bin": {
-    "surfaces": "./dist/cli.js"
+    "surfaces": "dist/cli.js"
   }
 }

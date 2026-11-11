@@ -28,6 +28,9 @@ import { patches } from "./patches.ts"
 import { trails } from "./trails.ts"
 import { prism } from "./prism.ts"
 
+import type { StyleName } from "./names.ts"
+
+// Every name in names.ts, and no other.
 export const STYLES = {
   underpaint,
   halftone,
@@ -59,24 +62,9 @@ export const STYLES = {
   patches,
   trails,
   prism,
-}
+} satisfies Record<StyleName, unknown>
 
-export type StyleName = keyof typeof STYLES
-
-// The styles that are drawn still: asked to move, they stay as they are. Said
-// here so the catalog can tell a reader, a cover asked to move can say so, and
-// a brand's hero never promises motion its style doesn't have. The tests hold
-// this list to what the styles really do.
-export const STILL: ReadonlySet<StyleName> = new Set<StyleName>([
-  "screenprint",
-  "linocut",
-  "typewriter",
-  "currents",
-  "weave",
-  "terrazzo",
-  "dashes",
-  "swatchbook",
-  "patches",
-  "trails",
-  "prism",
-])
+// Every recipe, by its name. Only what draws needs this: the names, shapes
+// and still styles are in names.ts, which carries no recipe.
+export { STILL, STYLE_NAMES } from "./names.ts"
+export type { StyleName } from "./names.ts"

@@ -1,6 +1,6 @@
 # @pogrobert/surfaces
 
-> Art drawn by code, not by an image model, for every picture a site repeats: post covers, link previews, docs and changelog headers, empty states, episode art, slides and profile headers. Make a brand once, from a colour or from the site's own HTML and CSS; every cover then follows from its title, the same bytes forever. It is for pictures a site repeats; a picture of one particular thing is a photo's job. A wrong input throws an error that names the fix.
+> Art drawn by code, not by an image model, for every picture a site repeats: post covers, link previews, docs and changelog headers, empty states, episode art, slides and profile headers. Make a brand once, from a colour or from the site's own HTML and CSS; every cover then follows from its title, the same bytes forever. It is for pictures a site repeats, and replacing a site's existing covers, hand-made, stock or placeholder, is what it is for; only a picture of one particular thing stays a photo's job. A wrong input throws an error that names the fix.
 
 Rules for writing code with it are in AGENTS.md. In short: `const brand = createBrand({ name: "acme.dev", ...readPage(html, css) })`, then `brand.cover({ title })`, `brand.og({ title })`, `brand.hero`, `brand.card`, `brand.banner({ for: "x" })`, drawn by `toHtml`, `toSvg`, or `toJpeg`/`toPng` (from `/png`). The images are art and carry no words: the site sets its titles in its own font over `scene.areas[0]`, as `<Cover brand={brand} title={title} />` (from `/react`) does by itself, and `drawTitle: true` draws one into an image file that has to carry it. `generate(input)` is the lower level, for one exact cover.
 
@@ -9,6 +9,7 @@ Rules for writing code with it are in AGENTS.md. In short: `const brand = create
 - `@pogrobert/surfaces`: `createBrand`, `readPage`, `directions`, `generate`, `validate`, `catalog`, `describe`, `toSvg`, `toHtml`, `loadFont`, `formats`, `inputSchema`
 - `@pogrobert/surfaces/png`: `toJpeg`, `toPng` (install `@resvg/resvg-js`, or `@resvg/resvg-wasm` on an edge runtime), `toPngInBrowser`. Their bytes go straight into `new Response(bytes)`
 - `@pogrobert/surfaces/react`: `<Cover>`, `<Surface>`
+- `@pogrobert/surfaces/<style>` and `@pogrobert/surfaces/<style>/react`: the same, drawing one style alone, for a page that draws in the browser and wants only that style's code (a `<Cover>` adds about 46 KB gzipped, not 120)
 - `@pogrobert/surfaces/dom`: `mount`, `watch`
 - `@pogrobert/surfaces/http`: `createHandler`, `signUrl`
 
@@ -16,7 +17,7 @@ Rules for writing code with it are in AGENTS.md. In short: `const brand = create
 
 - `<Cover brand title />` shows the title on the art itself, at a title's size, in the page's font. Don't add the same title beside it. To make it the page's heading, pass `<h1>{title}</h1>` as children. For art alone, `text="none"`; in a list, `use="card"`.
 - `brand.cover` is the use `"post"`: `brand.input("post", { title })` is its input. To change one cover's size, shape or motion, spread it: `generate({ ...brand.input("post", { title }), width: 800, height: 800 })`. A cover's own options are only `title`, `id`, `tag`, `text` and `drawTitle`; anything else throws and says where it belongs.
-- One `color`, as hex. The second colour on a cover is chosen from it; there is no second colour, no background and no transparent ground to give.
+- `color`, as hex. A brand with a second colour gives it as `partner` (hex; its hue and strength, in the styles with `partner: true` in `catalog`); `readPage` takes the site's own secondary or accent colour, and otherwise a brand picks one by its name, among the hues that sit well beside its colour, and keeps it in `brand.look`. There is no background and no transparent ground to give.
 - `scene.areas[0]` is in pixels of the output, with the `ink` that reads there. `ink` is CSS: under `theme: "auto"` it is a `var(…)`, so an image renderer such as Satori takes `scene.ink`, always hex.
 - An image file has one theme. A brand's link preview and headers are light even when the brand follows the reader (`theme: "auto"`); any other cover in both themes can't be a PNG or JPEG until it is drawn in one.
 - Only `toHtml` moves, and only styles with `moves: true` in `catalog`; `brand.hero` loops by itself where its style does. A loop needs a pause control: `data-paused` on the cover, `paused` on `<Surface>`, or `pause()` from `mount`.
@@ -25,7 +26,7 @@ Rules for writing code with it are in AGENTS.md. In short: `const brand = create
 
 ## Docs
 
-- [AGENTS.md](AGENTS.md): the rules, under 1 KB
+- [AGENTS.md](AGENTS.md): the rules, in a dozen lines
 - [README.md](README.md): examples for React, OG images, DOM, SVG and HTTP
 - [docs/api.md](docs/api.md): the whole API and why each part is there
 

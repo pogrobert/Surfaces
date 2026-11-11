@@ -1,10 +1,11 @@
-import { createElement, useEffect, useMemo, useRef } from "react"
+import { createElement } from "react"
 import type { CSSProperties, ReactElement, ReactNode } from "react"
 import { titleAt, titleWidth } from "./brand.ts"
 import type { Brand, Content } from "./brand.ts"
 import { describe } from "./core/describe.ts"
-import { watch } from "./dom.ts"
+import { Moving } from "./react-motion.ts"
 import { generate } from "./core/generate.ts"
+import type { Scene } from "./core/scene.ts"
 import type { SurfaceInput } from "./core/generate.ts"
 import type { Area, MotionLevel } from "./core/intent.ts"
 import { titleOf } from "./core/scene.ts"
@@ -53,7 +54,34 @@ const align = (area: SceneArea): CSSProperties => {
   return { justifyContent: row, alignItems: column }
 }
 
-export function Surface({ className, css, children, label, paused, areas, ...input }: SurfaceProps): ReactElement {
+const named = (spoken: string | undefined) => (spoken ? { role: "img" as const, "aria-label": spoken } : { "aria-hidden": true as const })
+
+// The drawing for an input, kept for the next render of the same one: a
+// component that draws on every render, as a server component does, has no
+// memo of its own, and a page draws the same few covers again and again.
+// Kept per drawer, so a style's own import never answers with another's.
+const kept = new WeakMap<(input: SurfaceInput) => Scene, Map<string, { scene: Scene; art: string }>>()
+function drawn(draw: (input: SurfaceInput) => Scene, input: SurfaceInput) {
+  const key = JSON.stringify(input)
+  let these = kept.get(draw)
+  if (!these) kept.set(draw, (these = new Map()))
+  const known = these.get(key)
+  if (known) return known
+  const scene = draw(input)
+  // Layers, so a moving cover is moved by the graphics card (see layers.ts).
+  const made = { scene, art: toHtml(scene, { fill: true }) }
+  if (these.size >= 64) these.delete(these.keys().next().value!)
+  these.set(key, made)
+  return made
+}
+
+export function Surface(props: SurfaceProps): ReactElement {
+  return drawSurface(generate, props)
+}
+
+// What <Surface> renders, drawn by the `draw` given: every style's here, a
+// style's own one in its import, so <Cover> there carries no other style.
+export function drawSurface(draw: (input: SurfaceInput) => Scene, { className, css, children, label, paused, areas, ...input }: SurfaceProps): ReactElement {
   if (children !== undefined && areas !== undefined) {
     throw new Error("Surface takes children or areas, not both: put the children in an area's content.")
   }
@@ -64,14 +92,8 @@ export function Surface({ className, css, children, label, paused, areas, ...inp
       : []
   // The input is plain data, so its JSON is the drawing's identity.
   const plain = asked.map(({ content: _, ...area }) => area)
-  const key = JSON.stringify({ ...input, areas: plain })
-  const scene = useMemo(() => generate({ ...input, ...(plain.length ? { areas: plain } : null) }), [key])
-  // Layers, so a moving cover is moved by the graphics card (see layers.ts).
-  const art = useMemo(() => toHtml(scene, { fill: true }), [scene])
-  // A moving cover arrives when it is scrolled to and rests off screen.
-  const holder = useRef<HTMLDivElement>(null)
+  const { scene, art } = drawn(draw, { ...input, ...(plain.length ? { areas: plain } : null) })
   const moves = input.motion !== undefined && input.motion !== "none"
-  useEffect(() => (moves && holder.current ? watch(holder.current) : undefined), [art, moves])
   // A title drawn into the art is words in a picture, so it is read out.
   const spoken = label === true ? describe(scene) : label ?? titleOf(scene)
   const { w, h } = scene.output
@@ -88,18 +110,21 @@ export function Surface({ className, css, children, label, paused, areas, ...inp
         ...css,
       },
     },
-    createElement("div", {
-      ref: holder,
-      // The picture alone is named or hidden, never the element round it:
-      // what stands in the areas is the page's own content, and a role of
-      // "img" on its parent would hide it from a screen reader.
-      ...(spoken ? { role: "img", "aria-label": spoken } : { "aria-hidden": true }),
-      "data-paused": paused ? "" : undefined,
-      style: { position: "absolute", inset: 0, lineHeight: 0 },
-      // The art is built here from numbers and palette colours; nothing a
-      // caller passes reaches it as markup.
-      dangerouslySetInnerHTML: { __html: art },
-    }),
+    // The picture alone is named or hidden, never the element round it:
+    // what stands in the areas is the page's own content, and a role of
+    // "img" on its parent would hide it from a screen reader. A moving cover
+    // is watched in the browser (react-motion.ts); a still one is plain
+    // markup, so it renders on a server with no client code.
+    moves
+      ? createElement(Moving, { html: art, paused, ...named(spoken) })
+      : createElement("div", {
+          ...named(spoken),
+          "data-paused": paused ? "" : undefined,
+          style: { position: "absolute", inset: 0, lineHeight: 0 },
+          // The art is built here from numbers and palette colours; nothing
+          // a caller passes reaches it as markup.
+          dangerouslySetInnerHTML: { __html: art },
+        }),
     ...scene.areas.map((area, index) =>
       asked[index]?.content === undefined
         ? null
@@ -162,7 +187,12 @@ function titleSize(title: string) {
   return length <= 18 ? 1 / 8 : length <= 36 ? 1 / 10 : length <= 60 ? 1 / 12.5 : length <= 90 ? 1 / 15 : 1 / 18
 }
 
-export function Cover({ brand, use = "post", title, id, tag, text, children, ...rest }: CoverProps): ReactElement {
+export function Cover(props: CoverProps): ReactElement {
+  return drawCover(Surface, props)
+}
+
+// What <Cover> renders, on the <Surface> given.
+export function drawCover(Surface: (props: SurfaceProps) => ReactElement, { brand, use = "post", title, id, tag, text, children, ...rest }: CoverProps): ReactElement {
   // Its words are the page's, in the page's own type, so the cover keeps room
   // for them where the use carries a title, as a post's cover does at its
   // foot; a card's and a header's have none.

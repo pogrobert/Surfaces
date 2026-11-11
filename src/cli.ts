@@ -304,10 +304,11 @@ function agentBlock(module: string) {
   return `<!-- surfaces:start -->
 ## Covers and link previews (@pogrobert/surfaces)
 
-- For pictures the site repeats: covers, link previews, docs, changelog and email headers, empty states, slides. A picture of one particular thing (a product, a person) is a photo or an image model's job.
-- The brand is \`brand\`, exported from \`${module}\`. Change its look there; \`npx @pogrobert/surfaces directions\` draws others to choose from.
-- The pictures are art; the words are the site's, in its own type. A cover is \`brand.cover({ title })\`, \`brand.card\`, \`brand.hero\`, \`brand.banner\`. Each draws art with no words on it.
-- React: \`<Cover brand={brand} title={title} />\` from \`@pogrobert/surfaces/react\` shows the title on the art itself, in the page's font, so don't repeat the title beside it. To make it the page's heading, pass \`<h1>{title}</h1>\` as children; \`text="none"\` is the art alone, and \`use="card"\` a card in a list.
+- For pictures the site repeats: covers, link previews, docs, changelog and email headers, empty states, slides. Replacing the site's existing covers, hand-made, stock or placeholder, is what it is for; only a picture of one particular thing (a product, a person, a place) stays a photo.
+- The brand is \`brand\`, exported from \`${module}\`. Change its look there; \`npx @pogrobert/surfaces directions\` draws others to choose from. It imports its style's own path, \`@pogrobert/surfaces/<style>\`, so it carries one style; a new \`style\` needs the new path too. A second brand colour is \`partner\` (used by styles with \`partner: true\` in \`catalog\`): the site's own secondary or accent when it has one, otherwise one the brand picks by its name; set it in the look to choose.
+- The pictures are art; the words are the site's, in its own type. A cover is \`brand.cover({ title })\`, \`brand.card\` (the same art, for a list), \`brand.hero\`, \`brand.og\`, \`brand.banner\`. Each draws art with no words on it.
+- Draw on the server or at build time where you can, so no drawing code ships: \`toHtml(scene)\` inline, or \`toSvg(scene)\` written to a file for \`<img loading="lazy">\` in a long list.
+- React: \`<Cover brand={brand} title={title} />\` from \`@pogrobert/surfaces/<style>/react\` (the brand's style) shows the title on the art itself, in the page's font, so don't repeat the title beside it. It works in a Server Component. To make it the page's heading, pass \`<h1>{title}</h1>\` as children; \`text="none"\` is the art alone, and \`use="card"\` a card in a list.
 - Words over the art elsewhere: \`text: "bottom-left"\` (or any place) keeps them room; \`scene.areas[0]\` is its box and \`ink\`. A link preview file is \`toJpeg(brand.og({ title, drawTitle: true }))\`, with \`toJpeg\` from \`@pogrobert/surfaces/png\`; alt \`describe(scene, { title })\`. In the site's own font: \`drawTitle: { font: await loadFont(await readFile(titleFont)) }\`, with \`loadFont\` from \`@pogrobert/surfaces\`, where the brand module exports \`titleFont\`.
 - \`id: post.slug\` keeps a cover's art when its title is edited. There are no seeds to choose. A cover takes only \`title\`, \`id\`, \`tag\`, \`text\` and \`drawTitle\`; for another size or motion, \`generate({ ...brand.input("post", { title }), width, height })\`.
 - Look before shipping: \`npx @pogrobert/surfaces preview --title "..."\` writes images to .surfaces/; \`check\` says whether they hold. \`kit\` writes the preview and headers, with the site's logo.
@@ -404,11 +405,13 @@ async function initCommand(root: string, args: Args, log: (line: string) => void
   const look = JSON.stringify({ name, ...brand.look }, null, 2)
   writes.push({
     path: module,
-    text: `import { createBrand } from "@pogrobert/surfaces"
+    text: `import { createBrand } from "@pogrobert/surfaces/${brand.look.style}"
 
 // This site's brand: every cover, link preview and header comes from it.
 // Written by \`npx @pogrobert/surfaces init\`; change any choice here, or run
-// \`npx @pogrobert/surfaces directions\` to see others.
+// \`npx @pogrobert/surfaces directions\` to see others. It is imported from
+// its style's own path, so a page that draws it in the browser carries that
+// style alone; for another style, change both the path and \`style\`.
 export const look = ${look}${project.typescript ? " as const" : ""}
 
 export const brand = createBrand(look)

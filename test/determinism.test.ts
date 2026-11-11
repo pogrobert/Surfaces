@@ -8,7 +8,7 @@ import { formats } from "../src/core/intent.ts"
 import { createRng } from "../src/core/random.ts"
 import type { Layer } from "../src/core/scene.ts"
 import { toSvg } from "../src/render/svg.ts"
-import { randomInputs, STYLE_NAMES } from "./support/inputs.ts"
+import { randomInputs, seeds, STYLE_NAMES } from "./support/inputs.ts"
 
 const GOLDEN = new URL("./golden.json", import.meta.url)
 
@@ -16,7 +16,7 @@ const sha = (text: string) =>
   createHash("sha256").update(text).digest("hex").slice(0, 16)
 
 test("one seed gives byte-identical output every time", () => {
-  for (const input of randomInputs(50)) {
+  for (const input of randomInputs(seeds(10, 50))) {
     const first = generate(input)
     const second = generate({ ...input })
     assert.equal(JSON.stringify(first), JSON.stringify(second))
@@ -86,7 +86,7 @@ function geometry(layer: Layer): unknown {
 }
 
 test("light and dark are the same drawing", () => {
-  for (const input of randomInputs(100)) {
+  for (const input of randomInputs(seeds(20, 100))) {
     const light = generate({ ...input, theme: "light" })
     const dark = generate({ ...input, theme: "dark" })
     assert.deepEqual(light.layers.map(geometry), dark.layers.map(geometry))
@@ -94,7 +94,7 @@ test("light and dark are the same drawing", () => {
 })
 
 test("a new brand colour repaints the drawing and moves nothing", () => {
-  for (const input of randomInputs(100)) {
+  for (const input of randomInputs(seeds(20, 100))) {
     const one = generate({ ...input, color: "#0ea5e9" })
     const other = generate({ ...input, color: "#e11d48" })
     assert.deepEqual(one.layers.map(geometry), other.layers.map(geometry))
@@ -117,7 +117,7 @@ test("a mood narrows ranges and keeps the seed's composition", () => {
 })
 
 test("a grain level changes the grain and nothing else", () => {
-  for (const input of randomInputs(60)) {
+  for (const input of randomInputs(seeds(12, 60))) {
     const drawing = (grain: "smooth" | "natural" | "heavy") => {
       const scene = generate({ ...input, grain })
       return [scene.palette, scene.areas, scene.subject, scene.layers.map(geometry)]

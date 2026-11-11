@@ -10,9 +10,9 @@ with an error that names the fix.
 What it is for: the pictures a site repeats, which should look like one
 brand and come out the same on every build: post covers and link previews,
 docs, changelog and email headers, empty states, episode art, slides, the
-backgrounds of tickets and wallpapers, and a profile's X or LinkedIn header. A picture of one
-particular thing, a product, a person or a place, is a photo's job, or an
-image model's.
+backgrounds of tickets and wallpapers, and a profile's X or LinkedIn header, including the ones a site has now, hand-made,
+stock or placeholder. A picture of one particular thing, a product, a person
+or a place, is a photo's job, or an image model's.
 
 ## Brands
 
@@ -177,6 +177,7 @@ type SurfaceInput = {
   style: StyleName                      // which look: "halftone", "riso", ...
   seed: string | number                 // a stable name for one drawing; use the page's slug
   color?: string                        // the brand colour, as hex: "#635bff" or "#63f"; default "#5b5bd6"
+  partner?: string                      // the brand's second colour, as hex; its hue and strength are used, where a style has partner: true in catalog. Default: chosen from color
 
   width?: number                        // output size; the art only cares about the shape
   height?: number                       // default 1600 x 900
@@ -226,9 +227,11 @@ type Area = {
 - An input has no `use` and no `text`: those are a brand's (`brand.og`,
   `text: "bottom-left"`), and it writes the size and areas they stand for.
   `validate` says so when one is given here.
-- There is one `color`. The ground, the shades and the second colour on a
-  cover are chosen from it, so there is no second colour or background to
-  give, and no transparent ground.
+- A cover is drawn from `color`. The ground and the shades are chosen from
+  it, and so is the second colour where a style sets one, unless the brand
+  gives its own as `partner`. Its hue and strength are used, and each style
+  keeps its own lightness, so no colour given can make a seed unreadable.
+  There is no background to give, and no transparent ground.
 
 Sizes that other platforms fix are plain data, not a mode:
 
@@ -249,6 +252,14 @@ and label would read as noise. Everything keeps clear of content, and asking
 for it never moves the art.
 
 ## Output
+
+`theme: "auto"` draws one picture with both themes in it. Inline (`toHtml`,
+`<Cover>`, `<Surface>`) it follows the reader's system setting, and a site's
+own switch overrides that: `.dark` or `.light`, or `data-theme="dark"` or
+`"light"`, on any element round it. A switch that only ever adds `.dark`
+leaves the system setting in charge in light mode, so set `.light` too. An
+SVG shown in `<img>` can only follow the system setting.
+
 
 `generate(input)` returns a `Scene`: plain data, the same in every runtime.
 `scene.areas[i]` is each area resolved, for anyone placing content themselves:
@@ -421,6 +432,32 @@ them. The rest of this section is the lower level, one exact cover:
 aligned to the side of its area it hangs from (a `top-left` area's content
 sits top left) and, in an `around` area, coloured with the area's `ink`.
 
+## One style alone
+
+Each style has an import of its own, `@pogrobert/surfaces/<style>`, with the
+same functions as the package's (all but `directions`) drawing only that
+style, and `@pogrobert/surfaces/<style>/react` for `<Cover>` and
+`<Surface>`. A page that draws in the browser with one style carries that
+style alone: a `<Cover>` adds about 46 KB gzipped instead of 120, and
+`generate` about 32 KB instead of 105.
+
+```tsx
+import { createBrand } from "@pogrobert/surfaces/underpaint"
+import { Cover } from "@pogrobert/surfaces/underpaint/react"
+
+const brand = createBrand({ name: "acme.dev", color: "#635bff" })   // in underpaint without saying so
+<Cover brand={brand} title={post.title} />
+```
+
+The pictures are the same as the full import's. Asked for another style,
+these throw and say which import has it. The saving needs the brand to come
+from the same import: a brand made with the root `createBrand` draws with
+every style, and so does `mount` from `/dom` (draw with `toHtml` and `watch`
+instead). The module `init` writes imports its style's own path already.
+The sizes above are underpaint's; each style is a little different. A brand there has no choice of
+style to make, so `readPage` facts still choose its mood, grain and font but
+not its style.
+
 ## One exact look
 
 A brand is how a site keeps one look. For a single cover outside one, keep
@@ -438,8 +475,8 @@ toPng(generate({ ...launch, ...formats.og, areas: [{ place: "bottom-left", size:
 
 - Unknown key: `Unknown option "grian". Did you mean "grain"?`
 - A key that belongs elsewhere says where: `text` here is an area, `width`
-  on a brand's cover is its input's, `slug` is `id`, a second colour doesn't
-  exist. A brand's covers and `createBrand` throw the same way; nothing
+  on a brand's cover is its input's, `slug` is `id`, a second colour is
+  `partner`. A brand's covers and `createBrand` throw the same way; nothing
   given is ever quietly dropped.
 - Unknown value: `Unknown grain "rough". Use "smooth", "natural" or "heavy".`
 - Wrong shape for a style: lists that style's shapes.
@@ -452,7 +489,7 @@ toPng(generate({ ...launch, ...formats.og, areas: [{ place: "bottom-left", size:
 
 1. Done: strict types plus the validation above, and the input as JSON Schema
    (`@pogrobert/surfaces/schema.json`, also exported as `inputSchema`).
-2. Done: `AGENTS.md`, a rules block under 1 KB, shipped in the package.
+2. Done: `AGENTS.md`, a rules block of a dozen lines, shipped in the package.
 3. Done: the examples-first README and `llms.txt`, both shipped.
 4. Done: `catalog`, each style with what it looks like, what it suits, its
    shapes and whether it moves.

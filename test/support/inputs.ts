@@ -63,6 +63,12 @@ export const PRESETS: readonly (readonly [number, number, TitlePlace])[] = [
   [900, 1200, "bottom-left"],
 ]
 
+// How many seeds the random sweeps take: a sample on every run, so the suite
+// stays a few minutes, and ten times as many with SURFACES_FULL=1 (pnpm
+// test:full), as before a release. Each seed goes through every style.
+export const FULL = process.env.SURFACES_FULL === "1"
+export const seeds = (everyRun: number, full: number) => (FULL ? full : everyRun)
+
 // A fixed stream of random inputs, so a failure can be reproduced by its index.
 // Most are a common cover; one in three asks for a size and a title place of
 // its own.

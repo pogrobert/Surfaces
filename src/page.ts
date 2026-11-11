@@ -4,8 +4,8 @@ import { hash } from "./core/random.ts"
 import type { Area, Grain, Mood, MotionLevel, Theme } from "./core/intent.ts"
 import type { Font } from "./core/type.ts"
 import { nearest } from "./core/validate.ts"
-import { STYLES } from "./styles/index.ts"
-import type { StyleName } from "./styles/index.ts"
+import { isStyle, STYLE_NAMES } from "./styles/names.ts"
+import type { StyleName } from "./styles/names.ts"
 
 // What a page shows, and the look a brand takes from it when it doesn't
 // decide for itself: its colour, its light or dark, and the style that suits
@@ -30,6 +30,10 @@ export type PageFacts = {
   words?: string
   // Covers the site already has. A new one joins them.
   covers?: readonly { style: StyleName; color?: string }[]
+  // The brand's second colour, where the site names one: a secondary or an
+  // accent that is a colour of its own beside the brand's. A brand's choice,
+  // so spreading these facts into createBrand gives it its partner.
+  partner?: string
 }
 
 export type Look = {
@@ -43,6 +47,19 @@ export type Look = {
   why: string[]
   // Every style, best suited first.
   ranked: StyleName[]
+}
+
+// What a site calls its second colour, and whether one is a colour of its
+// own beside the brand's: strong enough to print, neither near white nor near
+// black, and a hue of its own, not a shade of the brand's. A design system's
+// accent is often a pale grey for hovers, which this passes over.
+const SECOND = /secondary|accent|tertiary/
+function pairsWith(color: string, brand: string | undefined) {
+  if (!brand) return false
+  const one = toOklch(color)
+  const other = toOklch(brand)
+  const apart = Math.abs(((one.h - other.h + 540) % 360) - 180)
+  return one.c >= 0.08 && one.l >= 0.3 && one.l <= 0.9 && apart >= 35
 }
 
 export const FACTS = ["colors", "background", "text", "darkMode", "fonts", "words", "covers"] as const
@@ -156,7 +173,7 @@ export function checkFacts(given: Record<string, unknown>): string[] {
   if (given.covers !== undefined && !Array.isArray(given.covers)) errors.push(`"covers" should be a list such as [{ style: "riso" }]`)
   if (Array.isArray(given.covers)) {
     for (const cover of given.covers as { style?: unknown }[]) {
-      if (!(String(cover?.style) in STYLES)) errors.push(`A cover's style "${String(cover?.style)}" isn't a style.${nearest(String(cover?.style), Object.keys(STYLES))}`)
+      if (!isStyle(cover?.style)) errors.push(`A cover's style "${String(cover?.style)}" isn't a style.${nearest(String(cover?.style), STYLE_NAMES)}`)
     }
   }
   return errors
@@ -271,7 +288,7 @@ function signalsOf(facts: PageFacts, color: string | undefined, dark: boolean) {
 const NEAR = 0.6
 function rank(signals: Map<Signal, number>, name = "") {
   const score = (style: StyleName) => [...signals].reduce((sum, [signal, weight]) => sum + (LEANS[signal][style] ?? 0) * weight, 0)
-  const ranked = (Object.keys(STYLES) as StyleName[])
+  const ranked = [...STYLE_NAMES]
     .map((style, index) => ({ style, score: score(style), tie: name ? hash(`${name}/${style}`) : index }))
     .sort((a, b) => b.score - a.score || a.tie - b.tie)
   const best = ranked[0]!.score
@@ -442,6 +459,11 @@ function readStyles(html: string, css: string): Omit<PageFacts, "covers"> {
   const strongTheme = themed.filter((color) => toOklch(color).c >= 0.08)
   const colors = [...new Set([...pinned, ...strongTheme, ...named, ...(mostUsed ? [mostUsed] : []), ...accents, ...themed, ...byUse])]
   if (colors.length) facts.colors = colors
+  const partner = [...declared.keys()]
+    .filter((name) => SECOND.test(name) && !/brand|primary/.test(name) && !NOT_BRAND.test(name))
+    .map(colorOf)
+    .find((color) => color && pairsWith(color, colors[0]))
+  if (partner) facts.partner = partner
 
   if (/prefers-color-scheme\s*:\s*dark|\.dark\b|data-theme=["']?dark/i.test(source)) facts.darkMode = true
 
@@ -536,6 +558,8 @@ function readDesign(markdown: string): Omit<PageFacts, "covers"> {
   }
   const ranked = colors.map((entry, index) => ({ ...entry, index })).sort((a, b) => order(a.name) - order(b.name) || a.index - b.index)
   if (ranked.length) facts.colors = [...new Set(ranked.map((entry) => entry.color))]
+  const partner = colors.find((entry) => SECOND.test(entry.name) && !/container|^on-|-on$|fixed|dim|variant/.test(entry.name) && pairsWith(entry.color, facts.colors?.[0]))?.color
+  if (partner) facts.partner = partner
 
   const type = Object.entries(branch("typography"))
   const family = (pattern: RegExp) => {

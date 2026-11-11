@@ -57,4 +57,6 @@ export const INIT = "npx @pogrobert/surfaces init"
 export const LINKS = {
   github: "https://github.com/pogrobert/surfaces",
   npm: "https://www.npmjs.com/package/@pogrobert/surfaces",
+  // Who made it.
+  maker: "https://pogrobert.com",
 } as const
