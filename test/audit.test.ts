@@ -83,7 +83,8 @@ test("a cover that moves can be held still", () => {
 test("<Cover> sets its title as a title, and gives way to the page's own", () => {
   const title = "Shipping the new editor"
   const set = renderToString(createElement(Cover, { brand, title }))
-  assert.match(set, /<div style="font-size:[\d.]+cqw;font-weight:700[^"]*">Shipping the new editor<\/div>/)
+  // Set right to left where the title is, as a title in Arabic or Hebrew needs.
+  assert.match(set, /<div dir="auto" style="font-size:[\d.]+cqw;font-weight:700[^"]*">Shipping the new editor<\/div>/)
   const own = renderToString(createElement(Cover, { brand, title }, createElement("h1", null, title)))
   assert.match(own, /<h1>Shipping the new editor<\/h1>/)
   assert.doesNotMatch(own, /font-size:[\d.]+cqw/)
