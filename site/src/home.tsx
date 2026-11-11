@@ -19,10 +19,9 @@ import "./styles.css"
 const SAY = "Pictures for every page of your site, drawn from one colour."
 const SUB = "Post covers, link previews, headers. Thirty styles, each yours to tune."
 const round = (n: number) => Math.round(n / 4) * 4
-// The shape a style shows on the plate where its seed's own pick sits badly
-// there: Stencil opens the page, and its two bars stand whole on the right
-// where its corner of tiles ran off the edge.
-const SHAPE: Partial<Record<StyleName, string>> = { stencil: "bars" }
+// The shape a style shows on the plate where its seed's own pick is not the
+// one to open the page with: Stencil opens it, on its grid of tiles.
+const SHAPE: Partial<Record<StyleName, string>> = { stencil: "grid" }
 
 // An element's own size, to the nearest 4px, so a change too small to see
 // draws nothing again. The plate is measured, not the window: a phone's
@@ -48,7 +47,7 @@ function Step({ by, label, keyName, children }: { by: number; label: string; key
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label={label} data-step={by} className="transition-none hover:bg-(--on)/10 hover:text-(--on) pointer-coarse:size-11">
+        <Button variant="ghost" size="icon-sm" aria-label={label} data-step={by} className="transition-[scale] hover:bg-(--on)/10 hover:text-(--on) pointer-coarse:size-11">
           {children}
         </Button>
       </TooltipTrigger>
@@ -59,7 +58,7 @@ function Step({ by, label, keyName, children }: { by: number; label: string; key
   )
 }
 
-function Words({ ink, refer }: { ink: { on: string; off: string }; refer?: (element: HTMLDivElement | null) => void }) {
+function Words({ ink, studio, refer }: { ink: { on: string; off: string }; studio: string; refer?: (element: HTMLDivElement | null) => void }) {
   return (
     <div ref={refer} className="grid justify-items-start" style={{ "--on": ink.on, "--off": ink.off } as CSSProperties}>
       <h1 className="text-[clamp(34px,5cqw,84px)] leading-[0.98] font-[680] tracking-[-0.035em] text-balance">{SAY}</h1>
@@ -67,9 +66,9 @@ function Words({ ink, refer }: { ink: { on: string; off: string }; refer?: (elem
       {/* What to do next, with the words that say why, as a hero has it. They
           change colour with the art, at once, never after it. */}
       <div className="mt-6 flex flex-wrap gap-2.5">
-        <CopyButton text={PROMPT} size="lg" className="bg-(--on) px-4 text-(--off) transition-none hover:bg-(--on)/85">Copy prompt</CopyButton>
-        <Button variant="outline" size="lg" asChild className="border-(--on)/20 bg-(--off)/90 px-4 text-(--on) transition-none hover:bg-(--off) hover:text-(--on) dark:border-(--on)/20 dark:bg-(--off)/90 dark:hover:bg-(--off)">
-          <a href="/studio/">See all thirty in the studio</a>
+        <CopyButton text={PROMPT} size="lg" className="bg-(--on) px-4 text-(--off) transition-[scale] hover:bg-(--on)/85">Copy prompt</CopyButton>
+        <Button variant="outline" size="lg" asChild className="border-(--on)/20 bg-(--off)/90 px-4 text-(--on) transition-[scale] hover:bg-(--off) hover:text-(--on) dark:border-(--on)/20 dark:bg-(--off)/90 dark:hover:bg-(--off)">
+          <a href={studio}>See all thirty in the studio</a>
         </Button>
       </div>
     </div>
@@ -160,7 +159,9 @@ function Plate() {
     setInk((was) => (was.on === on && was.off === off ? was : { on, off }))
   }, [words, shown, height, w, wordsH])
 
-  const links = [["Studio", "/studio/"], ["GitHub", LINKS.github]] as const
+  // The studio opens on the style, shape and colour the plate shows.
+  const studio = `/studio/?${new URLSearchParams({ style, ...(SHAPE[style] ? { shape: SHAPE[style] } : null), color: sample(shown).color })}`
+  const links = [["Studio", studio], ["GitHub", LINKS.github]] as const
   return (
     <section ref={plate} className="relative h-svh min-h-[max(520px,25vw)] max-[860px]:h-[86svh]">
       {size && (
@@ -170,7 +171,7 @@ function Plate() {
             // A style that fails to draw leaves the words on plain ground.
             <div className="absolute inset-0 tint" style={{ bottom: below }}>
               <div className="absolute" style={{ left: `${wordsBox.x * 100}%`, bottom: `${(1 - foot) * 100}%`, width: `${wordsBox.w * 100}%` }}>
-                <Words ink={{ on: "var(--ink)", off: "var(--paper)" }} />
+                <Words ink={{ on: "var(--ink)", off: "var(--paper)" }} studio={studio} />
               </div>
             </div>
           }
@@ -186,7 +187,7 @@ function Plate() {
                 // The words sit at the foot of their room, however tall it is.
                 content: (
                   <div className="flex h-full flex-col justify-end">
-                    <Words ink={ink} refer={setWords} />
+                    <Words ink={ink} studio={studio} refer={setWords} />
                   </div>
                 ),
               },
@@ -200,7 +201,7 @@ function Plate() {
                       content: (
                         <nav className="-mr-2.5 flex h-full w-full items-center justify-end gap-1">
                           {links.map(([name, href]) => (
-                            <Button key={name} variant="ghost" asChild className="text-current opacity-85 hover:bg-current/10 hover:text-current hover:opacity-100">
+                            <Button key={name} variant="ghost" asChild className="cursor-pointer text-current opacity-85 hover:bg-current/10 hover:text-current hover:opacity-100">
                               <a href={href}>{name}</a>
                             </Button>
                           ))}

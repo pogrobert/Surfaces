@@ -98,7 +98,7 @@
 }
 
 /* Asked for less motion, the controls still fade but no longer slide, grow
-   or sink: gentler, not gone. The art keeps to the same rule by itself. */
+   or press in: gentler, not gone. The art keeps to the same rule by itself. */
 @media (prefers-reduced-motion: reduce) {
   [data-slot="tooltip-content"] {
     --tw-enter-scale: 1;
@@ -106,5 +106,7 @@
     --tw-enter-translate-x: 0;
     --tw-enter-translate-y: 0;
   }
-  [data-slot="button"]:active { translate: none; }
+  [data-slot="button"]:active,
+  [data-slot="toggle-group-item"]:active,
+  [data-slot="toggle"]:active { scale: none; }
 }

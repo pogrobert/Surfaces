@@ -2,21 +2,63 @@ import { memo, StrictMode, useCallback, useDeferredValue, useEffect, useMemo, us
 import { createRoot } from "react-dom/client"
 import type { Root } from "react-dom/client"
 import { createBrand } from "@pogrobert/surfaces"
-import type { Grain, Mood, StyleName, Theme, Use } from "@pogrobert/surfaces"
+import type { Grain, Mood, MotionLevel, StyleName, Theme, Use } from "@pogrobert/surfaces"
 import { Cover, Surface } from "@pogrobert/surfaces/react"
+import { Dices } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { ABOUT, KINDS, LINKS, NAME, SAMPLES, SIZES } from "./data.ts"
+import { ABOUT, KINDS, LINKS, NAME, ORDER, SAMPLES, SIZES, TITLES } from "./data.ts"
 import { Code, Mend, Picture } from "./parts.tsx"
 import "./styles.css"
 
 // The studio: every choice the library has, seen and made. Laid out as a desk:
 // the styles in a list, one large picture, every choice beside it, and the
 // code that makes it under it. On a phone the styles run in a row.
-type Look = { name: string; color: string; style: StyleName; shape: string | null; mood: Mood | null; grain: Grain; theme: Theme; use: Use; title: string }
+type Look = { name: string; color: string; style: StyleName; shape: string | null; mood: Mood | null; grain: Grain; theme: Theme; use: Use; motion: MotionLevel | null; title: string }
+
+// How a size moves when left to itself: a page's header loops, the rest hold still.
+const ownMotion = (use: Use): MotionLevel => (use === "hero" ? "loop" : "none")
+// What is drawn: the motion asked for, or the size's own, and none at all for a style that holds still.
+const motionOf = (look: Look): MotionLevel => (ABOUT[look.style].moves ? look.motion ?? ownMotion(look.use) : "none")
+
+// The desk as an address, so the main page can open it on what it showed and
+// a look can be shared: only what differs from the defaults is written.
+const DEFAULT: Look = { name: SAMPLES[0].name, color: SAMPLES[0].color, style: ORDER[0]!, shape: null, mood: null, grain: "natural", theme: "light", use: "post", motion: null, title: TITLES[0]! }
+const one = <T extends string>(value: string | null, from: readonly T[]) => (from as readonly string[]).includes(value ?? "") ? (value as T) : null
+function fromAddress(): Look {
+  const asked = new URLSearchParams(location.search)
+  const style = one(asked.get("style"), ORDER) ?? DEFAULT.style
+  const color = /^#[0-9a-f]{6}$/i.test(asked.get("color") ?? "") ? asked.get("color")!.toLowerCase() : DEFAULT.color
+  const title = asked.get("title")
+  return {
+    name: SAMPLES.find((sample) => sample.color === color)?.name ?? DEFAULT.name,
+    color,
+    style,
+    shape: one(asked.get("shape"), ABOUT[style].shapes),
+    mood: one(asked.get("mood"), ["calm", "bold"] as const),
+    grain: one(asked.get("grain"), ["smooth", "natural", "heavy"] as const) ?? DEFAULT.grain,
+    theme: one(asked.get("theme"), ["light", "dark"] as const) ?? DEFAULT.theme,
+    use: one(asked.get("size"), SIZES.map((size) => size.use)) ?? DEFAULT.use,
+    motion: one(asked.get("motion"), ["none", "once", "loop"] as const),
+    title: title !== null && title.length <= 90 ? title : DEFAULT.title,
+  }
+}
+function toAddress(look: Look) {
+  const write = new URLSearchParams({ style: look.style })
+  if (look.color !== DEFAULT.color) write.set("color", look.color)
+  if (look.shape) write.set("shape", look.shape)
+  if (look.mood) write.set("mood", look.mood)
+  if (look.grain !== DEFAULT.grain) write.set("grain", look.grain)
+  if (look.theme !== DEFAULT.theme) write.set("theme", look.theme)
+  if (look.use !== DEFAULT.use) write.set("size", look.use)
+  if (look.motion) write.set("motion", look.motion)
+  if (look.title !== DEFAULT.title) write.set("title", look.title)
+  return `?${write}`
+}
 
 const brandOf = (look: Look) =>
   createBrand({ name: look.name, color: look.color, style: look.style, theme: look.theme, grain: look.grain, ...(look.shape ? { shape: look.shape } : null), ...(look.mood ? { mood: look.mood } : null) })
@@ -28,7 +70,13 @@ function snippet(look: Look) {
   if (look.grain !== "natural") options.push(["grain", look.grain])
   if (look.shape) options.push(["shape", look.shape])
   if (look.mood) options.push(["mood", look.mood])
-  const call = SIZES.find((size) => size.use === look.use)!.call
+  const size = SIZES.find((entry) => entry.use === look.use)!
+  // A motion other than the size's own is the input, changed.
+  const motion = motionOf(look)
+  const call =
+    motion === ownMotion(look.use) || !ABOUT[look.style].moves
+      ? size.call
+      : `generate({ ...brand.input("${look.use}"${size.banner ? "" : ", { title }"}), motion: "${motion}" })`
   return `const brand = createBrand({ ${options.map(([key, value]) => `${key}: ${JSON.stringify(value)}`).join(", ")} })\n${call}`
 }
 
@@ -85,12 +133,11 @@ const Styles = memo(function Styles({ look, pick }: { look: Pick<Look, "name" | 
               <ToggleGroupItem
                 key={style}
                 value={style}
-                className="grid h-auto w-full grid-cols-[36px_minmax(0,1fr)_auto] justify-normal gap-2.5 rounded-[7px]! py-[3px] pr-2 pl-[3px] text-left font-normal text-body data-[state=on]:bg-muted data-[state=on]:font-semibold data-[state=on]:text-ink max-[1100px]:w-[86px] max-[1100px]:grid-cols-1 max-[1100px]:gap-[5px] max-[1100px]:p-1 max-[1100px]:text-[13px]"
+                className="grid h-auto w-full grid-cols-[36px_minmax(0,1fr)] justify-normal gap-2.5 rounded-[7px]! py-[3px] pr-2 pl-[3px] text-left font-normal text-body data-[state=on]:bg-muted data-[state=on]:font-semibold data-[state=on]:text-ink max-[1100px]:w-[86px] max-[1100px]:grid-cols-1 max-[1100px]:gap-[5px] max-[1100px]:p-1 max-[1100px]:text-[13px]"
               >
                 {/* Each in the colour and theme chosen, so the list shows what a change of colour does to every style. */}
                 <Picture input={{ ...createBrand({ name: look.name, color: look.color, style, theme: look.theme }).input("card", { title: "Surfaces", id: "list" }), width: 160, height: 120 }} className="aspect-[4/3] w-full rounded-[2px]" />
                 {NAME(style)}
-                <small className="font-mono text-xs text-quiet max-[1100px]:hidden">{ABOUT[style].shapes.length || ""}</small>
               </ToggleGroupItem>
             ))}
           </div>
@@ -105,8 +152,9 @@ function Shown({ look }: { look: Look }) {
   const brand = useMemo(() => brandOf(look), [look.name, look.color, look.style, look.theme, look.grain, look.shape, look.mood])
   const size = SIZES.find((entry) => entry.use === look.use)!
   // A banner is art alone; the rest are covers with their title on them.
-  if (size.banner) return <Surface {...brand.input(look.use)} className="rounded-[3px]" />
-  return <Cover brand={brand} use={look.use} title={look.title} id="studio" motion="none" className="rounded-[3px]" />
+  const motion = motionOf(look)
+  if (size.banner) return <Surface {...brand.input(look.use)} motion={motion} className="rounded-[3px]" />
+  return <Cover brand={brand} use={look.use} title={look.title} id="studio" motion={motion} className="rounded-[3px]" />
 }
 
 function Colour({ look, set }: { look: Look; set: (change: Partial<Look>) => void }) {
@@ -153,7 +201,10 @@ function Colour({ look, set }: { look: Look; set: (change: Partial<Look>) => voi
 }
 
 function Studio() {
-  const [look, setLook] = useState<Look>({ name: SAMPLES[0].name, color: SAMPLES[0].color, style: "riso", shape: null, mood: null, grain: "natural", theme: "light", use: "post", title: "What we shipped in March" })
+  const [look, setLook] = useState<Look>(fromAddress)
+  useEffect(() => history.replaceState(null, "", toAddress(look)), [look])
+  // The next title to try, from the list, after the one shown.
+  const anotherTitle = () => set({ title: TITLES[(TITLES.indexOf(look.title) + 1) % TITLES.length]! })
   const set = useCallback((change: Partial<Look>) => setLook((was) => ({ ...was, ...change })), [])
   const pick = useCallback((style: StyleName) => set({ style, shape: null }), [set])
   const banner = SIZES.find((size) => size.use === look.use)!.banner
@@ -199,22 +250,41 @@ function Studio() {
           <Choice<Mood> label="Mood" value={look.mood} options={[[null, "Either"], ["calm", "Calm"], ["bold", "Bold"]]} set={(mood) => set({ mood })} />
           <Choice<Grain> label="Grain" value={look.grain} options={[["smooth", "Smooth"], ["natural", "Natural"], ["heavy", "Heavy"]]} set={(grain) => grain && set({ grain })} />
           <Choice<Theme> label="Theme" value={look.theme} options={[["light", "Light"], ["dark", "Dark"]]} set={(theme) => theme && set({ theme })} />
-          <Choice<Use> label="Size" value={look.use} options={SIZES.map((size) => [size.use, size.name] as const)} set={(use) => use && set({ use })} />
+          <Choice<Use> label="Size" value={look.use} options={SIZES.map((size) => [size.use, size.name] as const)} set={(use) => use && set({ use, motion: null })} />
+          {/* Motion, for a style that moves; a page's header loops by itself, the rest hold still. */}
+          {about.moves ? (
+            <Choice<MotionLevel> label="Motion" value={motionOf(look)} options={[["none", "Still"], ["once", "Once"], ["loop", "Loop"]]} set={(motion) => motion && set({ motion })} />
+          ) : (
+            <div className="grid gap-[7px]">
+              <span className="text-[13px] text-quiet">Motion</span>
+              <p className="text-body">This style holds still.</p>
+            </div>
+          )}
           {/* A banner is art alone, so it has no title to type. */}
           <div className="grid gap-[7px]" hidden={banner}>
             <Label htmlFor="title" className="text-[13px] font-normal text-quiet">Title</Label>
-            <Input
-              id="title"
-              dir="auto"
-              value={look.title}
-              maxLength={90}
-              autoComplete="off"
-              spellCheck={false}
-              enterKeyHint="done"
-              onChange={(event) => set({ title: event.target.value })}
-              // 16px under a finger, so a phone or a tablet never zooms in to it.
-              className="bg-sheet pointer-coarse:text-base"
-            />
+            <div className="flex gap-2">
+              <Input
+                id="title"
+                dir="auto"
+                value={look.title}
+                maxLength={90}
+                autoComplete="off"
+                spellCheck={false}
+                enterKeyHint="done"
+                onChange={(event) => set({ title: event.target.value })}
+                // 16px under a finger, so a phone or a tablet never zooms in to it.
+                className="bg-sheet pointer-coarse:text-base"
+              />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button type="button" variant="secondary" size="icon" aria-label="Another title" onClick={anotherTitle} className="pointer-coarse:size-11">
+                    <Dices />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Another title</TooltipContent>
+              </Tooltip>
+            </div>
           </div>
         </aside>
       </div>

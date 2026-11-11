@@ -34,6 +34,22 @@ export const SIZES: readonly { use: Use; name: string; w: number; h: number; cal
   { use: "email", name: "Email header", w: 1200, h: 400, call: 'brand.banner({ for: "email" })', banner: true },
 ]
 
+// Titles to try a cover with, of the kinds a site's covers carry; the first
+// is in the month it is now.
+const MONTH = new Intl.DateTimeFormat("en", { month: "long" }).format(new Date())
+export const TITLES = [
+  `What we shipped in ${MONTH}`,
+  "How we cut our build time in half",
+  "Introducing dark mode",
+  "A field guide to slow mornings",
+  "Why we rewrote search from scratch",
+  "Hiring our first designer",
+  "Ten years of open source",
+  "On keeping things small",
+  "The quiet launch",
+  "Notes from our team offsite",
+]
+
 export const PROMPT = "Add @pogrobert/surfaces to this site: run npx @pogrobert/surfaces init, then follow its AGENTS.md."
 export const INIT = "npx @pogrobert/surfaces init"
 
