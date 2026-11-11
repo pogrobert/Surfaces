@@ -19,8 +19,8 @@ import {
 import { coverage, keptBoxes, worstTitleContrast } from "../src/core/judge.ts"
 
 // Seeds, each through every style with a random colour, use or size, mood
-// and theme: 100 on every run, 1,000 under pnpm test:full.
-const INPUTS = randomInputs(seeds(100, 1000))
+// and theme: 40 on every run, 1,000 under pnpm test:full.
+const INPUTS = randomInputs(seeds(40, 1000))
 // Each scene is drawn once and every check below run on it, rather than
 // drawn again for each test (that was six sweeps of thirty thousand covers),
 // and none is kept afterwards: a thousand scenes of the densest styles held
@@ -185,7 +185,7 @@ test("every style holds a title in every brand colour and theme", () => {
   for (const style of STYLE_NAMES) {
     for (const color of BRAND_COLORS) {
       for (const theme of ["light", "dark"] as const) {
-        for (let seed = 0; seed < 8; seed++) {
+        for (let seed = 0; seed < seeds(2, 8); seed++) {
           const scene = generate({ style, seed, color, theme })
           const worst = worstTitleContrast(scene)
           assert.ok(worst >= 4.5, `${style} ${color} ${theme} ${seed}: ${worst}`)
@@ -209,7 +209,8 @@ test("every style holds at every size and title place", () => {
     for (const [width, height] of SIZES) {
       for (const text of TITLE_PLACES) {
         for (const theme of ["light", "dark"] as const) {
-          for (let seed = 0; seed < 5; seed++) {
+          // Every size, place and theme on every run; more seeds of each under test:full.
+          for (let seed = 0; seed < seeds(1, 5); seed++) {
             const input = { style, seed, width, height, ...titleAt(text), theme }
             const scene = generate(input)
             const name = label(input)
@@ -238,7 +239,7 @@ test("every style holds a title at every grain level", () => {
   for (const style of STYLE_NAMES) {
     for (const grain of ["smooth", "heavy"] as const) {
       for (const theme of ["light", "dark"] as const) {
-        for (let seed = 0; seed < 20; seed++) {
+        for (let seed = 0; seed < seeds(5, 20); seed++) {
           const input = { style, seed, grain, theme, color: BRAND_COLORS[seed]! }
           const scene = generate(input)
           const svg = toSvg(scene)
@@ -254,7 +255,7 @@ test("every approved shape holds", () => {
   for (const style of STYLE_NAMES) {
     for (const shape of STYLES[style].shapes ?? []) {
       for (const theme of ["light", "dark"] as const) {
-        for (let seed = 0; seed < 20; seed++) {
+        for (let seed = 0; seed < seeds(5, 20); seed++) {
           const input = { style, seed, shape, theme }
           const scene = generate(input)
           assert.equal(scene.shape, shape)

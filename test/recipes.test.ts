@@ -5,7 +5,7 @@ import { AREA_SIZES, MOODS, PLACES } from "../src/core/intent.ts"
 import { validate } from "../src/core/validate.ts"
 import { toSvg } from "../src/render/svg.ts"
 import { STYLES } from "../src/styles/index.ts"
-import { PRESETS, STYLE_NAMES } from "./support/inputs.ts"
+import { FULL, PRESETS, STYLE_NAMES } from "./support/inputs.ts"
 
 test("every range is ordered, and every mood sits inside its range", () => {
   for (const recipe of Object.values(STYLES)) {
@@ -55,7 +55,8 @@ test("every grain level is ordered and touches only the finish", () => {
 
 test("every style takes an area at every place and size", () => {
   for (const style of STYLE_NAMES) {
-    for (const [width, height] of PRESETS) {
+    // Every place and size on every run, at a few shapes of page; at all of them under test:full.
+    for (const [width, height] of FULL ? PRESETS : PRESETS.slice(0, 3)) {
       for (const place of PLACES) {
         for (const size of AREA_SIZES) {
           const scene = generate({ style, seed: 1, width, height, areas: [{ place, size }] })

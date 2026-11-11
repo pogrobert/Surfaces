@@ -49,10 +49,10 @@ test("a number seed and its text are the same seed", () => {
 test("different seeds give different drawings", () => {
   for (const style of STYLE_NAMES) {
     const drawings = new Set<string>()
-    for (let i = 0; i < 300; i++) {
+    for (let i = 0; i < seeds(40, 300); i++) {
       drawings.add(JSON.stringify(generate({ style, seed: i }).layers))
     }
-    assert.equal(drawings.size, 300, style)
+    assert.equal(drawings.size, seeds(40, 300), style)
   }
 })
 
@@ -129,7 +129,7 @@ test("a grain level changes the grain and nothing else", () => {
 
 test("a post's cover and its OG image are one drawing", () => {
   for (const style of STYLE_NAMES) {
-    for (let seed = 0; seed < 50; seed++) {
+    for (let seed = 0; seed < seeds(10, 50); seed++) {
       const input = { style, seed, color: "#0f766e", theme: "dark" } as const
       const cover = generate({ ...input, width: 1600, height: 900 })
       const og = generate({ ...input, ...formats.og })

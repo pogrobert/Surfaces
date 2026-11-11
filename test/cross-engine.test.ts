@@ -15,8 +15,10 @@ test(
   "JavaScriptCore computes the same bytes as V8",
   { skip: existsSync(JSC) ? false : "no jsc on this machine" },
   () => {
-    const v8 = execFileSync(process.execPath, [DIGEST], { encoding: "utf8" })
-    const jsc = execFileSync(JSC, ["-m", DIGEST], { encoding: "utf8" })
+    // 24 seeds of every style on every run, 120 under test:full.
+    const count = String(process.env.SURFACES_FULL === "1" ? 120 : 24)
+    const v8 = execFileSync(process.execPath, [DIGEST, count], { encoding: "utf8" })
+    const jsc = execFileSync(JSC, ["-m", DIGEST, "--", count], { encoding: "utf8" })
     assert.match(v8, /^\d+ covers/)
     assert.equal(jsc, v8)
   }

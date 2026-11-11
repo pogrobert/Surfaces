@@ -34,8 +34,13 @@ const PHOTO = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 
 let digest = 0x811c9dc5
 let bytes = 0
 let count = 0
+// How many seeds each style draws: given by the test, as node or jsc passes its
+// arguments, so every run takes a sample and test:full the lot.
+// jsc gives a module its arguments after -- as a global `arguments`.
+const given = Number(typeof process !== "undefined" ? process.argv[2] : typeof arguments !== "undefined" ? arguments[0] : undefined)
+const SEEDS = Number.isInteger(given) && given > 0 ? given : 120
 for (const { style, takesImage } of catalog) {
-  for (let seed = 0; seed < 120; seed++) {
+  for (let seed = 0; seed < SEEDS; seed++) {
     const svg = toSvg(
       generate({
         style,
