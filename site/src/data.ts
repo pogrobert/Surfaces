@@ -39,7 +39,6 @@ export const INIT = "npx @pogrobert/surfaces init"
 
 // Where the library itself is.
 export const LINKS = {
-  docs: "https://github.com/pogrobert/surfaces/blob/main/docs/api.md",
   github: "https://github.com/pogrobert/surfaces",
   npm: "https://www.npmjs.com/package/@pogrobert/surfaces",
 } as const

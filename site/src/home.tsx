@@ -3,6 +3,7 @@ import type { CSSProperties, ReactNode, RefObject } from "react"
 import { createRoot } from "react-dom/client"
 import type { Root } from "react-dom/client"
 import { createBrand } from "@pogrobert/surfaces"
+import type { StyleName } from "@pogrobert/surfaces"
 import { Surface } from "@pogrobert/surfaces/react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -18,6 +19,10 @@ import "./styles.css"
 const SAY = "Pictures for every page of your site, drawn from one colour."
 const SUB = "Post covers, link previews, headers. Thirty styles, each yours to tune."
 const round = (n: number) => Math.round(n / 4) * 4
+// The shape a style shows on the plate where its seed's own pick sits badly
+// there: Stencil opens the page, and its two bars stand whole on the right
+// where its corner of tiles ran off the edge.
+const SHAPE: Partial<Record<StyleName, string>> = { stencil: "bars" }
 
 // An element's own size, to the nearest 4px, so a change too small to see
 // draws nothing again. The plate is measured, not the window: a phone's
@@ -103,7 +108,7 @@ function Plate() {
   const height = Math.max(600, Math.min(8192, Math.round((2400 * tall) / w)))
   const style = ORDER[shown]!
   const input = useMemo(() => {
-    const { areas: _, ...rest } = createBrand({ name: sample(shown).name, color: sample(shown).color, style }).input("post", { title: SAY, id: "home", text: "bottom-left" })
+    const { areas: _, ...rest } = createBrand({ name: sample(shown).name, color: sample(shown).color, style, ...(SHAPE[style] ? { shape: SHAPE[style] } : null) }).input("post", { title: SAY, id: "home", text: "bottom-left" })
     return rest
   }, [shown])
 
@@ -133,7 +138,11 @@ function Plate() {
   const across = narrow ? 1 - 2 * left : 0.6
   const foot = narrow ? 1 - share(20, tall) : 0.9
   const room = Math.max(0.05, foot - share(70, tall))
-  const high = Math.min(room, Math.max(0.05, wordsH ? (wordsH + 8) / tall : 0.34))
+  // On a wide window the words keep the whole left side, from under the
+  // header to the foot, so the art takes the right side whole, large, and is
+  // not pressed into the band above them. On a phone the art stands above the
+  // words, so they keep only as much as they are tall.
+  const high = narrow ? Math.min(room, Math.max(0.05, wordsH ? (wordsH + 8) / tall : 0.34)) : room
   const wordsBox = { x: left, y: foot - high, w: across, h: high }
 
   // The buttons and the stepper take their colours from the ink the art
@@ -151,7 +160,7 @@ function Plate() {
     setInk((was) => (was.on === on && was.off === off ? was : { on, off }))
   }, [words, shown, height, w, wordsH])
 
-  const links = [["Studio", "/studio/"], ["Docs", LINKS.docs], ["GitHub", LINKS.github]] as const
+  const links = [["Studio", "/studio/"], ["GitHub", LINKS.github]] as const
   return (
     <section ref={plate} className="relative h-svh min-h-[max(520px,25vw)] max-[860px]:h-[86svh]">
       {size && (
@@ -172,7 +181,15 @@ function Plate() {
             height={height}
             css={{ position: "absolute", inset: 0, bottom: below, aspectRatio: "auto" }}
             areas={[
-              { box: wordsBox, content: <Words ink={ink} refer={setWords} /> },
+              {
+                box: wordsBox,
+                // The words sit at the foot of their room, however tall it is.
+                content: (
+                  <div className="flex h-full flex-col justify-end">
+                    <Words ink={ink} refer={setWords} />
+                  </div>
+                ),
+              },
               // The name and the links stand where a page's header does.
               { box: box(edge, 14, 120, 40), content: <b className="flex h-full items-center text-[15px] tracking-[-0.01em]">Surfaces</b> },
               ...(narrow
@@ -245,7 +262,6 @@ function Home() {
         <footer className="mt-24 flex flex-wrap gap-x-[22px] gap-y-2 border-t border-rule pt-[18px] text-sm text-quiet">
           <span>Surfaces · MIT No Attribution</span>
           <a href="/studio/">Studio</a>
-          <a href={LINKS.docs}>Docs</a>
           <a href={LINKS.github}>GitHub</a>
           <a href={LINKS.npm}>npm</a>
         </footer>

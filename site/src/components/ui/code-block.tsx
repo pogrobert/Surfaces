@@ -119,13 +119,13 @@ function CodeBlockCopyButton({
         }}
         {...props}
       >
-        {copied ? (
-          <CheckIcon
-          />
-        ) : (
-          <CopyIcon
-          />
-        )}
+        {/* Both icons stand in one place; the one going shrinks a little
+            as it fades and the one coming grows in, so the swap reads as an
+            answer and not a flicker. Asked for less motion, only the fade. */}
+        <span className="grid *:col-start-1 *:row-start-1 *:transition-[opacity,scale] *:duration-150 *:ease-out motion-reduce:*:scale-100!">
+          <CopyIcon aria-hidden className={copied ? "scale-90 opacity-0" : undefined} />
+          <CheckIcon aria-hidden className={copied ? undefined : "scale-90 opacity-0"} />
+        </span>
       </Button>
       <span aria-live="polite" className="sr-only">
         {copied ? "Copied" : ""}

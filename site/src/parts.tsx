@@ -79,12 +79,14 @@ export function CopyButton({ text, children, ...props }: { text: string; childre
     const timer = setTimeout(() => setSaid(""), SAID)
     return () => clearTimeout(timer)
   }, [said])
-  const fade = "col-start-1 row-start-1 transition-opacity duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]"
+  // The same swap as the code block's icon: the word going shrinks a little as
+  // it fades, the one coming grows in. Asked for less motion, only the fade.
+  const fade = "col-start-1 row-start-1 transition-[opacity,scale] duration-150 ease-out motion-reduce:scale-100!"
   return (
     <Button {...props} onClick={async () => setSaid((await copyText(text)) ? "Copied" : "Couldn't copy")}>
       <span className="grid justify-items-center">
-        <span className={`${fade} ${said ? "opacity-0" : ""}`}>{children}</span>
-        <span aria-hidden className={`${fade} ${said ? "" : "opacity-0"}`}>{said || "Copied"}</span>
+        <span className={`${fade} ${said ? "scale-95 opacity-0" : ""}`}>{children}</span>
+        <span aria-hidden className={`${fade} ${said ? "" : "scale-95 opacity-0"}`}>{said || "Copied"}</span>
       </span>
       <span aria-live="polite" className="sr-only">{said}</span>
     </Button>

@@ -167,7 +167,6 @@ function Studio() {
         <a href="/" className="font-bold">Surfaces</a>
         <span className="text-quiet">Studio</span>
         <nav className="-my-2 ml-auto flex gap-2 text-sm text-body">
-          <a href={LINKS.docs} className="px-1.5 py-2">Docs</a>
           <a href={LINKS.github} className="px-1.5 py-2">GitHub</a>
         </nav>
       </header>

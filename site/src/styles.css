@@ -72,6 +72,10 @@
   --font-sans: "Atkinson Hyperlegible Next Variable", Arial, sans-serif;
   --font-mono: "Atkinson Hyperlegible Mono Variable", ui-monospace, monospace;
   --font-heading: var(--font-sans);
+  /* Easing: the built-in ease-out is too weak for UI, so the class carries a
+     strong one, and ease-in-out the same for movement on screen. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
