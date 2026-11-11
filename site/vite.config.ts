@@ -7,6 +7,7 @@ import { defineConfig } from "vite"
 // from this repo's own build (dist), as it ships.
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  resolve: { alias: { "@": fileURLToPath(new URL("src", import.meta.url)) } },
   server: { port: Number(process.env.PORT ?? 4178), host: "127.0.0.1" },
   preview: { port: 4178, host: "127.0.0.1" },
   build: {

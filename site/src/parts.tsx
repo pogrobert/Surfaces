@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react"
-import type { ReactNode } from "react"
+import type { ComponentProps, ReactNode } from "react"
 import { generate, toSvg } from "@pogrobert/surfaces"
 import type { SurfaceInput } from "@pogrobert/surfaces"
+import { Button } from "@/components/ui/button"
+import { CodeBlock, CodeBlockActions, CodeBlockContent, CodeBlockCopyButton, CodeBlockLine } from "@/components/ui/code-block"
+import { highlightCode } from "@/lib/highlighter"
 
 // A small picture as an <img> of its SVG: one element, drawn once at its size
 // and kept, where the art inline would be hundreds of elements under filters,
 // laid out again with the page. For the many small pictures; the large one on
-// each page is the library's own <Surface>, as a site would use it.
+// each page is the library's own <Surface> or <Cover>, as a site would use it.
 const made = new Map<string, string>()
 const later: (() => void)[] = []
 let working = false
@@ -43,7 +46,7 @@ export function Picture({ input, className = "" }: { input: SurfaceInput; classN
 }
 
 // A button that copies, and says so for a moment.
-export function Copy({ text, children = "Copy", className = "" }: { text: string; children?: ReactNode; className?: string }) {
+export function CopyButton({ text, children, ...props }: { text: string; children: ReactNode } & Omit<ComponentProps<typeof Button>, "onClick" | "children">) {
   const [done, setDone] = useState(false)
   useEffect(() => {
     if (!done) return
@@ -51,8 +54,32 @@ export function Copy({ text, children = "Copy", className = "" }: { text: string
     return () => clearTimeout(timer)
   }, [done])
   return (
-    <button type="button" className={className} onClick={() => (navigator.clipboard?.writeText(text).catch(() => {}), setDone(true))}>
+    <Button {...props} onClick={() => navigator.clipboard?.writeText(text).then(() => setDone(true), () => {})}>
       <span aria-live="polite">{done ? "Copied" : children}</span>
-    </button>
+    </Button>
+  )
+}
+
+// Code to copy, coloured once its highlighter has loaded; plain until then,
+// and plain for words that aren't code.
+export function Code({ code, lang, className = "" }: { code: string; lang?: "typescript" | "bash"; className?: string }) {
+  const [lines, setLines] = useState<ReactNode[] | null>(null)
+  useEffect(() => {
+    let gone = false
+    setLines(null)
+    if (lang) highlightCode(code, lang).then((result) => !gone && setLines(result), () => {})
+    return () => void (gone = true)
+  }, [code, lang])
+  return (
+    <CodeBlock className={`border-0 bg-secondary ${className}`}>
+      <CodeBlockActions className="opacity-100!">
+        <CodeBlockCopyButton value={code} />
+      </CodeBlockActions>
+      <CodeBlockContent wrap className="pr-12 text-[13px] leading-[1.6]">
+        {(lines ?? code.split("\n")).map((line, index) => (
+          <CodeBlockLine key={index}>{line}</CodeBlockLine>
+        ))}
+      </CodeBlockContent>
+    </CodeBlock>
   )
 }

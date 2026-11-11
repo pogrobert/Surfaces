@@ -1,6 +1,11 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 @import "@fontsource-variable/atkinson-hyperlegible-next/wght.css";
 @import "@fontsource-variable/atkinson-hyperlegible-mono/wght.css";
+
+/* Dark follows the reader's system, as the colours below do, and not a class. */
+@custom-variant dark (@media (prefers-color-scheme: dark));
 
 /* The page's own colours, each with its light and its dark, so every class
    made from them follows the reader's theme by itself. */
@@ -13,6 +18,27 @@
   --quiet: light-dark(#66665f, #94938b);
   --rule: light-dark(#e8e8e5, #262624);
   --action: light-dark(#0f766e, #2dd4bf);
+
+  /* shadcn's names, given the page's colours, so its components wear them. */
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--sheet);
+  --card-foreground: var(--ink);
+  --popover: var(--sheet);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--paper);
+  --secondary: color-mix(in srgb, var(--ink) 5%, transparent);
+  --secondary-foreground: var(--ink);
+  --muted: color-mix(in srgb, var(--ink) 7%, transparent);
+  --muted-foreground: var(--quiet);
+  --accent: color-mix(in srgb, var(--ink) 7%, transparent);
+  --accent-foreground: var(--ink);
+  --destructive: light-dark(#c2410c, #fb923c);
+  --border: var(--rule);
+  --input: var(--rule);
+  --ring: var(--action);
+  --radius: 0.5625rem;
 }
 
 @theme inline {
@@ -23,20 +49,43 @@
   --color-quiet: var(--quiet);
   --color-rule: var(--rule);
   --color-action: var(--action);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
   --font-sans: "Atkinson Hyperlegible Next Variable", Arial, sans-serif;
   --font-mono: "Atkinson Hyperlegible Mono Variable", ui-monospace, monospace;
+  --font-heading: var(--font-sans);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
 }
 
 @layer base {
+  * { @apply border-border outline-ring/50; }
   html { -webkit-text-size-adjust: 100%; }
-  body { @apply bg-paper text-ink font-sans antialiased; font-size: 15px; line-height: 1.5; }
+  body { @apply bg-background font-sans text-foreground antialiased; font-size: 15px; line-height: 1.5; }
   button { cursor: default; }
-  :focus-visible { outline: 2px solid var(--action); outline-offset: 3px; border-radius: 4px; }
+  /* shadcn's components ring themselves; everything else gets an outline. */
+  :focus-visible:not([data-slot]) { outline: 2px solid var(--action); outline-offset: 3px; border-radius: 4px; }
 }
 
 @utility tint {
   background: color-mix(in srgb, var(--ink) 5%, transparent);
-}
-@utility tint-strong {
-  background: color-mix(in srgb, var(--ink) 9%, transparent);
 }
