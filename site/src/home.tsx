@@ -1,5 +1,5 @@
-import { StrictMode, useEffect, useMemo, useState } from "react"
-import type { ReactNode } from "react"
+import { StrictMode, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import type { CSSProperties, ReactNode } from "react"
 import { createRoot } from "react-dom/client"
 import type { Root } from "react-dom/client"
 import { createBrand } from "@pogrobert/surfaces"
@@ -48,7 +48,7 @@ function Step({ by, label, keyName, children }: { by: number; label: string; key
 }
 
 function Plate() {
-  const [at, setAt] = useState(ORDER.indexOf("riso"))
+  const [at, setAt] = useState(0)
   const step = (by: number) => setAt((i) => (i + by + ORDER.length) % ORDER.length)
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
@@ -60,14 +60,40 @@ function Plate() {
     return () => removeEventListener("keydown", key)
   }, [])
   const view = useWindow()
-  // On a narrow window the controls can't stand over the art beside the
-  // words, so the art stops short of them and they sit on the page below it.
+  // On a narrow window the stepper can't stand over the art beside the
+  // words, so the art stops short of it and it sits on the page below.
   const narrow = view.w <= 860
-  const below = narrow ? 120 : 0
-  const height = Math.max(600, Math.min(2400, Math.round((2400 * Math.max(view.h * (narrow ? 0.86 : 1), 520) - 2400 * below) / Math.max(view.w, 1))))
+  const below = narrow ? 64 : 0
+  const tall = Math.max(view.h * (narrow ? 0.86 : 1), 520) - below
+  const height = Math.max(600, Math.min(2400, Math.round((2400 * tall) / Math.max(view.w, 1))))
   const style = ORDER[at]!
   const { areas, ...input } = useMemo(() => createBrand({ name: sample(at).name, color: sample(at).color, style }).input("post", { title: SAY, id: "home", text: "bottom-left" }), [at])
   const links = ["Studio", "Docs", "GitHub"]
+  // The name and the links stand where a page's header does, in small boxes
+  // of their own measured in pixels of the window, which the art keeps clear
+  // and inks to read, as it does the words. A box is kept a twentieth of the
+  // canvas at least and a fiftieth in from its edges, as the library asks.
+  const share = (value: number, of: number, least = 0.02) => Math.max(least, value / of)
+  const box = (x: number, y: number, w: number, h: number) => {
+    const across = Math.min(share(w, view.w, 0.05), 0.96)
+    return { x: Math.min(share(x, view.w), 0.98 - across), y: share(y, tall), w: across, h: share(h, tall, 0.05) }
+  }
+  const edge = narrow ? 16 : 24
+  // The buttons by the words take their colours from the ink the art chose
+  // for the words, solid in it or on a face of its opposite, so they read on
+  // a dark plate as on a pale one, whatever the page's own theme.
+  const words = useRef<HTMLDivElement>(null)
+  const [ink, setInk] = useState({ on: "#121212", off: "#ffffff" })
+  useLayoutEffect(() => {
+    if (!words.current) return
+    const seen = getComputedStyle(words.current).color
+    // rgb() in 0 to 255, or color(srgb) in 0 to 1.
+    const scale = seen.startsWith("color(") ? 255 : 1
+    const [r = 0, g = 0, b = 0] = (seen.match(/[\d.]+/g) ?? []).map((n) => Number(n) * scale)
+    const on = `rgb(${r} ${g} ${b})`
+    const off = 0.2126 * r + 0.7152 * g + 0.0722 * b > 128 ? "#121212" : "#ffffff"
+    setInk((was) => (was.on === on && was.off === off ? was : { on, off }))
+  })
 
   return (
     <section className="relative h-svh min-h-[520px] max-[860px]:h-[86svh]">
@@ -76,42 +102,54 @@ function Plate() {
         width={2400}
         height={height}
         css={{ position: "absolute", inset: 0, bottom: below, aspectRatio: "auto" }}
-        // The name and the links go in areas of their own, which the art keeps
-        // clear and gives an ink that reads there, as it does the words.
         areas={[
           {
             ...areas![0]!,
             content: (
-              <h1 className="text-[clamp(34px,5cqw,84px)] leading-[0.98] font-[680] tracking-[-0.035em] text-balance">
-                {SAY}
-                <small className="mt-[0.7em] block text-[max(15px,0.24em)] leading-[1.35] font-medium tracking-[-0.005em] opacity-80">{SUB}</small>
-              </h1>
-            ),
-          },
-          { place: "top-left", size: "sm", content: <b className="text-[15px] tracking-[-0.01em]">Surfaces</b> },
-          {
-            place: "top-right",
-            size: "sm",
-            content: (
-              <nav className="-mt-1.5 -mr-2.5 flex gap-1 max-[860px]:hidden">
-                {links.map((link) => (
-                  <Button key={link} variant="ghost" asChild className="text-current opacity-85 hover:bg-current/10 hover:text-current hover:opacity-100">
-                    <a href={link === "Studio" ? "/studio/" : "#"}>{link}</a>
+              <div ref={words} className="grid justify-items-start" style={{ "--on": ink.on, "--off": ink.off } as CSSProperties}>
+                <h1 className="text-[clamp(34px,5cqw,84px)] leading-[0.98] font-[680] tracking-[-0.035em] text-balance">{SAY}</h1>
+                <p className="mt-[0.9em] text-[max(15px,1.2cqw)] leading-[1.35] font-medium tracking-[-0.005em] opacity-80">{SUB}</p>
+                {/* What to do next, with the words that say why, as a hero has it. */}
+                <div className="mt-6 flex flex-wrap gap-2.5">
+                  <CopyButton text={PROMPT} size="lg" className="bg-(--on) px-4 text-(--off) hover:bg-(--on)/85">Copy prompt</CopyButton>
+                  <Button variant="outline" size="lg" asChild className="border-(--on)/20 bg-(--off)/90 px-4 text-(--on) hover:bg-(--off) hover:text-(--on) dark:border-(--on)/20 dark:bg-(--off)/90 dark:hover:bg-(--off)">
+                    <a href="/studio/">See all thirty in the studio</a>
                   </Button>
-                ))}
-              </nav>
+                </div>
+              </div>
             ),
           },
+          { box: box(edge, 14, 120, 40), content: <b className="flex h-full items-center text-[15px] tracking-[-0.01em]">Surfaces</b> },
+          ...(narrow
+            ? []
+            : [
+                {
+                  box: box(view.w - edge - 250, 14, 250, 40),
+                  content: (
+                    <nav className="-mr-2.5 flex h-full w-full items-center justify-end gap-1">
+                      {links.map((link) => (
+                        <Button key={link} variant="ghost" asChild className="text-current opacity-85 hover:bg-current/10 hover:text-current hover:opacity-100">
+                          <a href={link === "Studio" ? "/studio/" : "#"}>{link}</a>
+                        </Button>
+                      ))}
+                    </nav>
+                  ),
+                },
+              ]),
         ]}
       />
       <div
-        className="absolute right-6 bottom-[22px] flex items-center gap-3 max-[860px]:right-4 max-[860px]:bottom-4 max-[860px]:left-4 max-[860px]:flex-wrap"
+        className="absolute right-6 bottom-[22px] max-[860px]:right-4 max-[860px]:bottom-3 max-[860px]:left-4"
         onClick={(event) => {
           const by = (event.target as Element).closest<HTMLElement>("[data-step]")?.dataset.step
           if (by) step(Number(by))
         }}
       >
-        <div className="flex items-center gap-0.5 rounded-xl bg-background p-1 ring-1 ring-border">
+        {/* Over the art it wears the words' colours; below it, on a phone, the page's. */}
+        <div
+          className={`flex w-fit items-center gap-0.5 rounded-xl p-1 ring-1 ${narrow ? "bg-background ring-border" : "bg-(--off)/90 text-(--on) ring-(--on)/15 [&_button:hover]:bg-(--on)/10 [&_button:hover]:text-(--on)"}`}
+          style={{ "--on": ink.on, "--off": ink.off } as CSSProperties}
+        >
           <Step by={-1} label="The style before" keyName="←">
             <ChevronLeft />
           </Step>
@@ -120,10 +158,6 @@ function Plate() {
             <ChevronRight />
           </Step>
         </div>
-        <Button variant="outline" size="lg" asChild>
-          <a href="/studio/">See all thirty in the studio</a>
-        </Button>
-        <CopyButton text={PROMPT} size="lg">Copy prompt</CopyButton>
       </div>
     </section>
   )

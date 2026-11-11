@@ -28,11 +28,13 @@
   --popover-foreground: var(--ink);
   --primary: var(--ink);
   --primary-foreground: var(--paper);
-  --secondary: color-mix(in srgb, var(--ink) 5%, transparent);
+  /* Mixed into the paper, not into nothing, so a button over the art stays
+     solid when it is hovered or chosen. */
+  --secondary: color-mix(in srgb, var(--ink) 5%, var(--paper));
   --secondary-foreground: var(--ink);
-  --muted: color-mix(in srgb, var(--ink) 7%, transparent);
+  --muted: color-mix(in srgb, var(--ink) 7%, var(--paper));
   --muted-foreground: var(--quiet);
-  --accent: color-mix(in srgb, var(--ink) 7%, transparent);
+  --accent: color-mix(in srgb, var(--ink) 7%, var(--paper));
   --accent-foreground: var(--ink);
   --destructive: light-dark(#c2410c, #fb923c);
   --border: var(--rule);
