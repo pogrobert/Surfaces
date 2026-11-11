@@ -1,0 +1,12 @@
+// The site at surfaces.pogrobert.com, served by Cloudflare as static files:
+// the build (pnpm build && pnpm --filter surfaces-site build) writes them to
+// site/dist, and `npx wrangler deploy` puts them up. No code runs on the
+// server; /studio serves site/dist/studio/index.html.
+{
+  "name": "surfaces",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./site/dist",
+    "html_handling": "auto-trailing-slash"
+  }
+}
