@@ -164,7 +164,10 @@ function Plate() {
     watch.observe(words)
     return () => watch.disconnect()
   }, [words])
-  const left = share(narrow ? 24 : 0.06 * w, w)
+  // On a wide window the words stand a twenty-fifth of its width in, never
+  // less than 40px nor more than 72px, so a large screen does not push them
+  // and the chips at the edges toward the middle.
+  const left = share(narrow ? 24 : Math.min(72, Math.max(40, 0.04 * w)), w)
   const across = narrow ? 1 - 2 * left : 0.6
   const foot = narrow ? 1 - share(20, tall) : 0.9
   const room = Math.max(0.05, foot - share(70, tall))
@@ -182,6 +185,10 @@ function Plate() {
   const [boxX, boxW] = keep(left, across)
   const [boxY, boxH] = keep(foot - high, high)
   const wordsBox = { x: boxX, y: boxY, w: boxW, h: boxH }
+  // On a wide window the chips at the plate's edges, the header's and the
+  // stepper's, stand this far in: the name's mark then sits on the words'
+  // left edge, its chip reaching out past it by the chip's padding.
+  const edge = Math.max(14, Math.round(wordsBox.x * w) - 12)
 
   const [art, setArt] = useState<Behind>({ ink: DARK_INK, glow: LIGHT_INK, halo: 0.6 })
   // The text as drawn, its lines and not their room, for the scrim to follow.
@@ -310,10 +317,7 @@ function Plate() {
           page's ground that the art runs into at the top. */}
       <header
         className={`pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3.5 ${narrow ? "items-center bg-linear-to-b from-background/90 via-background/55 to-transparent px-2.5 pt-2.5 pb-8 text-ink" : ""}`}
-        // On a wide window the name's mark stands on the words' left edge, a
-        // share of the plate's width, its chip reaching out past it as far as
-        // the chip's padding; the links keep the same distance on the right.
-        style={narrow ? undefined : ({ "--on": ink.on, "--off": ink.off, paddingInline: Math.max(14, Math.round(wordsBox.x * w) - 12) } as CSSProperties)}
+        style={narrow ? undefined : ({ "--on": ink.on, "--off": ink.off, paddingInline: edge } as CSSProperties)}
       >
         <a href="/" className={`pointer-events-auto flex items-center gap-2 rounded-[10px] px-3 py-1.5 text-[15px] font-bold tracking-[-0.01em] ${narrow ? "px-1.5" : chip}`}><SurfacesMark />Surfaces</a>
         <nav className={`pointer-events-auto flex items-center gap-0.5 rounded-[10px] p-0.5 ${narrow ? "[--on:var(--ink)]" : chip}`}>
@@ -334,6 +338,7 @@ function Plate() {
       </header>
       <div
         className="absolute right-6 bottom-[22px] max-[860px]:right-auto max-[860px]:bottom-3 max-[860px]:left-3"
+        style={narrow ? undefined : { right: edge }}
         onClick={(event) => {
           const by = (event.target as Element).closest<HTMLElement>("[data-step]")?.dataset.step
           if (by) step(Number(by))
