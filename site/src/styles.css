@@ -1,0 +1,42 @@
+@import "tailwindcss";
+@import "@fontsource-variable/atkinson-hyperlegible-next/wght.css";
+@import "@fontsource-variable/atkinson-hyperlegible-mono/wght.css";
+
+/* The page's own colours, each with its light and its dark, so every class
+   made from them follows the reader's theme by itself. */
+:root {
+  color-scheme: light dark;
+  --paper: light-dark(#fbfbfa, #0b0b0a);
+  --sheet: light-dark(#ffffff, #1b1b19);
+  --ink: light-dark(#121212, #ededea);
+  --body: light-dark(#3d3d39, #c4c3bd);
+  --quiet: light-dark(#66665f, #94938b);
+  --rule: light-dark(#e8e8e5, #262624);
+  --action: light-dark(#0f766e, #2dd4bf);
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-sheet: var(--sheet);
+  --color-ink: var(--ink);
+  --color-body: var(--body);
+  --color-quiet: var(--quiet);
+  --color-rule: var(--rule);
+  --color-action: var(--action);
+  --font-sans: "Atkinson Hyperlegible Next Variable", Arial, sans-serif;
+  --font-mono: "Atkinson Hyperlegible Mono Variable", ui-monospace, monospace;
+}
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body { @apply bg-paper text-ink font-sans antialiased; font-size: 15px; line-height: 1.5; }
+  button { cursor: default; }
+  :focus-visible { outline: 2px solid var(--action); outline-offset: 3px; border-radius: 4px; }
+}
+
+@utility tint {
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+}
+@utility tint-strong {
+  background: color-mix(in srgb, var(--ink) 9%, transparent);
+}

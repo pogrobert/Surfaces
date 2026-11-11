@@ -1,0 +1,3 @@
+# The library is the root; the website that shows it is its own package.
+packages:
+  - site

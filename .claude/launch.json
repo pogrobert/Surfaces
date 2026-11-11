@@ -15,7 +15,8 @@
       "runtimeArgs": [
         "site"
       ],
-      "port": 4178
+      "port": 4178,
+      "autoPort": true
     }
   ]
 }
