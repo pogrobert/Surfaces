@@ -197,6 +197,24 @@ export function NpmMark({ className = "size-4" }: { className?: string }) {
   )
 }
 
+// Surfaces' own mark, beside its name: four panes with one disc cut through
+// them, one picture across every surface. Its colours are fixed, mint and
+// ink, so the same tile stands on a light page and a dark one.
+export function SurfacesMark({ className = "size-5" }: { className?: string }) {
+  return (
+    <svg viewBox="4 4 92 92" aria-hidden className={className}>
+      <rect x="4" y="4" width="92" height="92" rx="26" fill="#2dd4bf" />
+      <g fill="#1c1c20">
+        <rect x="20" y="20" width="33" height="25" rx="4" />
+        <rect x="57" y="20" width="23" height="25" rx="4" />
+        <rect x="20" y="49" width="23" height="31" rx="4" />
+        <rect x="47" y="49" width="33" height="31" rx="4" />
+      </g>
+      <circle cx="52" cy="47" r="15" fill="#2dd4bf" />
+    </svg>
+  )
+}
+
 // GitHub's mark, beside the link to the repository.
 export function GitHubMark({ className = "size-4" }: { className?: string }) {
   return (

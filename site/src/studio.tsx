@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { ABOUT, KINDS, LINKS, NAME, ORDER, SAMPLES, SIZES, TITLES } from "./data.ts"
-import { Code, GitHubMark, NpmMark, Mend, Picture, ThemeSwitch } from "./parts.tsx"
+import { Code, GitHubMark, NpmMark, Mend, Picture, SurfacesMark, ThemeSwitch } from "./parts.tsx"
 import { useTheme } from "@/lib/theme"
 import "./styles.css"
 
@@ -293,7 +293,7 @@ function Studio() {
       <header className="sticky top-0 z-20 flex h-16 items-center gap-[18px] border-b border-rule bg-background px-6 max-[640px]:px-4 max-[480px]:gap-3">
         {/* Where the page sits, as a path: the site, then this page in the same type. */}
         <div className="flex items-center gap-2">
-          <a href="/" className="font-bold">Surfaces</a>
+          <a href="/" className="flex items-center gap-2 font-bold"><SurfacesMark />Surfaces</a>
           <span aria-hidden className="text-quiet">/</span>
           <span className="font-medium text-body">Studio</span>
         </div>

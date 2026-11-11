@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Kbd } from "@/components/ui/kbd"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { INIT, LINKS, NAME, ORDER, PROMPT, sample } from "./data.ts"
-import { Code, CopyButton, GitHubMark, NpmMark, Mend, ThemeSwitch } from "./parts.tsx"
+import { Code, CopyButton, GitHubMark, NpmMark, Mend, SurfacesMark, ThemeSwitch } from "./parts.tsx"
 import { useTheme } from "@/lib/theme"
 import { behind, DARK_INK, halo, LIGHT_INK } from "@/lib/behind"
 import type { Behind } from "@/lib/behind"
@@ -312,7 +312,7 @@ function Plate() {
         className={`pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3.5 ${narrow ? "items-center bg-linear-to-b from-background/90 via-background/55 to-transparent px-2.5 pt-2.5 pb-8 text-ink" : ""}`}
         style={narrow ? undefined : ({ "--on": ink.on, "--off": ink.off } as CSSProperties)}
       >
-        <a href="/" className={`pointer-events-auto rounded-[10px] px-3 py-1.5 text-[15px] font-bold tracking-[-0.01em] ${narrow ? "px-1.5" : chip}`}>Surfaces</a>
+        <a href="/" className={`pointer-events-auto flex items-center gap-2 rounded-[10px] px-3 py-1.5 text-[15px] font-bold tracking-[-0.01em] ${narrow ? "px-1.5" : chip}`}><SurfacesMark />Surfaces</a>
         <nav className={`pointer-events-auto flex items-center gap-0.5 rounded-[10px] p-0.5 ${narrow ? "[--on:var(--ink)]" : chip}`}>
           {links.map(([name, href]) => (
             // On a phone the studio is a button under the words, so the header
