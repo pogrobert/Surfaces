@@ -4,8 +4,18 @@
 @import "@fontsource-variable/atkinson-hyperlegible-next/wght.css";
 @import "@fontsource-variable/atkinson-hyperlegible-mono/wght.css";
 
-/* Dark follows the reader's system, as the colours below do, and not a class. */
-@custom-variant dark (@media (prefers-color-scheme: dark));
+/* Dark is the reader's system, or the theme they chose (data-theme on
+   <html>), as the colours below are. */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+}
 
 /* The page's own colours, each with its light and its dark, so every class
    made from them follows the reader's theme by itself. */
@@ -42,6 +52,10 @@
   --ring: var(--action);
   --radius: 0.5625rem;
 }
+
+/* A theme chosen on the page sets the scheme its light-dark() colours read. */
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
 
 @theme inline {
   --color-paper: var(--paper);

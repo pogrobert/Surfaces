@@ -2,10 +2,14 @@ import { Component, useEffect, useState } from "react"
 import type { ComponentProps, ReactNode } from "react"
 import { generate, toSvg } from "@pogrobert/surfaces"
 import type { SurfaceInput } from "@pogrobert/surfaces"
+import { Monitor, Moon, Sun } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { CodeBlock, CodeBlockActions, CodeBlockContent, CodeBlockCopyButton, CodeBlockLine } from "@/components/ui/code-block"
 import { copyText, SAID } from "@/lib/copy"
 import { loadHighlighter } from "@/lib/highlighter"
+import { setTheme, useTheme } from "@/lib/theme"
+import type { ThemeChoice } from "@/lib/theme"
 
 // A small picture as an <img> of its SVG: one element, drawn once at its size
 // and kept, where the art inline would be hundreds of elements under filters,
@@ -140,5 +144,34 @@ export function Code({ code, lang, className = "" }: { code: string; lang?: "typ
         ))}
       </CodeBlockContent>
     </CodeBlock>
+  )
+}
+
+// The page's theme: follow the system, or keep it light or dark. Three icons
+// in a row, the arrow keys moving along them, as every choice on the site is.
+const THEMES = [
+  ["system", "Follow the system", Monitor],
+  ["light", "Light", Sun],
+  ["dark", "Dark", Moon],
+] as const
+export function ThemeSwitch({ className = "" }: { className?: string }) {
+  const { choice } = useTheme()
+  return (
+    <ToggleGroup type="single" aria-label="Theme" spacing={0} value={choice} onValueChange={(next) => next && setTheme(next as ThemeChoice)} className={className}>
+      {THEMES.map(([value, label, Icon]) => (
+        <ToggleGroupItem key={value} value={value} aria-label={label} title={label} size="sm" className="text-current opacity-70 hover:bg-current/10 hover:text-current data-[state=on]:bg-current/12 data-[state=on]:opacity-100 pointer-coarse:size-10">
+          <Icon />
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
+  )
+}
+
+// GitHub's mark, beside the link to the repository.
+export function GitHubMark({ className = "size-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden className={className} fill="currentColor">
+      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+    </svg>
   )
 }

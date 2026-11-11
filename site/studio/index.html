@@ -6,6 +6,8 @@
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#fbfbfa" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0b0b0a" media="(prefers-color-scheme: dark)">
+<!-- The theme a reader chose, set before the first paint so the page never flashes the other one. -->
+<script>try{var t=localStorage.getItem("surfaces-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <title>Surfaces, the studio</title>
 <meta name="description" content="Covers, link previews and headers for every page of a site, drawn by code from one brand colour. No AI and no API key: the same title always gives the same picture.">
 <!-- The icon: dither-15, a crescent of light in Dither, drawn by Surfaces. -->

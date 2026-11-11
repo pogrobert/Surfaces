@@ -12,13 +12,14 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { ABOUT, KINDS, LINKS, NAME, ORDER, SAMPLES, SIZES, TITLES } from "./data.ts"
-import { Code, Mend, Picture } from "./parts.tsx"
+import { Code, GitHubMark, Mend, Picture, ThemeSwitch } from "./parts.tsx"
+import { useTheme } from "@/lib/theme"
 import "./styles.css"
 
 // The studio: every choice the library has, seen and made. Laid out as a desk:
 // the styles in a list, one large picture, every choice beside it, and the
 // code that makes it under it. On a phone the styles run in a row.
-type Look = { name: string; color: string; style: StyleName; shape: string | null; mood: Mood | null; grain: Grain; theme: Theme; use: Use; motion: MotionLevel | null; title: string }
+type Look = { name: string; color: string; style: StyleName; shape: string | null; mood: Mood | null; grain: Grain; theme: Theme | "auto"; use: Use; motion: MotionLevel | null; title: string }
 
 // How a size moves when left to itself: a page's header loops, the rest hold still.
 const ownMotion = (use: Use): MotionLevel => (use === "hero" ? "loop" : "none")
@@ -27,7 +28,8 @@ const motionOf = (look: Look): MotionLevel => (ABOUT[look.style].moves ? look.mo
 
 // The desk as an address, so the main page can open it on what it showed and
 // a look can be shared: only what differs from the defaults is written.
-const DEFAULT: Look = { name: SAMPLES[0].name, color: SAMPLES[0].color, style: ORDER[0]!, shape: null, mood: null, grain: "natural", theme: "light", use: "post", motion: null, title: TITLES[0]! }
+// It opens following its reader, as a site with a dark mode would have it.
+const DEFAULT: Look = { name: SAMPLES[0].name, color: SAMPLES[0].color, style: ORDER[0]!, shape: null, mood: null, grain: "natural", theme: "auto", use: "post", motion: null, title: TITLES[0]! }
 const one = <T extends string>(value: string | null, from: readonly T[]) => (from as readonly string[]).includes(value ?? "") ? (value as T) : null
 function fromAddress(): Look {
   const asked = new URLSearchParams(location.search)
@@ -41,7 +43,7 @@ function fromAddress(): Look {
     shape: one(asked.get("shape"), ABOUT[style].shapes),
     mood: one(asked.get("mood"), ["calm", "bold"] as const),
     grain: one(asked.get("grain"), ["smooth", "natural", "heavy"] as const) ?? DEFAULT.grain,
-    theme: one(asked.get("theme"), ["light", "dark"] as const) ?? DEFAULT.theme,
+    theme: one(asked.get("theme"), ["auto", "light", "dark"] as const) ?? DEFAULT.theme,
     use: one(asked.get("size"), SIZES.map((size) => size.use)) ?? DEFAULT.use,
     motion: one(asked.get("motion"), ["none", "once", "loop"] as const),
     title: title !== null && title.length <= 90 ? title : DEFAULT.title,
@@ -60,8 +62,11 @@ function toAddress(look: Look) {
   return `?${write}`
 }
 
-const brandOf = (look: Look) =>
-  createBrand({ name: look.name, color: look.color, style: look.style, theme: look.theme, grain: look.grain, ...(look.shape ? { shape: look.shape } : null), ...(look.mood ? { mood: look.mood } : null) })
+// A look that follows its reader is drawn here in the theme the page is in,
+// light or dark, so it changes with the page's own switch.
+const drawn = (theme: Look["theme"], dark: boolean): Theme => (theme === "auto" ? (dark ? "dark" : "light") : theme)
+const brandOf = (look: Look, dark: boolean) =>
+  createBrand({ name: look.name, color: look.color, style: look.style, theme: drawn(look.theme, dark), grain: look.grain, ...(look.shape ? { shape: look.shape } : null), ...(look.mood ? { mood: look.mood } : null) })
 
 // The code that draws what is shown, with only the choices that aren't the default.
 function snippet(look: Look) {
@@ -149,7 +154,8 @@ const Styles = memo(function Styles({ look, pick }: { look: Pick<Look, "name" | 
 (was, now) => was.pick === now.pick && was.look.name === now.look.name && was.look.color === now.look.color && was.look.theme === now.look.theme && was.look.style === now.look.style)
 
 function Shown({ look }: { look: Look }) {
-  const brand = useMemo(() => brandOf(look), [look.name, look.color, look.style, look.theme, look.grain, look.shape, look.mood])
+  const { dark } = useTheme()
+  const brand = useMemo(() => brandOf(look, dark), [look.name, look.color, look.style, look.theme, look.grain, look.shape, look.mood, dark])
   const size = SIZES.find((entry) => entry.use === look.use)!
   // A banner is art alone; the rest are covers with their title on them.
   const motion = motionOf(look)
@@ -201,6 +207,8 @@ function Colour({ look, set }: { look: Look; set: (change: Partial<Look>) => voi
 }
 
 function Studio() {
+  // The theme the page is in, for the pictures of a look that follows its reader.
+  const { dark } = useTheme()
   const [look, setLook] = useState<Look>(fromAddress)
   useEffect(() => history.replaceState(null, "", toAddress(look)), [look])
   // The next title to try, from the list, after the one shown.
@@ -217,12 +225,17 @@ function Studio() {
       <header className="flex items-center gap-[18px] border-b border-rule px-6 py-4 max-[640px]:px-4">
         <a href="/" className="font-bold">Surfaces</a>
         <span className="text-quiet">Studio</span>
-        <nav className="-my-2 ml-auto flex gap-2 text-sm text-body">
-          <a href={LINKS.github} className="px-1.5 py-2">GitHub</a>
+        <nav className="-my-2 ml-auto flex items-center gap-2 text-sm text-body">
+          <a href={LINKS.github} className="flex items-center gap-1.5 px-1.5 py-2">
+            <GitHubMark />
+            GitHub
+          </a>
+          <span aria-hidden className="h-5 w-px bg-rule" />
+          <ThemeSwitch />
         </nav>
       </header>
       <div className="grid grid-cols-[200px_minmax(0,1fr)_300px] items-start gap-8 p-6 max-[1100px]:grid-cols-1 max-[1100px]:gap-6 max-[1100px]:p-4">
-        <Styles look={look} pick={pick} />
+        <Styles look={{ name: look.name, color: look.color, style: look.style, theme: drawn(look.theme, dark) }} pick={pick} />
         <main className="grid gap-[18px]">
           {/* A choice that fails to draw says so where the picture was, and the
               rest of the desk stays; the next choice tries again. */}
@@ -249,7 +262,7 @@ function Studio() {
           )}
           <Choice<Mood> label="Mood" value={look.mood} options={[[null, "Either"], ["calm", "Calm"], ["bold", "Bold"]]} set={(mood) => set({ mood })} />
           <Choice<Grain> label="Grain" value={look.grain} options={[["smooth", "Smooth"], ["natural", "Natural"], ["heavy", "Heavy"]]} set={(grain) => grain && set({ grain })} />
-          <Choice<Theme> label="Theme" value={look.theme} options={[["light", "Light"], ["dark", "Dark"]]} set={(theme) => theme && set({ theme })} />
+          <Choice<Look["theme"]> label="Theme" value={look.theme} options={[["auto", "System"], ["light", "Light"], ["dark", "Dark"]]} set={(theme) => theme && set({ theme })} />
           <Choice<Use> label="Size" value={look.use} options={SIZES.map((size) => [size.use, size.name] as const)} set={(use) => use && set({ use, motion: null })} />
           {/* Motion, for a style that moves; a page's header loops by itself, the rest hold still. */}
           {about.moves ? (
