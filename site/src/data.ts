@@ -36,3 +36,10 @@ export const SIZES: readonly { use: Use; name: string; w: number; h: number; cal
 
 export const PROMPT = "Add @pogrobert/surfaces to this site: run npx @pogrobert/surfaces init, then follow its AGENTS.md."
 export const INIT = "npx @pogrobert/surfaces init"
+
+// Where the library itself is.
+export const LINKS = {
+  docs: "https://github.com/pogrobert/surfaces/blob/main/docs/api.md",
+  github: "https://github.com/pogrobert/surfaces",
+  npm: "https://www.npmjs.com/package/@pogrobert/surfaces",
+} as const

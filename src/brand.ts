@@ -269,9 +269,21 @@ const OG_LAYOUTS: readonly { title: Place; logo: Place }[] = [
   { title: "bottom-left", logo: "left" },
 ]
 const ogLayout = (name: string) => OG_LAYOUTS[hash(`${name}/og`) % OG_LAYOUTS.length]!
+// How far a title runs, in Latin letters. A Chinese, Japanese or Korean
+// character, a fullwidth one or a pictograph is about two letters wide; a mark
+// that joins the letter before it is none. Counted per character, with no
+// segmenter, so it is the same on every runtime and the same title always
+// gets the same picture.
+const WIDE = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Extended_Pictographic}\u3000-\u303f\uff00-\uff60\uffe0-\uffe6]/u
+const JOINS = /[\p{M}\u200d\ufe0e\ufe0f]/u
+export function titleWidth(title: string) {
+  let width = 0
+  for (const char of title.trim()) if (!JOINS.test(char)) width += WIDE.test(char) ? 2 : 1
+  return width
+}
 // A long title gets the large area, so it is set at a size a feed can read,
 // and the art gives up a little room; a short one keeps the art large.
-const ogSize = (title: string | undefined) => ((title?.trim().length ?? 0) > 45 ? "lg" : "md")
+const ogSize = (title: string | undefined) => (titleWidth(title ?? "") > 45 ? "lg" : "md")
 
 function logoFor(logo: Logo | undefined, use: Use, name: string, title?: string): SurfaceInput["logo"] {
   // A lockup's logo has no room over a long title's large area, so it goes
@@ -348,7 +360,9 @@ function build(name: string, look: Brand["look"], why: string[], logo?: Logo): B
     // Where the words go: as asked, or the use's own place when it carries
     // words over the art or has them drawn in.
     const at = content.text === "none" ? undefined : content.text ?? (drawn || TEXT_AT[use] ? titleAt(name, use) ?? "bottom-left" : undefined)
-    const size = use === "og" ? (drawn ? ogSize(content.title) : "md") : placing.areas[0]?.size ?? "md"
+    // A link preview's title gets the room its length needs, set by the page
+    // or drawn in alike: the page sets a long one as large as a drawn one.
+    const size = use === "og" ? ogSize(content.title) : placing.areas[0]?.size ?? "md"
     const areas = [...(at ? [{ place: at, size }] : []), ...(placing.keep ?? [])]
     return {
       style: look.style,

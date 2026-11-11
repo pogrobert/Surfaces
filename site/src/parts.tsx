@@ -1,21 +1,30 @@
-import { useEffect, useState } from "react"
+import { Component, useEffect, useState } from "react"
 import type { ComponentProps, ReactNode } from "react"
 import { generate, toSvg } from "@pogrobert/surfaces"
 import type { SurfaceInput } from "@pogrobert/surfaces"
 import { Button } from "@/components/ui/button"
 import { CodeBlock, CodeBlockActions, CodeBlockContent, CodeBlockCopyButton, CodeBlockLine } from "@/components/ui/code-block"
-import { highlightCode } from "@/lib/highlighter"
+import { copyText, SAID } from "@/lib/copy"
+import { loadHighlighter } from "@/lib/highlighter"
 
 // A small picture as an <img> of its SVG: one element, drawn once at its size
 // and kept, where the art inline would be hundreds of elements under filters,
 // laid out again with the page. For the many small pictures; the large one on
 // each page is the library's own <Surface> or <Cover>, as a site would use it.
 const made = new Map<string, string>()
+const MOST = 300
 const later: (() => void)[] = []
 let working = false
 function work() {
   const until = performance.now() + 8
-  while (later.length && performance.now() < until) later.shift()!()
+  while (later.length && performance.now() < until) {
+    // One picture that fails to draw is left blank; the rest still come.
+    try {
+      later.shift()!()
+    } catch (error) {
+      console.error(error)
+    }
+  }
   if (later.length) setTimeout(work, 4)
   else working = false
 }
@@ -27,10 +36,21 @@ function soon(job: () => void) {
 function source(input: SurfaceInput) {
   const key = JSON.stringify(input)
   let src = made.get(key)
-  if (!src) {
-    if (made.size > 300) made.clear()
-    src = URL.createObjectURL(new Blob([toSvg(generate(input))], { type: "image/svg+xml" }))
+  if (src) {
+    // The most recently asked for are kept longest.
+    made.delete(key)
     made.set(key, src)
+    return src
+  }
+  src = URL.createObjectURL(new Blob([toSvg(generate(input))], { type: "image/svg+xml" }))
+  made.set(key, src)
+  // The oldest are let go, their memory with them. An <img> already showing
+  // one keeps its picture; asked for again, it is drawn again.
+  if (made.size > MOST) {
+    for (const [old, url] of [...made].slice(0, made.size - MOST + 50)) {
+      made.delete(old)
+      URL.revokeObjectURL(url)
+    }
   }
   return src
 }
@@ -42,41 +62,78 @@ export function Picture({ input, className = "" }: { input: SurfaceInput; classN
     soon(() => !gone && setSrc(source(input)))
     return () => void (gone = true)
   }, [key])
-  return <span className={`relative block overflow-hidden tint ${className}`}>{src && <img alt="" decoding="async" src={src} className="absolute inset-0 size-full object-cover" />}</span>
+  return (
+    <span className={`relative block overflow-hidden tint ${className}`}>
+      {src && <img alt="" decoding="async" draggable={false} src={src} className="pointer-events-none absolute inset-0 size-full object-cover" />}
+    </span>
+  )
 }
 
-// A button that copies, and says so for a moment.
+
+// A button that copies, and says so for a moment. Both words stand in one
+// place, so the button keeps its width and nothing beside it moves.
 export function CopyButton({ text, children, ...props }: { text: string; children: ReactNode } & Omit<ComponentProps<typeof Button>, "onClick" | "children">) {
-  const [done, setDone] = useState(false)
+  const [said, setSaid] = useState<"" | "Copied" | "Couldn't copy">("")
   useEffect(() => {
-    if (!done) return
-    const timer = setTimeout(() => setDone(false), 1200)
+    if (!said) return
+    const timer = setTimeout(() => setSaid(""), SAID)
     return () => clearTimeout(timer)
-  }, [done])
+  }, [said])
+  const fade = "col-start-1 row-start-1 transition-opacity duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]"
   return (
-    <Button {...props} onClick={() => navigator.clipboard?.writeText(text).then(() => setDone(true), () => {})}>
-      <span aria-live="polite">{done ? "Copied" : children}</span>
+    <Button {...props} onClick={async () => setSaid((await copyText(text)) ? "Copied" : "Couldn't copy")}>
+      <span className="grid justify-items-center">
+        <span className={`${fade} ${said ? "opacity-0" : ""}`}>{children}</span>
+        <span aria-hidden className={`${fade} ${said ? "" : "opacity-0"}`}>{said || "Copied"}</span>
+      </span>
+      <span aria-live="polite" className="sr-only">{said}</span>
     </Button>
   )
 }
 
-// Code to copy, coloured once its highlighter has loaded; plain until then,
-// and plain for words that aren't code.
+// Something that failed to draw shows `fallback` in its place instead of
+// emptying the page, and tries again once `retry` changes.
+export class Mend extends Component<{ fallback: ReactNode; retry: unknown; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false }
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+  componentDidCatch(error: unknown) {
+    console.error(error)
+  }
+  componentDidUpdate(before: { retry: unknown }) {
+    if (this.state.failed && before.retry !== this.props.retry) this.setState({ failed: false })
+  }
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children
+  }
+}
+
+// Code to copy, coloured once its highlighter has loaded and plain until then.
+// Once loaded it colours each new snippet as it is drawn, so a change never
+// shows the code plain for a moment first.
+type Highlighter = NonNullable<Awaited<ReturnType<typeof loadHighlighter>>>
+const ready = new Map<string, Highlighter>()
 export function Code({ code, lang, className = "" }: { code: string; lang?: "typescript" | "bash"; className?: string }) {
-  const [lines, setLines] = useState<ReactNode[] | null>(null)
+  const [, setLoaded] = useState(0)
   useEffect(() => {
+    if (!lang || ready.has(lang)) return
     let gone = false
-    setLines(null)
-    if (lang) highlightCode(code, lang).then((result) => !gone && setLines(result), () => {})
+    loadHighlighter(lang).then((highlighter) => {
+      if (highlighter) ready.set(lang, highlighter)
+      if (!gone) setLoaded((n) => n + 1)
+    }, () => {})
     return () => void (gone = true)
-  }, [code, lang])
+  }, [lang])
+  const highlighter = lang ? ready.get(lang) : undefined
+  const lines: ReactNode[] = highlighter ? highlighter.highlight(code).lines : code.split("\n")
   return (
     <CodeBlock className={`border-0 bg-secondary ${className}`}>
       <CodeBlockActions className="opacity-100!">
         <CodeBlockCopyButton value={code} />
       </CodeBlockActions>
       <CodeBlockContent wrap className="pr-12 text-[13px] leading-[1.6]">
-        {(lines ?? code.split("\n")).map((line, index) => (
+        {lines.map((line, index) => (
           <CodeBlockLine key={index}>{line}</CodeBlockLine>
         ))}
       </CodeBlockContent>

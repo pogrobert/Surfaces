@@ -1,4 +1,4 @@
-import { StrictMode, useDeferredValue, useEffect, useMemo, useState } from "react"
+import { memo, StrictMode, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react"
 import { createRoot } from "react-dom/client"
 import type { Root } from "react-dom/client"
 import { createBrand } from "@pogrobert/surfaces"
@@ -9,8 +9,8 @@ import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { ABOUT, KINDS, NAME, SAMPLES, SIZES } from "./data.ts"
-import { Code, Picture } from "./parts.tsx"
+import { ABOUT, KINDS, LINKS, NAME, SAMPLES, SIZES } from "./data.ts"
+import { Code, Mend, Picture } from "./parts.tsx"
 import "./styles.css"
 
 // The studio: every choice the library has, seen and made. Laid out as a desk:
@@ -33,7 +33,8 @@ function snippet(look: Look) {
 }
 
 function useNarrow() {
-  const query = "(max-width: 1100px)"
+  // As the CSS has it: max-[1100px] is a width under 1100px.
+  const query = "(width < 1100px)"
   const [narrow, setNarrow] = useState(() => matchMedia(query).matches)
   useEffect(() => {
     const list = matchMedia(query)
@@ -54,7 +55,7 @@ function Choice<T extends string>({ label, value, options, set }: { label: strin
       <span className="text-[13px] text-quiet">{label}</span>
       <ToggleGroup type="single" aria-label={label} spacing={1} className="flex-wrap" value={value ?? ANY} onValueChange={(next) => next && set(next === ANY ? null : (next as T))}>
         {options.map(([option, text]) => (
-          <ToggleGroupItem key={option ?? ANY} value={option ?? ANY} size="sm" className={`bg-secondary ${on}`}>
+          <ToggleGroupItem key={option ?? ANY} value={option ?? ANY} size="sm" className={`bg-secondary pointer-coarse:h-10 ${on}`}>
             {text}
           </ToggleGroupItem>
         ))}
@@ -63,10 +64,11 @@ function Choice<T extends string>({ label, value, options, set }: { label: strin
   )
 }
 
-function Styles({ look, pick }: { look: Look; pick: (style: StyleName) => void }) {
+// Redrawn only when what it shows changes, not on every letter of a title.
+const Styles = memo(function Styles({ look, pick }: { look: Pick<Look, "name" | "color" | "theme" | "style">; pick: (style: StyleName) => void }) {
   const narrow = useNarrow()
   return (
-    <ScrollArea className="sticky top-4 h-[calc(100svh-32px)] max-[1100px]:static max-[1100px]:-mx-4 max-[1100px]:h-auto">
+    <ScrollArea className="sticky top-4 h-[calc(100svh-32px)] [&>[data-slot=scroll-area-viewport]]:overscroll-x-contain max-[1100px]:static max-[1100px]:-mx-4 max-[1100px]:h-auto">
       <ToggleGroup
         type="single"
         aria-label="Styles"
@@ -96,7 +98,8 @@ function Styles({ look, pick }: { look: Look; pick: (style: StyleName) => void }
       </ToggleGroup>
     </ScrollArea>
   )
-}
+},
+(was, now) => was.pick === now.pick && was.look.name === now.look.name && was.look.color === now.look.color && was.look.theme === now.look.theme && was.look.style === now.look.style)
 
 function Shown({ look }: { look: Look }) {
   const brand = useMemo(() => brandOf(look), [look.name, look.color, look.style, look.theme, look.grain, look.shape, look.mood])
@@ -131,7 +134,7 @@ function Colour({ look, set }: { look: Look; set: (change: Partial<Look>) => voi
                   style={{ background: entry.color }}
                   // The tooltip sets its own data-state on the swatch, so its ring
                   // follows aria-checked instead.
-                  className="size-[26px] min-w-0 rounded-full! p-0 shadow-[inset_0_0_0_1px_rgb(0_0_0/0.12)] hover:opacity-90 aria-checked:outline-2 aria-checked:outline-solid aria-checked:outline-offset-2 aria-checked:outline-ink"
+                  className="size-[26px] min-w-0 rounded-full! p-0 pointer-coarse:size-10 shadow-[inset_0_0_0_1px_rgb(0_0_0/0.12)] hover:opacity-90 aria-checked:outline-2 aria-checked:outline-solid aria-checked:outline-offset-2 aria-checked:outline-ink"
                 />
               </TooltipTrigger>
               <TooltipContent>{entry.color}</TooltipContent>
@@ -140,7 +143,7 @@ function Colour({ look, set }: { look: Look; set: (change: Partial<Look>) => voi
         </ToggleGroup>
         <Tooltip>
           <TooltipTrigger asChild>
-            <input type="color" aria-label="Any colour" value={look.color} onChange={(event) => set({ color: event.target.value })} className="size-[30px] border-0 bg-transparent p-0" />
+            <input type="color" aria-label="Any colour" value={look.color} onChange={(event) => set({ color: event.target.value })} className="size-[30px] border-0 bg-transparent p-0 pointer-coarse:size-11" />
           </TooltipTrigger>
           <TooltipContent>Any colour{known ? "" : `: ${look.color}`}</TooltipContent>
         </Tooltip>
@@ -151,7 +154,9 @@ function Colour({ look, set }: { look: Look; set: (change: Partial<Look>) => voi
 
 function Studio() {
   const [look, setLook] = useState<Look>({ name: SAMPLES[0].name, color: SAMPLES[0].color, style: "riso", shape: null, mood: null, grain: "natural", theme: "light", use: "post", title: "What we shipped in March" })
-  const set = (change: Partial<Look>) => setLook((was) => ({ ...was, ...change }))
+  const set = useCallback((change: Partial<Look>) => setLook((was) => ({ ...was, ...change })), [])
+  const pick = useCallback((style: StyleName) => set({ style, shape: null }), [set])
+  const banner = SIZES.find((size) => size.use === look.use)!.banner
   const about = ABOUT[look.style]
   // The large picture follows a little behind typing and dragging.
   const shown = useDeferredValue(look)
@@ -161,15 +166,22 @@ function Studio() {
       <header className="flex items-center gap-[18px] border-b border-rule px-6 py-4 max-[640px]:px-4">
         <a href="/" className="font-bold">Surfaces</a>
         <span className="text-quiet">Studio</span>
-        <nav className="ml-auto flex gap-[18px] text-sm text-body">
-          <a href="#">Docs</a>
-          <a href="#">GitHub</a>
+        <nav className="-my-2 ml-auto flex gap-2 text-sm text-body">
+          <a href={LINKS.docs} className="px-1.5 py-2">Docs</a>
+          <a href={LINKS.github} className="px-1.5 py-2">GitHub</a>
         </nav>
       </header>
       <div className="grid grid-cols-[200px_minmax(0,1fr)_300px] items-start gap-8 p-6 max-[1100px]:grid-cols-1 max-[1100px]:gap-6 max-[1100px]:p-4">
-        <Styles look={look} pick={(style) => set({ style, shape: null })} />
+        <Styles look={look} pick={pick} />
         <main className="grid gap-[18px]">
-          <Shown look={shown} />
+          {/* A choice that fails to draw says so where the picture was, and the
+              rest of the desk stays; the next choice tries again. */}
+          <Mend
+            retry={JSON.stringify(shown)}
+            fallback={<p className="grid aspect-[16/9] place-items-center rounded-[3px] p-6 text-center text-body tint">This one didn't draw. Try another choice.</p>}
+          >
+            <Shown look={shown} />
+          </Mend>
           <p className="max-w-[62ch] text-pretty text-body">
             <b className="font-semibold text-ink">{NAME(look.style)}.</b> {about.looks} Suits {about.suits[0]!.toLowerCase()}{about.suits.slice(1)}
           </p>
@@ -189,9 +201,21 @@ function Studio() {
           <Choice<Grain> label="Grain" value={look.grain} options={[["smooth", "Smooth"], ["natural", "Natural"], ["heavy", "Heavy"]]} set={(grain) => grain && set({ grain })} />
           <Choice<Theme> label="Theme" value={look.theme} options={[["light", "Light"], ["dark", "Dark"]]} set={(theme) => theme && set({ theme })} />
           <Choice<Use> label="Size" value={look.use} options={SIZES.map((size) => [size.use, size.name] as const)} set={(use) => use && set({ use })} />
-          <div className="grid gap-[7px]">
+          {/* A banner is art alone, so it has no title to type. */}
+          <div className="grid gap-[7px]" hidden={banner}>
             <Label htmlFor="title" className="text-[13px] font-normal text-quiet">Title</Label>
-            <Input id="title" value={look.title} maxLength={90} onChange={(event) => set({ title: event.target.value })} className="bg-sheet" />
+            <Input
+              id="title"
+              dir="auto"
+              value={look.title}
+              maxLength={90}
+              autoComplete="off"
+              spellCheck={false}
+              enterKeyHint="done"
+              onChange={(event) => set({ title: event.target.value })}
+              // 16px under a finger, so a phone or a tablet never zooms in to it.
+              className="bg-sheet pointer-coarse:text-base"
+            />
           </div>
         </aside>
       </div>

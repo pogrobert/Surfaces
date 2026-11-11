@@ -1,6 +1,6 @@
 import { createElement, useEffect, useMemo, useRef } from "react"
 import type { CSSProperties, ReactElement, ReactNode } from "react"
-import { titleAt } from "./brand.ts"
+import { titleAt, titleWidth } from "./brand.ts"
 import type { Brand, Content } from "./brand.ts"
 import { describe } from "./core/describe.ts"
 import { watch } from "./dom.ts"
@@ -155,8 +155,10 @@ export type CoverProps = Omit<Content, "drawTitle"> & {
 // A title's size on a cover, as a share of the cover's short side, set as a
 // designer sets one: large when short, smaller as it runs on (see setTitle,
 // which draws the same title into an image by the same rule).
+// The length is how far it runs, so a title in Chinese, Japanese or Korean
+// is set as a Latin one twice its count would be.
 function titleSize(title: string) {
-  const length = title.trim().length
+  const length = titleWidth(title)
   return length <= 18 ? 1 / 8 : length <= 36 ? 1 / 10 : length <= 60 ? 1 / 12.5 : length <= 90 ? 1 / 15 : 1 / 18
 }
 
@@ -175,6 +177,9 @@ export function Cover({ brand, use = "post", title, id, tag, text, children, ...
       ? createElement(
           "div",
           {
+            // Right to left where the title is, so Arabic or Hebrew reads and
+            // is punctuated as it should be.
+            dir: "auto",
             style: {
               fontSize: `${(titleSize(title) * short * 100).toFixed(2)}cqw`,
               fontWeight: 700,

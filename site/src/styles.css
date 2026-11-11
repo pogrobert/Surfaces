@@ -81,7 +81,8 @@
 
 @layer base {
   * { @apply border-border outline-ring/50; }
-  html { -webkit-text-size-adjust: 100%; }
+  /* No grey flash on a tap: every control shows its own press. */
+  html { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
   body { @apply bg-background font-sans text-foreground antialiased; font-size: 15px; line-height: 1.5; }
   button { cursor: default; }
   /* shadcn's components ring themselves; everything else gets an outline. */
@@ -90,4 +91,16 @@
 
 @utility tint {
   background: color-mix(in srgb, var(--ink) 5%, transparent);
+}
+
+/* Asked for less motion, the controls still fade but no longer slide, grow
+   or sink: gentler, not gone. The art keeps to the same rule by itself. */
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="tooltip-content"] {
+    --tw-enter-scale: 1;
+    --tw-exit-scale: 1;
+    --tw-enter-translate-x: 0;
+    --tw-enter-translate-y: 0;
+  }
+  [data-slot="button"]:active { translate: none; }
 }
