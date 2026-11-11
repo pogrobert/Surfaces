@@ -1,6 +1,6 @@
 # @pogrobert/surfaces
 
-> Generative art for every picture a site repeats: post covers, link previews, docs and changelog headers, empty states, episode art, slides and profile headers. Make a brand once, from a colour or from the site's own HTML and CSS; every cover then follows from its title, the same bytes forever. It is for pictures a site repeats; a picture of one particular thing is a photo's job. A wrong input throws an error that names the fix.
+> Art drawn by code, not by an image model, for every picture a site repeats: post covers, link previews, docs and changelog headers, empty states, episode art, slides and profile headers. Make a brand once, from a colour or from the site's own HTML and CSS; every cover then follows from its title, the same bytes forever. It is for pictures a site repeats; a picture of one particular thing is a photo's job. A wrong input throws an error that names the fix.
 
 Rules for writing code with it are in AGENTS.md. In short: `const brand = createBrand({ name: "acme.dev", ...readPage(html, css) })`, then `brand.cover({ title })`, `brand.og({ title })`, `brand.hero`, `brand.card`, `brand.banner({ for: "x" })`, drawn by `toHtml`, `toSvg`, or `toJpeg`/`toPng` (from `/png`). The images are art and carry no words: the site sets its titles in its own font over `scene.areas[0]`, as `<Cover brand={brand} title={title} />` (from `/react`) does by itself, and `drawTitle: true` draws one into an image file that has to carry it. `generate(input)` is the lower level, for one exact cover.
 

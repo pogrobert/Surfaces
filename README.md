@@ -1,7 +1,7 @@
 # Surfaces
 
-Generative art for every picture a site repeats: post covers and link
-previews, docs, changelog and email headers, empty states, episode art,
+Art drawn by code, not by an image model, for every picture a site
+repeats: post covers and link previews, docs, changelog and email headers, empty states, episode art,
 slides, tickets, wallpapers, and the headers of its X and LinkedIn profiles.
 Make a brand once, from a colour or from the site's own pages, and every
 picture after it follows from what it is about. The same title always draws
