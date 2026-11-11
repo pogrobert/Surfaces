@@ -310,7 +310,10 @@ function Plate() {
           page's ground that the art runs into at the top. */}
       <header
         className={`pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3.5 ${narrow ? "items-center bg-linear-to-b from-background/90 via-background/55 to-transparent px-2.5 pt-2.5 pb-8 text-ink" : ""}`}
-        style={narrow ? undefined : ({ "--on": ink.on, "--off": ink.off } as CSSProperties)}
+        // On a wide window the name's mark stands on the words' left edge, a
+        // share of the plate's width, its chip reaching out past it as far as
+        // the chip's padding; the links keep the same distance on the right.
+        style={narrow ? undefined : ({ "--on": ink.on, "--off": ink.off, paddingInline: Math.max(14, Math.round(wordsBox.x * w) - 12) } as CSSProperties)}
       >
         <a href="/" className={`pointer-events-auto flex items-center gap-2 rounded-[10px] px-3 py-1.5 text-[15px] font-bold tracking-[-0.01em] ${narrow ? "px-1.5" : chip}`}><SurfacesMark />Surfaces</a>
         <nav className={`pointer-events-auto flex items-center gap-0.5 rounded-[10px] p-0.5 ${narrow ? "[--on:var(--ink)]" : chip}`}>

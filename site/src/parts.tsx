@@ -167,7 +167,7 @@ export function ThemeSwitch({ className = "" }: { className?: string }) {
     <>
       <ToggleGroup type="single" aria-label="Theme" spacing={0} value={choice} onValueChange={(picked) => picked && setTheme(picked as ThemeChoice)} className={`max-[640px]:hidden ${className}`}>
         {THEMES.map(([value, name, Each]) => (
-          <ToggleGroupItem key={value} value={value} aria-label={name} title={name} size="sm" className="text-current opacity-70 hover:bg-current/10 hover:text-current data-[state=on]:bg-current/12 data-[state=on]:opacity-100 pointer-coarse:size-10">
+          <ToggleGroupItem key={value} value={value} aria-label={name} title={name} size="sm" className="rounded-[min(var(--radius-md),12px)]! text-current opacity-70 hover:bg-current/10 hover:text-current data-[state=on]:bg-current/12 data-[state=on]:opacity-100 pointer-coarse:size-10">
             <Each />
           </ToggleGroupItem>
         ))}
