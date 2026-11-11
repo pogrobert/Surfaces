@@ -291,8 +291,12 @@ function Studio() {
       {/* On a phone the mark alone stands for GitHub and the gaps close up,
           so the header fits a 320px screen with room to spare. */}
       <header className="sticky top-0 z-20 flex h-16 items-center gap-[18px] border-b border-rule bg-background px-6 max-[640px]:px-4 max-[480px]:gap-3">
-        <a href="/" className="font-bold">Surfaces</a>
-        <span className="text-quiet">Studio</span>
+        {/* Where the page sits, as a path: the site, then this page in the same type. */}
+        <div className="flex items-center gap-2">
+          <a href="/" className="font-bold">Surfaces</a>
+          <span aria-hidden className="text-quiet">/</span>
+          <span className="font-medium text-body">Studio</span>
+        </div>
         <nav className="-my-2 ml-auto flex items-center gap-2 text-sm text-body">
           <a href={LINKS.github} aria-label="GitHub" className="flex items-center gap-1.5 px-1.5 py-2 max-[480px]:px-2">
             <GitHubMark />

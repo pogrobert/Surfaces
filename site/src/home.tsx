@@ -315,8 +315,9 @@ function Plate() {
         <a href="/" className={`pointer-events-auto rounded-[10px] px-3 py-1.5 text-[15px] font-bold tracking-[-0.01em] ${narrow ? "px-1.5" : chip}`}>Surfaces</a>
         <nav className={`pointer-events-auto flex items-center gap-0.5 rounded-[10px] p-0.5 ${narrow ? "[--on:var(--ink)]" : chip}`}>
           {links.map(([name, href]) => (
-            // npm is in the footer too, so on the narrowest phones the header leaves it there.
-            <Button key={name} variant="ghost" size="sm" asChild className={`cursor-pointer text-current transition-[scale] hover:bg-(--on)/10 hover:text-current pointer-coarse:h-auto max-[360px]:px-2 ${name === "npm" ? "max-[359px]:hidden" : ""}`}>
+            // On a phone the studio is a button under the words, so the header
+            // keeps only the marks and the theme beside the name.
+            <Button key={name} variant="ghost" size="sm" asChild className={`cursor-pointer text-current transition-[scale] hover:bg-(--on)/10 hover:text-current pointer-coarse:h-auto max-[360px]:px-2 ${name === "Studio" ? "max-[860px]:hidden" : ""}`}>
               <a href={href} aria-label={name}>
                 {name === "GitHub" && <GitHubMark />}
                 {name === "npm" && <NpmMark className="size-3.5" />}
@@ -324,7 +325,7 @@ function Plate() {
               </a>
             </Button>
           ))}
-          <span aria-hidden className="mx-0.5 my-1.5 w-px bg-(--on)/15 max-[400px]:hidden" />
+          <span aria-hidden className="mx-0.5 my-1.5 w-px bg-(--on)/15 max-[860px]:hidden" />
           <ThemeSwitch />
         </nav>
       </header>
@@ -353,7 +354,9 @@ function Plate() {
       </div>
     </section>
     {narrow && (
-      <div className="px-4 pt-6 [container-type:inline-size]">
+      // A rule under the words ends the hero, so what the page says next starts
+      // on its own.
+      <div className="mx-4 border-b border-rule pt-6 pb-12 [container-type:inline-size]">
         <Words ink={{ on: "var(--ink)", off: "var(--paper)" }} studio={studio} refer={setWords} />
       </div>
     )}
@@ -365,7 +368,7 @@ function Home() {
   return (
     <TooltipProvider delayDuration={300}>
       <Plate />
-      <div className="mx-auto max-w-[1240px] px-6 pt-24 pb-[72px] max-[860px]:pt-16 max-[640px]:px-4">
+      <div className="mx-auto max-w-[1240px] px-6 pt-24 pb-[72px] max-[860px]:pt-12 max-[640px]:px-4">
         <p className="max-w-[54ch] text-[21px] leading-[1.42] tracking-[-0.008em] text-pretty text-body">
           <b className="font-semibold text-ink">Surfaces draws the pictures a site repeats</b>: the cover of each post, the preview of each link, the header of each profile. One colour in, one look out, and the same title always gets the same picture. The words stay yours, in your own type. No image model, no API key, nothing to pay.
         </p>

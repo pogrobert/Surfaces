@@ -158,14 +158,32 @@ const THEMES = [
 ] as const
 export function ThemeSwitch({ className = "" }: { className?: string }) {
   const { choice } = useTheme()
+  // On a phone one button stands for all three, showing the one in use and
+  // moving to the next on each press, so the header has room to breathe.
+  const at = THEMES.findIndex(([value]) => value === choice)
+  const [, label, Icon] = THEMES[at]!
+  const [next, nextLabel] = THEMES[(at + 1) % THEMES.length]!
   return (
-    <ToggleGroup type="single" aria-label="Theme" spacing={0} value={choice} onValueChange={(next) => next && setTheme(next as ThemeChoice)} className={className}>
-      {THEMES.map(([value, label, Icon]) => (
-        <ToggleGroupItem key={value} value={value} aria-label={label} title={label} size="sm" className="text-current opacity-70 hover:bg-current/10 hover:text-current data-[state=on]:bg-current/12 data-[state=on]:opacity-100 min-[400px]:pointer-coarse:size-10 max-[400px]:pointer-coarse:size-8">
-          <Icon />
-        </ToggleGroupItem>
-      ))}
-    </ToggleGroup>
+    <>
+      <ToggleGroup type="single" aria-label="Theme" spacing={0} value={choice} onValueChange={(picked) => picked && setTheme(picked as ThemeChoice)} className={`max-[640px]:hidden ${className}`}>
+        {THEMES.map(([value, name, Each]) => (
+          <ToggleGroupItem key={value} value={value} aria-label={name} title={name} size="sm" className="text-current opacity-70 hover:bg-current/10 hover:text-current data-[state=on]:bg-current/12 data-[state=on]:opacity-100 pointer-coarse:size-10">
+            <Each />
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        aria-label={`Theme: ${label}. Switch to ${nextLabel.toLowerCase()}`}
+        title={`Theme: ${label}`}
+        onClick={() => setTheme(next)}
+        className={`text-current hover:bg-current/10 hover:text-current min-[641px]:hidden pointer-coarse:size-10 ${className}`}
+      >
+        <Icon />
+      </Button>
+    </>
   )
 }
 
