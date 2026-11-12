@@ -10,10 +10,11 @@ import { Button } from "@/components/ui/button"
 import { Kbd } from "@/components/ui/kbd"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { LINKS, NAME, ORDER, PROMPT, RUNNERS, sample } from "./data.ts"
+import { LINKS, NAME, ORDER, prompt, RUNNERS, sample } from "./data.ts"
 import type { Runner } from "./data.ts"
-import { Code, CopyButton, GitHubMark, NpmMark, Mend, SurfacesMark, ThemeSwitch } from "./parts.tsx"
+import { BunMark, Code, CopyButton, GitHubMark, NpmMark, Mend, PnpmMark, SurfacesMark, ThemeSwitch, YarnMark } from "./parts.tsx"
 import { useTheme } from "@/lib/theme"
+import { setRunner, useRunner } from "@/lib/runner"
 import { behind, DARK_INK, halo, LIGHT_INK } from "@/lib/behind"
 import type { Behind } from "@/lib/behind"
 import "./styles.css"
@@ -86,6 +87,7 @@ function Step({ by, label, keyName, children }: { by: number; label: string; key
 }
 
 function Words({ ink, studio, refer, color, shadow, shadowSmall }: { ink: { on: string; off: string }; studio: string; refer?: (element: HTMLDivElement | null) => void; color?: string; shadow?: string; shadowSmall?: string }) {
+  const { command } = useRunner()
   return (
     <div ref={refer} className="grid justify-items-start" style={{ "--on": ink.on, "--off": ink.off, color, textShadow: shadow } as CSSProperties}>
       <h1 className="text-[clamp(34px,5cqw,84px)] leading-[0.98] font-[680] tracking-[-0.035em] text-balance">{SAY}</h1>
@@ -93,7 +95,7 @@ function Words({ ink, studio, refer, color, shadow, shadowSmall }: { ink: { on: 
       {/* What to do next, with the words that say why, as a hero has it. They
           change colour with the art, at once, never after it. */}
       <div className="mt-6 flex flex-wrap gap-2.5 [text-shadow:none]">
-        <CopyButton text={PROMPT} size="lg" className="bg-(--on) px-4 text-(--off) transition-[scale] hover:bg-(--on)/85">Copy prompt</CopyButton>
+        <CopyButton text={prompt(command)} size="lg" className="bg-(--on) px-4 text-(--off) transition-[scale] hover:bg-(--on)/85">Copy prompt</CopyButton>
         <Button variant="outline" size="lg" asChild className="border-(--on)/20 bg-(--off)/90 px-4 text-(--on) transition-[scale] hover:bg-(--off) hover:text-(--on) dark:border-(--on)/20 dark:bg-(--off)/90 dark:hover:bg-(--off)">
           <a href={studio}>See all thirty in the studio</a>
         </Button>
@@ -375,43 +377,34 @@ function Plate() {
 }
 
 // The command to run, in the package manager the reader uses: a row to choose
-// from, as every choice on the site is, and the choice kept in this browser.
-const RUNNER = "surfaces-runner"
+// from, as every choice on the site is, each with its maker's mark. The choice
+// is kept in this browser, and the prompt for a coding agent follows it too.
+const MARKS: Record<Runner, typeof NpmMark> = { npm: NpmMark, pnpm: PnpmMark, yarn: YarnMark, bun: BunMark }
 function Run() {
-  const [runner, setRunner] = useState<Runner>(() => {
-    try {
-      const kept = localStorage.getItem(RUNNER)
-      return RUNNERS.find(([name]) => name === kept)?.[0] ?? "npm"
-    } catch {
-      return "npm"
-    }
-  })
-  const choose = (next: Runner) => {
-    setRunner(next)
-    try {
-      localStorage.setItem(RUNNER, next)
-    } catch {
-      // A browser that keeps nothing still switches for this visit.
-    }
-  }
+  const { runner, command } = useRunner()
   return (
     <div>
       <div className="mb-2 flex min-h-7 flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
         <p className="text-body">Or run it yourself.</p>
-        <ToggleGroup type="single" aria-label="Package manager" spacing={1} value={runner} onValueChange={(next) => next && choose(next as Runner)}>
-          {RUNNERS.map(([name]) => (
-            <ToggleGroupItem key={name} value={name} size="sm" className="bg-secondary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground pointer-coarse:h-10">
-              {name}
-            </ToggleGroupItem>
-          ))}
+        <ToggleGroup type="single" aria-label="Package manager" spacing={1} value={runner} onValueChange={(next) => next && setRunner(next as Runner)}>
+          {RUNNERS.map(([name]) => {
+            const Mark = MARKS[name]
+            return (
+              <ToggleGroupItem key={name} value={name} size="sm" className="gap-1.5 bg-secondary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground pointer-coarse:h-10">
+                <Mark className="size-3.5" />
+                {name}
+              </ToggleGroupItem>
+            )
+          })}
         </ToggleGroup>
       </div>
-      <Code code={RUNNERS.find(([name]) => name === runner)![1]} lang="bash" />
+      <Code code={command} lang="bash" />
     </div>
   )
 }
 
 function Home() {
+  const { command } = useRunner()
   return (
     <TooltipProvider delayDuration={300}>
       <Plate />
@@ -422,7 +415,7 @@ function Home() {
         <div className="mt-11 grid grid-cols-2 gap-x-10 gap-y-3.5 max-[860px]:grid-cols-1">
           <div>
             <p className="mb-2 flex min-h-7 items-center text-body">Ask your coding agent.</p>
-            <Code code={PROMPT} />
+            <Code code={prompt(command)} />
           </div>
           <Run />
         </div>

@@ -50,7 +50,6 @@ export const TITLES = [
   "Notes from our team offsite",
 ]
 
-export const PROMPT = "Add @pogrobert/surfaces to this site: run npx @pogrobert/surfaces init, then follow its AGENTS.md."
 // The one command, as each package manager runs a package it has not installed.
 export const RUNNERS = [
   ["npm", "npx @pogrobert/surfaces init"],
@@ -59,6 +58,8 @@ export const RUNNERS = [
   ["bun", "bunx @pogrobert/surfaces init"],
 ] as const
 export type Runner = (typeof RUNNERS)[number][0]
+// What to ask a coding agent, naming the command as the reader's package manager runs it.
+export const prompt = (command: string) => `Add @pogrobert/surfaces to this site: run ${command}, then follow its AGENTS.md.`
 
 // Where the library itself is.
 export const LINKS = {
