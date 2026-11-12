@@ -2,7 +2,6 @@ import { clamp } from "../core/math.ts"
 import type { Art, Frame } from "../core/recipe.ts"
 import type { Box, Layer, Motion, Pool, Shape, Tone } from "../core/scene.ts"
 import { seat } from "../shapes/subjects.ts"
-import { inflate } from "./geometry.ts"
 import { pools } from "./pools.ts"
 import type { PoolParams, PoolPlan } from "./pools.ts"
 import { clearing } from "./stage.ts"
@@ -46,16 +45,25 @@ export function fluted(
     box = { x: x - width / 2, y: y - tall / 2, w: width, h: tall }
     outline = { type: "rect", ...box, radii: [width / 2, width / 2, 0, 0] }
   } else if (pane === "panel") {
-    box = inflate(area, -margin * 1.4)
+    // A window lying on its side, framed with small corners and set in the
+    // clear side, so it never reads as the arch standing or the band running
+    // off the edges.
+    const width = Math.min(area.w * 0.86, area.h * 1.5) * p.size
+    const tall = Math.min(area.h * 0.7, width * 0.62)
+    const { x, y } = seat({ area, safe: keep, w, h, away }, Math.max(width, tall) / 2)
+    box = { x: x - width / 2, y: y - tall / 2, w: width, h: tall }
     const corner = unit * 0.035
     outline = { type: "rect", ...box, radii: [corner, corner, corner, corner] }
   } else {
-    // The whole clear side, edge to edge, kept a margin off the title.
+    // A strip across the clear side, edge to edge where the cover is clear
+    // and kept a margin off the title, a third of its height: a band.
     const x = area.x > 0 ? area.x + margin : 0
-    const y = area.y > 0 ? area.y + margin : 0
     const right = area.x + area.w < w ? area.x + area.w - margin : w
+    const top = area.y > 0 ? area.y + margin : 0
     const bottom = area.y + area.h < h ? area.y + area.h - margin : h
-    box = { x, y, w: right - x, h: bottom - y }
+    const tall = Math.max(unit * 0.22, (bottom - top) * 0.34)
+    const middle = top + (bottom - top) * 0.45
+    box = { x, y: Math.max(top, middle - tall / 2), w: right - x, h: tall }
     outline = { type: "rect", ...box, radii: [0, 0, 0, 0] }
   }
 

@@ -52,6 +52,12 @@ function linearOf(color: string): Rgb {
   return [toLinear(r), toLinear(g), toLinear(b)]
 }
 
+/** A colour in linear light, 0 to 1 a channel, for mixing as light and ink mix. */
+export const linearRgb = (color: string): Rgb => linearOf(color)
+
+/** A colour from linear light back to hex. */
+export const fromLinear = ([r, g, b]: readonly number[]) => `#${toByte(toGamma(r!))}${toByte(toGamma(g!))}${toByte(toGamma(b!))}`
+
 export function toOklch(color: string): Oklch {
   const [r, g, b] = linearOf(color)
   const l = cubeRoot(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)

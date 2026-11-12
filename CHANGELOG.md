@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- **Second colours chosen from what is known about colour pairs**
+  (docs/colour.md). A calm brand takes a neighbouring hue and a bold one a
+  contrast, warm against cool, never the opposite hue; Riso and Screenprint
+  take a real riso ink whose overlap with the brand's colour stays a colour,
+  not mud; red is never paired with green. `partners(color, { style, mood })`
+  lists them.
+- **A partner the brand gives keeps its own lightness**, as near as the style
+  allows and clear of the ground, so a deep second colour stays deep; on a
+  dark ground it is drawn a little lighter and softer.
+- **A warm brand's dark ground keeps most of its tint**, so on a site's own
+  near-black page a cover still has an edge.
+- **Fluted's shapes are three silhouettes**: the arch standing, the panel a
+  window on its side, the band a strip across. Two tags can still land on
+  one shape; give a section its own `shape` for marks that must differ.
 - **`partners(color)`** lists the second colours that sit well beside a
   brand colour, as hex, best first: the ones a brand picks its partner
   from, to offer as choices.

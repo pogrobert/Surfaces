@@ -71,7 +71,8 @@
     "README.md",
     "CHANGELOG.md",
     "llms.txt",
-    "docs/api.md"
+    "docs/api.md",
+    "docs/colour.md"
   ],
   "publishConfig": {
     "access": "public"

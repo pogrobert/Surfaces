@@ -228,7 +228,10 @@ pictures, with only that style's code.
 A cover is drawn from the brand's colour: its ground and its shades are
 chosen from it, and so is the second colour beside it, unless the brand
 has its own: `createBrand({ name, color, partner: "#3730a3" })`, or one of the
-second colours that sit well beside its own, from `partners(color)`. Its hue and
+second colours that sit well beside its own, from `partners(color, { style, mood })`:
+a calm brand gets a neighbouring hue, a bold one a contrast, and Riso and
+Screenprint a real riso ink that overprints cleanly (docs/colour.md says
+why). Its hue and
 strength are used and each style keeps its own lightness, so it can't make
 a cover unreadable. Only the styles with `partner: true` in `catalog` set a
 second hue; the rest are one hue and ignore it. `readPage` takes the site's
