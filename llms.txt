@@ -9,7 +9,7 @@ Rules for writing code with it are in AGENTS.md. In short: `const brand = create
 - `@pogrobert/surfaces`: `createBrand`, `readPage`, `directions`, `generate`, `validate`, `catalog`, `describe`, `toSvg`, `toHtml`, `loadFont`, `formats`, `inputSchema`
 - `@pogrobert/surfaces/png`: `toJpeg`, `toPng` (install `@resvg/resvg-js`, or `@resvg/resvg-wasm` on an edge runtime), `toPngInBrowser`. Their bytes go straight into `new Response(bytes)`
 - `@pogrobert/surfaces/react`: `<Cover>`, `<Surface>`
-- `@pogrobert/surfaces/<style>` and `@pogrobert/surfaces/<style>/react`: the same, drawing one style alone, for a page that draws in the browser and wants only that style's code (a `<Cover>` adds about 46 KB gzipped, not 120)
+- `@pogrobert/surfaces/<style>` and `@pogrobert/surfaces/<style>/react`: the same, drawing one style alone, for a page that draws in the browser and wants only that style's code (a `<Cover>` adds about 45–55 KB gzipped, depending on the style, not about 120); a still cover drawn on the server or at build time adds none
 - `@pogrobert/surfaces/dom`: `mount`, `watch`
 - `@pogrobert/surfaces/http`: `createHandler`, `signUrl`
 

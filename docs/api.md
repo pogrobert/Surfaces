@@ -397,6 +397,37 @@ In React the label names the picture alone, never the element round it, so
 a heading, a link or a card standing in an area stays what it is to a screen
 reader.
 
+## No drawing code on the page
+
+A still cover needs no code in the browser: draw it where the page is
+built and send the drawing, as markup or a file. The page then ships none
+of Surfaces, where a `<Cover>` drawn in the browser adds about 45–55 KB
+gzipped, depending on the style.
+
+- **A server component** (Next.js App Router): `<Cover>` draws there, and a
+  still cover sends only its markup.
+- **A prerendered route** (React Router with `prerender`, or any loader run
+  at build time): draw in the loader and render the string. Import
+  Surfaces only in the loader, which never reaches the browser:
+
+  ```tsx
+  export async function loader({ params }) {
+    const { brand } = await import("~/surfaces")   // the module init writes
+    const { toHtml } = await import("@pogrobert/surfaces")
+    const scene = brand.cover({ title: post.title, id: params.slug, text: "bottom-left" })
+    return { art: toHtml(scene), area: scene.areas[0] }
+  }
+  export default function Post({ loaderData: { art, area } }) {
+    return <div className="cover" dangerouslySetInnerHTML={{ __html: art }} />   // set the title over area
+  }
+  ```
+
+- **A static site or a build script** (Vite, Astro, Eleventy): write each
+  cover as a file with `toSvg` and show it with `<img loading="lazy" alt="">`.
+
+Draw in the browser only what has to be drawn there, as a cover whose
+title is typed in.
+
 ## React
 
 A brand's cover with its title on: `<Cover brand={brand} title={post.title} />`.
@@ -428,6 +459,11 @@ them. The rest of this section is the lower level, one exact cover:
   areas={[{ place: "center", size: "md", art: "behind", content: <CodeCard /> }]} />
 ```
 
+`fill` makes it fill the box it is put in, a card's or a header's, instead of
+keeping its own shape: placed over the whole of its nearest positioned
+parent and cropped to fit, as a cover image is. Draw it at about the box's
+shape and little is cropped.
+
 `children` and `areas` together is an error: use one or the other. Content is
 aligned to the side of its area it hangs from (a `top-left` area's content
 sits top left) and, in an `around` area, coloured with the area's `ink`.
@@ -438,8 +474,8 @@ Each style has an import of its own, `@pogrobert/surfaces/<style>`, with the
 same functions as the package's (all but `directions`) drawing only that
 style, and `@pogrobert/surfaces/<style>/react` for `<Cover>` and
 `<Surface>`. A page that draws in the browser with one style carries that
-style alone: a `<Cover>` adds about 46 KB gzipped instead of 120, and
-`generate` about 32 KB instead of 105.
+style alone: a `<Cover>` adds about 45–55 KB gzipped, depending on the style,
+instead of about 120, and `generate` about 30–50 KB instead of 105.
 
 ```tsx
 import { createBrand } from "@pogrobert/surfaces/underpaint"
@@ -454,7 +490,7 @@ these throw and say which import has it. The saving needs the brand to come
 from the same import: a brand made with the root `createBrand` draws with
 every style, and so does `mount` from `/dom` (draw with `toHtml` and `watch`
 instead). The module `init` writes imports its style's own path already.
-The sizes above are underpaint's; each style is a little different. A brand there has no choice of
+A brand there has no choice of
 style to make, so `readPage` facts still choose its mood, grain and font but
 not its style.
 

@@ -284,3 +284,14 @@ test("a site's own second colour is its brand's partner, and a pale accent or a 
   assert.equal(readPage("", ":root { --primary: #0078bf; --accent: #3d9be0 }").partner, undefined)
   assert.equal(createBrand({ name: "meerlume.com", ...readPage("", ":root { --primary: #f59e0b; --secondary: #3730a3 }"), style: "riso" }).look.partner, "#3730a3")
 })
+
+test("partners() offers the second colours a brand picks from, and a one-hue style takes one silently", async () => {
+  const { partners } = await import("../src/core/palette.ts")
+  const { validate } = await import("../src/core/validate.ts")
+  const blue = partners("#0078bf")
+  assert.ok(blue.length >= 2 && blue.length <= 3 && blue.every((color) => /^#[0-9a-f]{6}$/.test(color)), blue.join(" "))
+  assert.ok(blue.includes(createBrand({ name: "harbour.dev", color: "#0078bf", style: "riso" }).look.partner!))
+  assert.throws(() => partners("blue"), /partners\(\) takes the brand's hex colour/)
+  // One brand look across sections: a style that ignores the partner says nothing.
+  assert.deepEqual(validate({ style: "halftone", seed: "x", color: "#f59e0b", partner: "#3730a3" }).warnings, [])
+})
