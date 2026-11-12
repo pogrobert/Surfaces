@@ -12,6 +12,7 @@ import { titleOf } from "./core/scene.ts"
 import type { SceneArea } from "./core/scene.ts"
 import { toHtml } from "./render/layers.ts"
 import type { Use } from "./page.ts"
+import { hash } from "./core/random.ts"
 
 // <Surface style="riso" seed={post.slug} color="#635bff">{post.title}</Surface>
 //
@@ -51,7 +52,18 @@ export type SurfaceProps = Omit<SurfaceInput, "areas"> & {
    * box's own shape (`width`, `height`) and little is cropped.
    */
   fill?: boolean
+  /**
+   * A drawing for each shape the box takes as it widens, shown by the box's
+   * own width with CSS alone: `[{ width: 1600, height: 1000 }, { width: 2400,
+   * height: 800, from: 720 }]` is 16:10 until the box is 720px wide and 3:1
+   * from there. Each is drawn for its own shape; the content is rendered once
+   * and moved into each one's area. Replaces `width` and `height`.
+   */
+  frames?: readonly Frame[]
 }
+
+/** One shape a responsive Surface takes: drawn at `width` by `height`, from a box `from` pixels wide (the first from 0). */
+export type Frame = { width: number; height: number; from?: number }
 
 // Content aligned to the side of its area that the area hangs from.
 const align = (area: SceneArea): CSSProperties => {
@@ -88,7 +100,7 @@ export function Surface(props: SurfaceProps): ReactElement {
 
 // What <Surface> renders, drawn by the `draw` given: every style's here, a
 // style's own one in its import, so <Cover> there carries no other style.
-export function drawSurface(draw: (input: SurfaceInput) => Scene, { className, css, children, label, paused, areas, fill, ...input }: SurfaceProps): ReactElement {
+export function drawSurface(draw: (input: SurfaceInput) => Scene, { className, css, children, label, paused, areas, fill, frames, ...input }: SurfaceProps): ReactElement {
   if (children !== undefined && areas !== undefined) {
     throw new Error("Surface takes children or areas, not both: put the children in an area's content.")
   }
@@ -99,6 +111,7 @@ export function drawSurface(draw: (input: SurfaceInput) => Scene, { className, c
       : []
   // The input is plain data, so its JSON is the drawing's identity.
   const plain = asked.map(({ content: _, ...area }) => area)
+  if (frames) return drawFrames(draw, frames, { className, css, label, paused, fill }, asked, { ...input, ...(plain.length ? { areas: plain } : null) })
   const { scene, art } = drawn(draw, { ...input, ...(plain.length ? { areas: plain } : null) })
   const moves = input.motion !== undefined && input.motion !== "none"
   // A title drawn into the art is words in a picture, so it is read out.
@@ -185,6 +198,8 @@ export type CoverProps = Omit<Content, "drawTitle"> & {
   paused?: boolean
   /** Fills the box it is put in instead of keeping the cover's own shape, cropped to fit; best for the art alone (`text="none"`) or a box of about the cover's shape. */
   fill?: boolean
+  /** A drawing for each shape the box takes as it widens, chosen by its width with CSS alone, as on `<Surface>`; the title is rendered once. */
+  frames?: readonly Frame[]
 }
 
 // A title's size on a cover, as a share of the cover's short side, set as a
@@ -240,4 +255,72 @@ export function drawCover(Surface: (props: SurfaceProps) => ReactElement, { bran
     ...rest,
     ...(areas ? { areas: areas.map((area, index) => (index === 0 && at !== "none" ? { ...area, content } : area)) } : null),
   })
+}
+
+// A Surface with a drawing for each shape its box takes. The box is a
+// container, and CSS container queries show the frame for its width, give
+// the box that frame's shape, and move each area's content into that
+// frame's area: the content is rendered once, so it is read once, and the
+// switch needs no script, so it renders on a server like any still cover.
+function drawFrames(
+  draw: (input: SurfaceInput) => Scene,
+  frames: readonly Frame[],
+  { className, css, label, paused, fill }: Pick<SurfaceProps, "className" | "css" | "label" | "paused" | "fill">,
+  asked: readonly SurfaceArea[],
+  input: SurfaceInput
+): ReactElement {
+  if (!Array.isArray(frames) || !frames.length) throw new Error(`"frames" is a list of shapes, such as [{ width: 1600, height: 1000 }, { width: 2400, height: 800, from: 720 }]`)
+  const ordered = [...frames].sort((a, b) => (a.from ?? 0) - (b.from ?? 0))
+  if ((ordered[0]!.from ?? 0) !== 0) throw new Error(`The first frame is for every width up to the next: leave its "from" out, or give 0`)
+  for (const frame of ordered) {
+    if (!(frame.width > 0 && frame.height > 0)) throw new Error(`Each frame needs a "width" and a "height" in pixels, got ${JSON.stringify(frame)}`)
+  }
+  const each = ordered.map((frame) => ({ frame, ...drawn(draw, { ...input, width: frame.width, height: frame.height }) }))
+  const moves = input.motion !== undefined && input.motion !== "none"
+  const spoken = label === true ? describe(each[0]!.scene) : label ?? titleOf(each[0]!.scene)
+  // Named for its drawings, so two on one page never share their rules.
+  const id = `surface-${hash(JSON.stringify([input, ordered])).toString(36)}`
+  const share = (value: number, of: number) => `${((value / of) * 100).toFixed(3)}%`
+  const shown = (index: number) => {
+    const { scene } = each[index]!
+    const { w, h } = scene.output
+    const rules = [
+      ...(fill ? [] : [`.${id}>.box{aspect-ratio:${w}/${h}}`]),
+      ...each.map((_, other) => `.${id} .f${other}{display:${other === index ? "block" : "none"}}`),
+      ...scene.areas.map((area, at) => {
+        const place = area.place ?? "top-left"
+        const row = place.startsWith("top") ? "flex-start" : place.startsWith("bottom") ? "flex-end" : "center"
+        const column = place.endsWith("left") ? "flex-start" : place.endsWith("right") ? "flex-end" : "center"
+        const ink = area.art === "around" ? `color:${area.ink};forced-color-adjust:none;` : ""
+        return `.${id} .a${at}{left:${share(area.x, w)};top:${share(area.y, h)};width:${share(area.width, w)};height:${share(area.height, h)};justify-content:${row};align-items:${column};${ink}}`
+      }),
+    ]
+    const from = each[index]!.frame.from ?? 0
+    return from ? `@container (min-width:${from}px){${rules.join("")}}` : rules.join("")
+  }
+  return createElement(
+    "div",
+    { className: [id, className].filter(Boolean).join(" "), style: { containerType: "inline-size", ...(fill ? { position: "absolute", inset: 0 } : null), ...css } },
+    // The rules are built from numbers alone; nothing a caller passes reaches them.
+    createElement("style", { dangerouslySetInnerHTML: { __html: each.map((_, index) => shown(index)).join("") } }),
+    createElement(
+      "div",
+      { className: "box", style: { position: fill ? "absolute" : "relative", ...(fill ? { inset: 0 } : null), overflow: "hidden", containerType: "inline-size" } },
+      ...each.map(({ art }, index) =>
+        moves
+          ? createElement("div", { key: `f${index}`, className: `f${index}`, style: { position: "absolute", inset: 0 } }, createElement(Moving, { html: art, paused, ...named(spoken) }))
+          : createElement("div", {
+              key: `f${index}`,
+              className: `f${index}`,
+              ...named(spoken),
+              "data-paused": paused ? "" : undefined,
+              style: { position: "absolute", inset: 0, lineHeight: 0 },
+              dangerouslySetInnerHTML: { __html: art },
+            })
+      ),
+      ...asked.map((area, at) =>
+        area.content === undefined ? null : createElement("div", { key: `a${at}`, className: `a${at}`, style: { position: "absolute", display: "flex", flexDirection: "column" } }, area.content)
+      )
+    )
+  )
 }

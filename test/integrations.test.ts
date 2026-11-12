@@ -154,3 +154,12 @@ test("a Surface given fill fills its box instead of keeping its shape", () => {
   assert.doesNotMatch(outer(filled), /aspect-ratio/)
   assert.match(outer(renderToString(createElement(Surface, { style: "riso", seed: "fill" }))), /^position:relative;aspect-ratio:1600 \/ 900;/)
 })
+
+test("a Surface given frames draws one per shape, its content once, switched by the box's width", () => {
+  const html = renderToString(createElement(Surface, { style: "halftone", seed: "frames", frames: [{ width: 1600, height: 1000 }, { width: 2400, height: 800, from: 720 }] }, createElement("h2", null, "Notes")))
+  assert.equal((html.match(/<h2>Notes<\/h2>/g) ?? []).length, 1)
+  assert.equal((html.match(/class="f\d"/g) ?? []).length, 2)
+  assert.match(html, /aspect-ratio:1600\/1000/)
+  assert.match(html, /@container \(min-width:720px\)\{[^}]*aspect-ratio:2400\/800/)
+  assert.throws(() => renderToString(createElement(Surface, { style: "riso", seed: "x", frames: [{ width: 10, height: 10, from: 5 }] })), /leave its "from" out/)
+})

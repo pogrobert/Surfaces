@@ -459,6 +459,19 @@ them. The rest of this section is the lower level, one exact cover:
   areas={[{ place: "center", size: "md", art: "behind", content: <CodeCard /> }]} />
 ```
 
+`frames` gives a box that changes shape as it widens a drawing for each
+shape, shown by the box's own width with CSS alone, no script:
+
+```tsx
+<Cover brand={brand} title={post.title}
+  frames={[{ width: 1600, height: 1000 }, { width: 2400, height: 800, from: 720 }]} />
+```
+
+is 16:10 until the box is 720px wide and 3:1 from there. Each frame is drawn
+for its own shape, so each is its own drawing in the page; the content, a
+title or the children, is rendered once and moved into each frame's area,
+so it is read once. `frames` replaces `width` and `height`.
+
 `fill` makes it fill the box it is put in, a card's or a header's, instead of
 keeping its own shape: placed over the whole of its nearest positioned
 parent and cropped to fit, as a cover image is. Draw it at about the box's

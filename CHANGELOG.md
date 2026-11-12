@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **`frames` on `<Cover>` and `<Surface>`**: a box that changes shape as it
+  widens gets a drawing for each shape, shown by its own width with CSS
+  container queries alone, no script, so it renders on a server like any
+  still cover. The content is rendered once and moved into each frame's area.
 - **Second colours chosen from what is known about colour pairs**
   (docs/colour.md). A calm brand takes a neighbouring hue and a bold one a
   contrast, warm against cool, never the opposite hue; Riso and Screenprint

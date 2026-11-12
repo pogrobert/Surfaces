@@ -197,7 +197,9 @@ moves), `toSvg` (files, `<img>`, email) or `toJpeg` and `toPng`. Draw a still
 cover where the page is built, in a server component, a prerendered
 route's loader or a build script, and the page ships none of Surfaces; see
 "No drawing code on the page" in docs/api.md. `<Cover fill>` and
-`<Surface fill>` fill the box they are put in, cropped to fit.
+`<Surface fill>` fill the box they are put in, cropped to fit, and `frames`
+gives a box a drawing for each shape it takes as it widens, 16:10 on a
+phone and 3:1 on a desk, switched by CSS alone.
 
 A brand's hero moves by itself, and any cover does when asked:
 `generate({ ...brand.input("post", { title }), motion: "once" })`. Nineteen
