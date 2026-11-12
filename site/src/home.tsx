@@ -8,8 +8,10 @@ import { Surface } from "@pogrobert/surfaces/react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Kbd } from "@/components/ui/kbd"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { INIT, LINKS, NAME, ORDER, PROMPT, sample } from "./data.ts"
+import { LINKS, NAME, ORDER, PROMPT, RUNNERS, sample } from "./data.ts"
+import type { Runner } from "./data.ts"
 import { Code, CopyButton, GitHubMark, NpmMark, Mend, SurfacesMark, ThemeSwitch } from "./parts.tsx"
 import { useTheme } from "@/lib/theme"
 import { behind, DARK_INK, halo, LIGHT_INK } from "@/lib/behind"
@@ -372,6 +374,43 @@ function Plate() {
   )
 }
 
+// The command to run, in the package manager the reader uses: a row to choose
+// from, as every choice on the site is, and the choice kept in this browser.
+const RUNNER = "surfaces-runner"
+function Run() {
+  const [runner, setRunner] = useState<Runner>(() => {
+    try {
+      const kept = localStorage.getItem(RUNNER)
+      return RUNNERS.find(([name]) => name === kept)?.[0] ?? "npm"
+    } catch {
+      return "npm"
+    }
+  })
+  const choose = (next: Runner) => {
+    setRunner(next)
+    try {
+      localStorage.setItem(RUNNER, next)
+    } catch {
+      // A browser that keeps nothing still switches for this visit.
+    }
+  }
+  return (
+    <div>
+      <div className="mb-2 flex min-h-7 flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+        <p className="text-body">Or run it yourself.</p>
+        <ToggleGroup type="single" aria-label="Package manager" spacing={1} value={runner} onValueChange={(next) => next && choose(next as Runner)}>
+          {RUNNERS.map(([name]) => (
+            <ToggleGroupItem key={name} value={name} size="sm" className="bg-secondary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground pointer-coarse:h-10">
+              {name}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      </div>
+      <Code code={RUNNERS.find(([name]) => name === runner)![1]} lang="bash" />
+    </div>
+  )
+}
+
 function Home() {
   return (
     <TooltipProvider delayDuration={300}>
@@ -382,13 +421,10 @@ function Home() {
         </p>
         <div className="mt-11 grid grid-cols-2 gap-x-10 gap-y-3.5 max-[860px]:grid-cols-1">
           <div>
-            <p className="mb-2 text-body">Ask your coding agent.</p>
+            <p className="mb-2 flex min-h-7 items-center text-body">Ask your coding agent.</p>
             <Code code={PROMPT} />
           </div>
-          <div>
-            <p className="mb-2 text-body">Or run it yourself.</p>
-            <Code code={INIT} lang="bash" />
-          </div>
+          <Run />
         </div>
         <Button variant="link" asChild className="mt-7 h-auto px-0 text-[17px] font-semibold whitespace-normal text-ink underline decoration-1 underline-offset-[5px]">
           <a href="/studio/">Every style and every choice, in the studio →</a>

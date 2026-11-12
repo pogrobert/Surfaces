@@ -51,7 +51,14 @@ export const TITLES = [
 ]
 
 export const PROMPT = "Add @pogrobert/surfaces to this site: run npx @pogrobert/surfaces init, then follow its AGENTS.md."
-export const INIT = "npx @pogrobert/surfaces init"
+// The one command, as each package manager runs a package it has not installed.
+export const RUNNERS = [
+  ["npm", "npx @pogrobert/surfaces init"],
+  ["pnpm", "pnpm dlx @pogrobert/surfaces init"],
+  ["yarn", "yarn dlx @pogrobert/surfaces init"],
+  ["bun", "bunx @pogrobert/surfaces init"],
+] as const
+export type Runner = (typeof RUNNERS)[number][0]
 
 // Where the library itself is.
 export const LINKS = {
