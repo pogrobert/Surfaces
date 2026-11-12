@@ -290,8 +290,39 @@ test("partners() offers the second colours a brand picks from, and a one-hue sty
   const { validate } = await import("../src/core/validate.ts")
   const blue = partners("#0078bf")
   assert.ok(blue.length >= 2 && blue.length <= 3 && blue.every((color) => /^#[0-9a-f]{6}$/.test(color)), blue.join(" "))
-  assert.ok(blue.includes(createBrand({ name: "harbour.dev", color: "#0078bf", style: "riso" }).look.partner!))
+  // A Riso brand picks among the riso inks that overprint its colour cleanly.
+  assert.ok(partners("#0078bf", { style: "riso" }).includes(createBrand({ name: "harbour.dev", color: "#0078bf", style: "riso" }).look.partner!))
   assert.throws(() => partners("blue"), /partners\(\) takes the brand's hex colour/)
   // One brand look across sections: a style that ignores the partner says nothing.
   assert.deepEqual(validate({ style: "halftone", seed: "x", color: "#f59e0b", partner: "#3730a3" }).warnings, [])
+})
+
+test("second colours follow what is known of colour pairs", async () => {
+  const { partners, RISO_INKS, overprint } = await import("../src/core/palette.ts")
+  const hue = (hex: string) => toOklch(hex).h
+  const apart = (a: number, b: number) => Math.abs(((a - b + 540) % 360) - 180)
+  for (const color of ["#0078bf", "#f59e0b", "#00838a", "#00a95c", "#f15060", "#6366f1"]) {
+    const h = hue(color)
+    // A calm brand takes a neighbour; a bold one a contrast, never the opposite.
+    for (const one of partners(color, { mood: "calm" })) assert.ok(apart(hue(one), h) >= 25 && apart(hue(one), h) <= 65, `${color} calm ${one}`)
+    for (const one of partners(color, { mood: "bold" })) assert.ok(apart(hue(one), h) >= 85 && apart(hue(one), h) <= 155, `${color} bold ${one}`)
+    // Overprinting styles take real riso inks that overlap as a colour.
+    const inks = new Set(RISO_INKS.map(([, ink]) => ink))
+    for (const one of partners(color, { style: "riso" })) {
+      assert.ok(inks.has(one), `${color} riso ${one}`)
+      assert.ok(overprint(color, one) >= 0.06, `${color} riso ${one} overprints as mud`)
+    }
+    // Red is never paired with green.
+    const isRed = (x: number) => x < 50 || x > 345
+    const isGreen = (x: number) => x >= 120 && x <= 175
+    for (const one of [...partners(color), ...partners(color, { style: "riso" })]) assert.ok(!(isRed(h) && isGreen(hue(one))) && !(isGreen(h) && isRed(hue(one))), `${color} ${one}`)
+  }
+})
+
+test("a deep partner the brand gives stays deep, and a warm dark ground keeps its tint", () => {
+  const given = createBrand({ name: "meerlume.com", color: "#f59e0b", partner: "#3730a3", style: "screenprint", theme: "light" }).cover({ title: "A" })
+  // Screenprint keeps its partner near 0.75; a given iris now stays as deep as it may go, not lavender.
+  assert.ok(toOklch(given.palette.partner).l < 0.66, given.palette.partner)
+  const ground = createBrand({ name: "meerlume.com", color: "#f59e0b", style: "halftone", theme: "dark" }).cover({ title: "A" }).palette.ground
+  assert.ok(toOklch(ground).l < 0.25 && toOklch(ground).c > 0.008, ground)
 })

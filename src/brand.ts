@@ -360,7 +360,7 @@ function build(draw: (input: SurfaceInput) => Scene, name: string, given: Brand[
   // picked by its name among the hues that sit well beside its colour,
   // unless the brand gave its own; it is in \`look\`, so it shows and is kept.
   const pairs = PARTNERED.has(given.style) && !(given.style === "underpaint" && given.shape === "glow")
-  const look = pairs && !given.partner && given.color ? { ...given, partner: partnerFor(given.color, name) } : given
+  const look = pairs && !given.partner && given.color ? { ...given, partner: partnerFor(given.color, name, { style: given.style, ...(given.mood ? { mood: given.mood } : {}) }) } : given
   const why = look === given ? said : [...said, `partner ${look.partner}: a second colour a printer would pair with ${look.color}, picked by the brand's name`]
   const input = (use: Use, content: Content = {}): SurfaceInput => {
     const placing = placingOf(use)

@@ -1,4 +1,4 @@
-import { fromOklch, toOklch, turnToward } from "./color.ts"
+import { fromLinear, fromOklch, linearRgb, toOklch, turnToward } from "./color.ts"
 import { clamp, lerp } from "./math.ts"
 import { hash } from "./random.ts"
 import type { Range, Rng } from "./random.ts"
@@ -36,59 +36,118 @@ const COOL = 265
 const WARM = 85
 const RED = 40
 
-// Each stretch of the hue circle and the hues that look best beside it, as
-// a printer would pair two inks: judged by eye, not by the colour wheel,
-// since a true complement is often muddy where the inks overlap. Blue takes
-// a fluorescent pink, a coral or an aqua; teal a coral, a violet or a pink;
-// green a pink, a blue or a coral. A brand's name picks one of them (see
-// partnerFor), so two blue brands are not alike. No yellow yet: drawn at the
-// lightness a style keeps for its partner, a yellow prints as khaki.
-const PARTNERS: readonly (readonly [number, readonly number[]])[] = [
-  [40, [255, 195]], // reds: blue, teal
-  [75, [300, 195, 350]], // oranges: violet, teal, pink
-  [125, [260, 300, 25]], // yellows: blue, violet, red
-  [165, [350, 255, 25]], // greens: pink, blue, coral
-  [215, [20, 300, 350]], // teals: coral, violet, pink
-  [280, [355, 25, 195]], // blues: fluorescent pink, coral, aqua
-  [330, [35, 185]], // violets: coral, teal
-  [360, [195, 250]], // magentas: teal, blue
+// How a second colour is chosen beside a brand's, from what is known of
+// colour pairs (docs/colour.md has the sources):
+// - Harmony rises as two hues come closer (Schloss & Palmer 2011): a calm
+//   brand takes a neighbour, 25 to 65 degrees round the wheel.
+// - Contrast is for a second colour that stands out: a bold brand takes one
+//   85 to 155 degrees away, warm against cool where it can, and never the
+//   opposite hue, which inks mix to mud (Munsell).
+// - Where two inks print over each other, as in Riso and Screenprint, the
+//   pair has to overprint as a colour, not a grey: each is scored by how
+//   colourful their overlap stays, and the partner is a real riso ink, as a
+//   print shop would load.
+// - A yellow is only yellow when light, so a style that draws its partner
+//   at a middling lightness takes none.
+const NEIGHBOUR: readonly [number, number] = [25, 65]
+const CONTRAST: readonly [number, number] = [85, 155]
+const WARM_HUES = (h: number) => h >= 20 && h <= 115
+const COOL_HUES = (h: number) => h >= 170 && h <= 300
+
+// Riso inks with a colour of their own, as print shops list them.
+export const RISO_INKS: readonly (readonly [string, string])[] = [
+  ["Blue", "#0078bf"], ["Medium Blue", "#3255a4"], ["Federal Blue", "#3d5588"], ["Cornflower", "#62a8e5"],
+  ["Aqua", "#5ec8e5"], ["Teal", "#00838a"], ["Light Teal", "#009da5"], ["Mint", "#82d8d5"],
+  ["Turquoise", "#00aa93"], ["Green", "#00a95c"], ["Kelly Green", "#67b346"], ["Yellow", "#ffe800"],
+  ["Sunflower", "#ffb511"], ["Flat Gold", "#bb8b41"], ["Orange", "#ff6c2f"], ["Fluorescent Orange", "#ff7477"],
+  ["Bright Red", "#f15060"], ["Crimson", "#e45d50"], ["Fluorescent Pink", "#ff48b0"], ["Bubble Gum", "#f984ca"],
+  ["Violet", "#9d7ad2"], ["Purple", "#765ba7"], ["Orchid", "#aa60bf"], ["Burgundy", "#914e72"],
 ]
 
-/** The partner hues that sit well beside a colour, best first. A grey has no hue to pair against, so it pairs with amber or teal. */
-export function partnerHues(color: string): readonly number[] {
-  const brand = toOklch(color)
-  if (brand.c < 0.03) return [60, 195]
-  return PARTNERS.find(([upTo]) => brand.h < upTo)?.[1] ?? [195]
+// Two inks printed one over the other, light passing through both: their
+// transmittances multiply, in linear light, as a thin ink layer's do. On a
+// dark ground the inks are light on dark, and add as a screen does.
+/** How colourful the overlap of two inks stays, light and dark both: low is mud. */
+export function overprint(a: string, b: string) {
+  const [x, y] = [linearRgb(a), linearRgb(b)]
+  const over = toOklch(fromLinear(x.map((c, i) => c * y[i]!)))
+  const lit = toOklch(fromLinear(x.map((c, i) => 1 - (1 - c) * (1 - y[i]!))))
+  return Math.min(over.c, lit.c * 1.4)
 }
 
-/**
- * A partner for a colour, as hex, picked among the hues that sit well beside
- * it by `key`: the brand's name, so a brand keeps one partner on all its
- * covers. Each style draws it at its own lightness; this sets the hue and
- * how strong it is.
- */
+const isRed = (h: number) => h < 50 || h > 345
+const isGreen = (h: number) => h >= 120 && h <= 175
+const apartOf = (a: number, b: number) => Math.abs(((a - b + 540) % 360) - 180)
+const isHex = (color: unknown): color is string => typeof color === "string" && /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(color)
+const full = (hex: string) => (hex.length === 4 ? "#" + [...hex.slice(1)].map((c) => c + c).join("") : hex).toLowerCase()
+
+export type PartnerOptions = {
+  /** The style it is for: an overprinting style (riso, screenprint) takes real riso inks whose overlap with the brand's stays a colour. */
+  style?: string
+  /** "calm" takes a neighbouring hue, "bold" a contrasting one; left out, either. */
+  mood?: "calm" | "bold"
+}
+
 /**
  * The second colours that sit well beside a brand colour, as hex, best first:
- * the two or three a brand picks its partner from, to offer as choices. Give
- * one as `partner`; each style draws it at its own lightness.
+ * two or three to offer as choices, the ones a brand picks its partner from.
+ * A calm brand gets neighbours, a bold one contrasts, warm against cool; for
+ * a style that overprints its inks, real riso inks that overlap cleanly.
  *
- *   partners("#0078bf")   // a fluorescent pink, a coral, an aqua
+ *   partners("#0078bf")                      // a violet, a teal, a pink…
+ *   partners("#f59e0b", { style: "riso" })   // riso inks that overprint amber cleanly
  */
-export function partners(color: string): string[] {
-  if (typeof color !== "string" || !/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(color)) {
-    throw new Error(`partners() takes the brand's hex colour, such as "#635bff", got ${JSON.stringify(color)}`)
-  }
-  return partnerHues(color).map((h) => fromOklch({ l: 0.7, c: 0.16, h }))
+export function partners(color: string, options: PartnerOptions = {}): string[] {
+  if (!isHex(color)) throw new Error(`partners() takes the brand's hex colour, such as "#635bff", got ${JSON.stringify(color)}`)
+  const brand = toOklch(color)
+  const grey = brand.c < 0.03
+  const print = options.style === "riso" || options.style === "screenprint"
+  const ranges = options.mood === "calm" ? [NEIGHBOUR] : options.mood === "bold" ? [CONTRAST] : [NEIGHBOUR, CONTRAST]
+  // Every candidate hue, as a print shop's ink or as a colour drawn for it.
+  const candidates = print
+    ? RISO_INKS.map(([, hex]) => ({ hex, h: toOklch(hex).h, c: toOklch(hex).c }))
+    : Array.from({ length: 36 }, (_, i) => i * 10)
+        .filter((h) => !(h >= 80 && h <= 120))
+        .map((h) => ({ hex: fromOklch({ l: 0.7, c: 0.16, h }), h, c: 0.16 }))
+  const scored = candidates
+    // A weak ink (a flat gold, a grey) prints brown beside a colour, and a
+    // yellow ink reads as olive in a stipple: neither is offered.
+    .filter((one) => one.c >= (print ? 0.12 : 0.08) && !(print && one.h >= 95 && one.h <= 115) && full(one.hex) !== full(color))
+    .map((one) => {
+      const apart = grey ? 120 : apartOf(one.h, brand.h)
+      const within = ranges.some(([low, high]) => apart >= low && apart <= high)
+      const near = apart <= NEIGHBOUR[1]
+      // Neighbours are best near the middle of their range; contrasts near 120.
+      let score = near ? 1 - Math.abs(apart - 45) / 40 : 1 - Math.abs(apart - 120) / 60
+      if (!near && ((WARM_HUES(brand.h) && COOL_HUES(one.h)) || (COOL_HUES(brand.h) && WARM_HUES(one.h)))) score += 0.25
+      const overlap = print ? overprint(full(color), one.hex) : 0.12
+      if (print) score = score * 0.5 + Math.min(1, overlap / 0.12) * 0.5
+      return { ...one, within, score, overlap }
+    })
+    // Red against green is the pair a colour-blind reader, about one man in
+    // twelve, can't tell apart: never offered.
+    .filter((one) => !(isRed(brand.h) && isGreen(one.h)) && !(isGreen(brand.h) && isRed(one.h)))
+    .filter((one) => (grey || one.within) && one.overlap >= 0.06)
+    .sort((a, b) => b.score - a.score)
+  const picked: typeof scored = []
+  for (const one of scored) if (picked.length < 3 && picked.every((other) => apartOf(other.h, one.h) >= 30)) picked.push(one)
+  return picked.map((one) => full(one.hex))
 }
 
+// Without a brand to pick it, the colour does, so the same colour always
+// gets the same partner.
 const pickHue = (color: string) => {
-  const hues = partnerHues(color)
-  return hues[hash(`${color.toLowerCase()}/partner`) % hues.length]!
+  const each = partners(full(color))
+  return toOklch(each[hash(`${color.toLowerCase()}/partner`) % each.length] ?? "#e58212").h
 }
 
-export function partnerFor(color: string, key: string): string {
-  const each = partners(color)
-  return each[hash(`${key}/partner`) % each.length]!
+/**
+ * A partner for a colour, as hex, picked by `key`, the brand's name, among
+ * `partners(color, options)`, so a brand keeps one on all its covers.
+ */
+export function partnerFor(color: string, key: string, options: PartnerOptions = {}): string {
+  const each = partners(color, options)
+  return each[hash(`${key}/partner`) % each.length] ?? partners(color)[0]!
 }
 
 export const BASE_PALETTE: PaletteSpec = {
@@ -135,12 +194,24 @@ function tone(
   return fromOklch({ l, c: chroma, h: fixedHue ?? h })
 }
 
-// A partner the brand gave: drawn at its own hue, as strong as it is (a grey
-// partner stays grey), at the lightness the style keeps for its partner. The
-// same fork as a chosen one, so giving one recolours and moves nothing else.
-function partnerGiven(partner: { c: number; h: number }, spec: ToneSpec, palette: PaletteSpec, rng: Rng) {
+// A partner the brand gave, or picked for it: drawn at its own hue and as
+// strong as it is (a grey stays grey), and at its own lightness as near as
+// the style allows. A pair reads best with a moderate gap in lightness (Ou &
+// Luo), so it is held within a reach of the lightness the style keeps for
+// its partner and kept clear of the ground, where it would vanish. On a dark
+// ground a strong colour vibrates, so there it is drawn a little lighter and
+// softer, as dark themes do with accents. The same fork as a chosen one, so
+// giving one recolours and moves nothing else.
+const REACH = 0.12
+const CLEAR = 0.22
+function partnerGiven(partner: { l: number; c: number; h: number }, spec: ToneSpec, palette: PaletteSpec, rng: Rng, dark: boolean, ground: number) {
   const grey = partner.c < 0.03
-  return tone(partner, spec, palette.maxChroma, rng.fork("partner"), partner.h, grey ? 0 : palette.partnerFloor ?? 0)
+  const own = rng.fork("partner")
+  const share = own.between(spec.c) * (dark ? 0.94 : 1)
+  let l = clamp(dark ? partner.l + 0.08 : partner.l, spec.l[0] - REACH, spec.l[1] + REACH)
+  if (Math.abs(l - ground) < CLEAR) l = dark ? ground + CLEAR : ground - CLEAR
+  const c = Math.max(Math.min(partner.c, palette.maxChroma) * share, grey ? 0 : palette.partnerFloor ?? 0)
+  return fromOklch({ l: clamp(l, 0.2, 0.95), c, h: partner.h })
 }
 
 export function makePalette(
@@ -170,12 +241,15 @@ export function makePalette(
         })
   // A dark ground in a warm hue reads as brown, and sinks the colour on it,
   // so an orange, amber or yellow brand prints on a near-black instead: the
-  // colour glows on it, as it does on a night sky. Cool hues keep their tint.
+  // colour glows on it, as it does on a night sky. It keeps most of its tint, so
+  // on a site's own near-black page the cover still has an edge. Cool hues
+  // keep their tint.
   const warm = theme === "dark" && brand.h > 35 && brand.h < 115
   const deep = (name: "ground" | "quiet") =>
-    warm ? tone(brand, { ...tones[name], c: [tones[name].c[0] * 0.3, tones[name].c[1] * 0.3] }, spec.maxChroma, rng.fork(name)) : make(name)
+    warm ? tone(brand, { ...tones[name], c: [tones[name].c[0] * 0.7, tones[name].c[1] * 0.7] }, spec.maxChroma, rng.fork(name)) : make(name)
+  const ground = deep("ground")
   return {
-    ground: deep("ground"),
+    ground,
     quiet: deep("quiet"),
     soft: make("soft"),
     body: make("body"),
@@ -183,7 +257,7 @@ export function makePalette(
     accent,
     partner: tones.partner
       ? given
-        ? partnerGiven(toOklch(given), tones.partner, spec, rng)
+        ? partnerGiven(toOklch(given), tones.partner, spec, rng, theme === "dark", toOklch(ground).l)
         : tone(
           brand,
           tones.partner,
