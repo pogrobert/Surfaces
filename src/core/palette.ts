@@ -67,15 +67,28 @@ export function partnerHues(color: string): readonly number[] {
  * covers. Each style draws it at its own lightness; this sets the hue and
  * how strong it is.
  */
+/**
+ * The second colours that sit well beside a brand colour, as hex, best first:
+ * the two or three a brand picks its partner from, to offer as choices. Give
+ * one as `partner`; each style draws it at its own lightness.
+ *
+ *   partners("#0078bf")   // a fluorescent pink, a coral, an aqua
+ */
+export function partners(color: string): string[] {
+  if (typeof color !== "string" || !/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(color)) {
+    throw new Error(`partners() takes the brand's hex colour, such as "#635bff", got ${JSON.stringify(color)}`)
+  }
+  return partnerHues(color).map((h) => fromOklch({ l: 0.7, c: 0.16, h }))
+}
+
 const pickHue = (color: string) => {
   const hues = partnerHues(color)
   return hues[hash(`${color.toLowerCase()}/partner`) % hues.length]!
 }
 
 export function partnerFor(color: string, key: string): string {
-  const hues = partnerHues(color)
-  const hue = hues[hash(`${key}/partner`) % hues.length]!
-  return fromOklch({ l: 0.7, c: 0.16, h: hue })
+  const each = partners(color)
+  return each[hash(`${key}/partner`) % each.length]!
 }
 
 export const BASE_PALETTE: PaletteSpec = {

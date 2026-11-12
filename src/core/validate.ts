@@ -122,9 +122,9 @@ export function validate(input: unknown): Problems {
   word("grain", GRAINS)
   word("detail", DETAILS)
   word("motion", MOTIONS)
-  if (input.partner !== undefined && isStyle(input.style) && (!PARTNERED.has(input.style) || (input.style === "underpaint" && input.shape === "glow"))) {
-    warnings.push(`${input.style === "underpaint" ? "Underpaint's glow" : input.style} is one hue, so "partner" changes nothing. Styles that use it have partner: true in \`catalog\`, such as ${list(STYLE_NAMES.filter((style) => PARTNERED.has(style)).slice(0, 4))}.`)
-  }
+  // A partner given to a one-hue style is not a warning: a brand keeps one
+  // look for all its sections, and some of their styles use the partner and
+  // some don't. \`partnerIgnored\` says so for \`check\` to note.
   if ((input.motion === "once" || input.motion === "loop") && typeof input.style === "string" && STILL.has(input.style as StyleName)) {
     warnings.push(`${input.style} is drawn still, so "motion" changes nothing. Styles that move have moves: true in \`catalog\`, such as ${list(STYLE_NAMES.filter((style) => !STILL.has(style)).slice(0, 4))}.`)
   }
@@ -279,4 +279,9 @@ export function validate(input: unknown): Problems {
     }
   }
   return { errors, warnings }
+}
+
+/** Whether a partner given with this input changes nothing, its style being one hue. For \`check\` to note; \`generate\` draws it silently. */
+export function partnerIgnored(input: { style?: unknown; shape?: unknown; partner?: unknown }) {
+  return input.partner !== undefined && isStyle(input.style) && (!PARTNERED.has(input.style) || (input.style === "underpaint" && input.shape === "glow"))
 }

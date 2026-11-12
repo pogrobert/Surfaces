@@ -11,7 +11,7 @@ import { generate } from "./core/generate.ts"
 import { judge } from "./core/judge.ts"
 import type { Scene, TextLayer } from "./core/scene.ts"
 import { measure } from "./core/type.ts"
-import { nearest, validate } from "./core/validate.ts"
+import { nearest, partnerIgnored, validate } from "./core/validate.ts"
 import { readPage, USES } from "./page.ts"
 import type { PageFacts, Use } from "./page.ts"
 import { readProject } from "./project.ts"
@@ -290,7 +290,9 @@ async function checkCommand(root: string, args: Args, log: (line: string) => voi
         const warnings = validate(input).warnings
         const ok = verdict.ok && !warnings.length
         if (!ok) failed++
-        log(JSON.stringify({ use, theme, title, ok, contrast: Number(verdict.contrast.toFixed(2)), coverage: Number(verdict.coverage.toFixed(3)), problems: verdict.problems, warnings }))
+        // Said, but not a failure: a brand shares one look across styles.
+        const notes = partnerIgnored(input) ? [`${input.style} is one hue, so the brand's partner changes nothing here`] : []
+        log(JSON.stringify({ use, theme, title, ok, contrast: Number(verdict.contrast.toFixed(2)), coverage: Number(verdict.coverage.toFixed(3)), problems: verdict.problems, warnings, ...(notes.length ? { notes } : null) }))
       }
     }
   }

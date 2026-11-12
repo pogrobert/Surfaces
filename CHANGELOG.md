@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- **`partners(color)`** lists the second colours that sit well beside a
+  brand colour, as hex, best first: the ones a brand picks its partner
+  from, to offer as choices.
+- **`fill`** on `<Cover>` and `<Surface>` fills the box they are put in, a
+  card's or a header's, cropped to fit, instead of keeping their own shape.
+- A partner given with a one-hue style draws silently instead of warning,
+  since a brand shares one look across styles; `check` still notes it.
+- The docs show how to ship no drawing code at all: a still cover drawn in
+  a server component, a prerendered route's loader or a build script. And
+  a style's own import is said to add about 45–55 KB gzipped, as measured
+  across styles, not 46.
+
 ## 0.1.1
 
 - **A brand's second colour.** `createBrand({ name, color, partner })`, or

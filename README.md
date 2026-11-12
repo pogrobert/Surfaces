@@ -193,7 +193,11 @@ at("wallpaper", 1170, 2532)      // a phone wallpaper
 ```
 
 Draw any of them with `toHtml` (inline on a page, the only output that
-moves), `toSvg` (files, `<img>`, email) or `toJpeg` and `toPng`.
+moves), `toSvg` (files, `<img>`, email) or `toJpeg` and `toPng`. Draw a still
+cover where the page is built, in a server component, a prerendered
+route's loader or a build script, and the page ships none of Surfaces; see
+"No drawing code on the page" in docs/api.md. `<Cover fill>` and
+`<Surface fill>` fill the box they are put in, cropped to fit.
 
 A brand's hero moves by itself, and any cover does when asked:
 `generate({ ...brand.input("post", { title }), motion: "once" })`. Nineteen
@@ -223,7 +227,8 @@ pictures, with only that style's code.
 
 A cover is drawn from the brand's colour: its ground and its shades are
 chosen from it, and so is the second colour beside it, unless the brand
-has its own: `createBrand({ name, color, partner: "#3730a3" })`. Its hue and
+has its own: `createBrand({ name, color, partner: "#3730a3" })`, or one of the
+second colours that sit well beside its own, from `partners(color)`. Its hue and
 strength are used and each style keeps its own lightness, so it can't make
 a cover unreadable. Only the styles with `partner: true` in `catalog` set a
 second hue; the rest are one hue and ignore it. `readPage` takes the site's

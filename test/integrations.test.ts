@@ -145,3 +145,12 @@ test("the React component draws the same art and puts its children in an area", 
   )
   assert.ok(Object.keys(STYLES).length > 0)
 })
+
+test("a Surface given fill fills its box instead of keeping its shape", () => {
+  const filled = renderToString(createElement(Surface, { style: "riso", seed: "fill", fill: true }))
+  // The element round the art, not the art's own layers.
+  const outer = (html: string) => html.match(/^<div style="([^"]*)"/)?.[1] ?? ""
+  assert.match(outer(filled), /^position:absolute;inset:0;/)
+  assert.doesNotMatch(outer(filled), /aspect-ratio/)
+  assert.match(outer(renderToString(createElement(Surface, { style: "riso", seed: "fill" }))), /^position:relative;aspect-ratio:1600 \/ 900;/)
+})

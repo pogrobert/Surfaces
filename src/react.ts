@@ -44,6 +44,13 @@ export type SurfaceProps = Omit<SurfaceInput, "areas"> & {
    * open, so give readers a control that sets this (WCAG 2.2.2).
    */
   paused?: boolean
+  /**
+   * Fills the box it is put in, a card's or a header's, instead of keeping
+   * its own shape: absolutely placed over the whole of its nearest positioned
+   * parent, the art cropped to fit as a cover image is. Draw it at about the
+   * box's own shape (`width`, `height`) and little is cropped.
+   */
+  fill?: boolean
 }
 
 // Content aligned to the side of its area that the area hangs from.
@@ -81,7 +88,7 @@ export function Surface(props: SurfaceProps): ReactElement {
 
 // What <Surface> renders, drawn by the `draw` given: every style's here, a
 // style's own one in its import, so <Cover> there carries no other style.
-export function drawSurface(draw: (input: SurfaceInput) => Scene, { className, css, children, label, paused, areas, ...input }: SurfaceProps): ReactElement {
+export function drawSurface(draw: (input: SurfaceInput) => Scene, { className, css, children, label, paused, areas, fill, ...input }: SurfaceProps): ReactElement {
   if (children !== undefined && areas !== undefined) {
     throw new Error("Surface takes children or areas, not both: put the children in an area's content.")
   }
@@ -103,8 +110,7 @@ export function drawSurface(draw: (input: SurfaceInput) => Scene, { className, c
     {
       className,
       style: {
-        position: "relative",
-        aspectRatio: `${w} / ${h}`,
+        ...(fill ? { position: "absolute", inset: 0 } : { position: "relative", aspectRatio: `${w} / ${h}` }),
         overflow: "hidden",
         containerType: "inline-size",
         ...css,
@@ -173,8 +179,12 @@ export type CoverProps = Omit<Content, "drawTitle"> & {
   css?: CSSProperties
   /** Stands where the title would, in place of it: the page's own heading, or anything else. */
   children?: ReactNode
+  /** Read out instead of the art; `true` reads out a description of it. Leave it out under a heading. */
   label?: string | true
+  /** Holds a moving cover where it is: a loop needs a control that sets this. */
   paused?: boolean
+  /** Fills the box it is put in instead of keeping the cover's own shape, cropped to fit; best for the art alone (`text="none"`) or a box of about the cover's shape. */
+  fill?: boolean
 }
 
 // A title's size on a cover, as a share of the cover's short side, set as a
