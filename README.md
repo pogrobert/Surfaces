@@ -1,9 +1,6 @@
 # Surfaces
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/readme-dark.svg">
-  <img src="docs/readme-light.svg" alt="Abstract art: a hazy blur of red and blue." width="100%">
-</picture>
+<img src="docs/readme.jpg" alt="Surfaces: its name over a wall of covers it drew, each in a different style." width="100%">
 
 Art drawn by code, not by an image model, for every picture a site
 repeats: post covers and link previews, docs, changelog and email headers, empty states, episode art,
@@ -18,12 +15,6 @@ input gives the same bytes on every build, in Node, an edge runtime or the
 browser. It is meant to replace a site's covers as they are now, hand-made,
 stock or placeholder; only a picture of one particular thing, a product, a
 person or a place, stays a photo's job, or an image model's.
-
-The picture above is one call, and 3 KB of SVG:
-
-```ts
-generate({ style: "sfumato", seed: "Surfaces", color: "#f15060", mood: "bold", width: 1600, height: 400 })
-```
 
 ```sh
 npm install @pogrobert/surfaces
