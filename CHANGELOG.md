@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.2
 
 - **`frames` on `<Cover>` and `<Surface>`**: a box that changes shape as it
   widens gets a drawing for each shape, shown by its own width with CSS
@@ -20,9 +20,6 @@
 - **Fluted's shapes are three silhouettes**: the arch standing, the panel a
   window on its side, the band a strip across. Two tags can still land on
   one shape; give a section its own `shape` for marks that must differ.
-- **`partners(color)`** lists the second colours that sit well beside a
-  brand colour, as hex, best first: the ones a brand picks its partner
-  from, to offer as choices.
 - **`fill`** on `<Cover>` and `<Surface>` fills the box they are put in, a
   card's or a header's, cropped to fit, instead of keeping their own shape.
 - A partner given with a one-hue style draws silently instead of warning,

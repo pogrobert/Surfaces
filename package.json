@@ -1,6 +1,6 @@
 {
   "name": "@pogrobert/surfaces",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Covers, link previews and headers for every page of a site, drawn by code from one brand colour. No AI and no API key: the same title always gives the same picture.",
   "keywords": [
     "generative-art",
