@@ -96,7 +96,7 @@ function Words({ ink, studio, refer, color, shadow, shadowSmall }: { ink: { on: 
           change colour with the art, at once, never after it. */}
       <div className="mt-6 flex flex-wrap gap-2.5 [text-shadow:none]">
         <CopyButton text={prompt(command)} size="lg" className="bg-(--on) px-4 text-(--off) transition-[scale] hover:bg-(--on)/85">Copy prompt</CopyButton>
-        <Button variant="outline" size="lg" asChild className="border-(--on)/20 bg-(--off)/90 px-4 text-(--on) transition-[scale] hover:bg-(--off) hover:text-(--on) dark:border-(--on)/20 dark:bg-(--off)/90 dark:hover:bg-(--off)">
+        <Button variant="outline" size="lg" asChild className="border-(--on)/20 bg-(--off)/90 px-4 text-(--on) transition-[scale] hover:bg-[color-mix(in_oklab,var(--off),var(--on)_16%)] hover:text-(--on) dark:border-(--on)/20 dark:bg-(--off)/90 dark:hover:bg-[color-mix(in_oklab,var(--off),var(--on)_16%)]">
           <a href={studio}>See all thirty in the studio</a>
         </Button>
       </div>
