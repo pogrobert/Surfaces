@@ -197,20 +197,20 @@ export function NpmMark({ className = "size-4" }: { className?: string }) {
   )
 }
 
-// Surfaces' own mark, beside its name: four panes with one disc cut through
-// them, one picture across every surface. Its colours are fixed, mint and
-// ink, so the same tile stands on a light page and a dark one.
+// Surfaces' own mark, beside its name: three sheets, each turned a little
+// more than the one in front, a stack of surfaces. Its colours are fixed,
+// graphite and cream, so the same tile stands on a light page and a dark one.
+// Each sheet's stroke is the tile's colour, painted under its fill: that cuts
+// the gap out of the sheets behind it.
 export function SurfacesMark({ className = "size-5" }: { className?: string }) {
   return (
     <svg viewBox="4 4 92 92" aria-hidden className={className}>
-      <rect x="4" y="4" width="92" height="92" rx="26" fill="#2dd4bf" />
-      <g fill="#1c1c20">
-        <rect x="20" y="20" width="33" height="25" rx="4" />
-        <rect x="57" y="20" width="23" height="25" rx="4" />
-        <rect x="20" y="49" width="23" height="31" rx="4" />
-        <rect x="47" y="49" width="33" height="31" rx="4" />
+      <rect x="4" y="4" width="92" height="92" rx="26" fill="#1b1b1f" />
+      <g fill="#f1ead9" stroke="#1b1b1f" strokeWidth="5.4" paintOrder="stroke">
+        <rect x="27.1" y="27.1" width="45.8" height="45.8" rx="9.9" transform="rotate(-27 50 50)" />
+        <rect x="28.9" y="28.9" width="42.2" height="42.2" rx="9.9" transform="rotate(-13 50 50)" />
+        <rect x="32.5" y="32.5" width="35" height="35" rx="9.9" />
       </g>
-      <circle cx="52" cy="47" r="15" fill="#2dd4bf" />
     </svg>
   )
 }
