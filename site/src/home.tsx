@@ -376,35 +376,29 @@ function Plate() {
   )
 }
 
-// The command to run, in the package manager the reader uses: a row to choose
-// from, as every choice on the site is, each with its maker's mark. The choice
-// is kept in this browser, and the prompt for a coding agent follows it too.
+// The package manager the reader uses: a row to choose from, as every choice
+// on the site is, each with its maker's mark. It stands over both blocks,
+// because both follow it: the prompt for a coding agent and the command to
+// run. The choice is kept in this browser.
 const MARKS: Record<Runner, typeof NpmMark> = { npm: NpmMark, pnpm: PnpmMark, yarn: YarnMark, bun: BunMark }
-function Run() {
-  const { runner, command } = useRunner()
+function Runners({ runner }: { runner: Runner }) {
   return (
-    <div>
-      <div className="mb-2 flex min-h-7 flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
-        <p className="text-body">Or run it yourself.</p>
-        <ToggleGroup type="single" aria-label="Package manager" spacing={1} value={runner} onValueChange={(next) => next && setRunner(next as Runner)}>
-          {RUNNERS.map(([name]) => {
-            const Mark = MARKS[name]
-            return (
-              <ToggleGroupItem key={name} value={name} size="sm" className="gap-1.5 bg-secondary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground pointer-coarse:h-10">
-                <Mark className="size-3.5" />
-                {name}
-              </ToggleGroupItem>
-            )
-          })}
-        </ToggleGroup>
-      </div>
-      <Code code={command} lang="bash" />
-    </div>
+    <ToggleGroup type="single" aria-label="Package manager" spacing={1} value={runner} onValueChange={(next) => next && setRunner(next as Runner)}>
+      {RUNNERS.map(([name]) => {
+        const Mark = MARKS[name]
+        return (
+          <ToggleGroupItem key={name} value={name} size="sm" className="gap-1.5 bg-secondary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground pointer-coarse:h-10">
+            <Mark className="size-3.5" />
+            {name}
+          </ToggleGroupItem>
+        )
+      })}
+    </ToggleGroup>
   )
 }
 
 function Home() {
-  const { command } = useRunner()
+  const { runner, command } = useRunner()
   return (
     <TooltipProvider delayDuration={300}>
       <Plate />
@@ -412,12 +406,18 @@ function Home() {
         <p className="max-w-[54ch] text-[21px] leading-[1.42] tracking-[-0.008em] text-pretty text-body">
           <b className="font-semibold text-ink">Surfaces draws the pictures a site repeats</b>: the cover of each post, the preview of each link, the header of each profile. One colour in, one look out, and the same title always gets the same picture. The words stay yours, in your own type. No image model, no API key, nothing to pay.
         </p>
-        <div className="mt-11 grid grid-cols-2 gap-x-10 gap-y-3.5 max-[860px]:grid-cols-1">
+        <div className="mt-11">
+          <Runners runner={runner} />
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-x-10 gap-y-3.5 max-[860px]:grid-cols-1">
           <div>
-            <p className="mb-2 flex min-h-7 items-center text-body">Ask your coding agent.</p>
+            <p className="mb-2 text-body">Ask your coding agent.</p>
             <Code code={prompt(command)} />
           </div>
-          <Run />
+          <div>
+            <p className="mb-2 text-body">Or run it yourself.</p>
+            <Code code={command} lang="bash" />
+          </div>
         </div>
         <Button variant="link" asChild className="mt-7 h-auto px-0 text-[17px] font-semibold whitespace-normal text-ink underline decoration-1 underline-offset-[5px]">
           <a href="/studio/">Every style and every choice, in the studio →</a>
