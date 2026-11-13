@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.3
 
 - **`coverHtml` and `surfaceHtml`**: `<Cover>` and `<Surface>` as a string
   of HTML, the same markup byte for byte, for any page that can place HTML:

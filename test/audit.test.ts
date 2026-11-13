@@ -84,7 +84,9 @@ test("<Cover> sets its title as a title, and gives way to the page's own", () =>
   const title = "Shipping the new editor"
   const set = renderToString(createElement(Cover, { brand, title }))
   // Set right to left where the title is, as a title in Arabic or Hebrew needs.
-  assert.match(set, /<div dir="auto" style="font-size:[\d.]+cqw;font-weight:700[^"]*">Shipping the new editor<\/div>/)
+  assert.match(set, /<div dir="auto" style="margin:0;font-size:[\d.]+cqw;font-weight:700[^"]*">Shipping the new editor<\/div>/)
+  // As a heading, at the same size, its own margins taken off.
+  assert.match(renderToString(createElement(Cover, { brand, title, heading: "h1" })), /<h1 dir="auto" style="margin:0;font-size:[\d.]+cqw;[^"]*">Shipping the new editor<\/h1>/)
   const own = renderToString(createElement(Cover, { brand, title }, createElement("h1", null, title)))
   assert.match(own, /<h1>Shipping the new editor<\/h1>/)
   assert.doesNotMatch(own, /font-size:[\d.]+cqw/)
