@@ -1,0 +1,71 @@
+/* The launch film's stage, dark: 1920 x 1080. What stands on the stage is sized in
+   cqw (1cqw = 19.2px); what is inside the one cover's frame is in px, because that
+   frame is scaled as a whole when the cover becomes a card. film.js places it all. */
+@font-face { font-family: "Atkinson Next"; src: url("out/fonts/atkinson-hyperlegible-next-latin-wght-normal.woff2") format("woff2"); font-weight: 200 800; }
+@font-face { font-family: "Atkinson Mono"; src: url("out/fonts/atkinson-hyperlegible-mono-latin-wght-normal.woff2") format("woff2"); font-weight: 200 800; }
+
+:root {
+  --night: #131312; --panel: #151413; --type: #f1f0ec; --quiet: #9a9992; --line: rgb(255 255 255 / 0.13);
+  --display: "Atkinson Next", system-ui, sans-serif;
+  --mono: "Atkinson Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+p { margin: 0; }
+
+#fit { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
+#stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; container-type: size; background: var(--night); color: var(--type); font-family: var(--display); -webkit-font-smoothing: antialiased; }
+#stage img { display: block; }
+#stage > * { position: absolute; }
+
+/* The desk under the stage, for looking at a moment; never in a captured frame. */
+#desk { position: fixed; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: #1b1b19; color: #ededea; font: 500 13px/1 ui-monospace, monospace; }
+#desk input { flex: 1; accent-color: #2dd4bf; }
+#desk button { font: inherit; color: inherit; background: #2f2f2c; border: 0; border-radius: 6px; padding: 7px 12px; }
+.capture #desk { display: none; }
+
+/* The wall of all thirty. */
+.wall { left: -2cqw; top: -9cqw; width: 104cqw; display: flex; gap: 1.2cqw; }
+.col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1.2cqw; }
+.col:nth-child(even) { margin-top: -5.2cqw; }
+.col img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; outline: 0.07cqw solid rgb(255 255 255 / var(--edge, 0.1)); outline-offset: -0.07cqw; }
+.big { inset: 0; display: grid; place-items: center; }
+.big span { padding: 1.5cqw 3.6cqw 1.9cqw; border-radius: 1.6cqw; background: var(--panel); border: 0.1cqw solid var(--line); font: 700 7cqw/1 var(--display); letter-spacing: -0.035em; box-shadow: 0 0.5cqw 1.8cqw rgb(0 0 0 / 0.32); }
+
+/* The one cover. It is the whole frame, then a card that takes the other shapes a site shows a post in. */
+.card { overflow: hidden; container-type: size; }
+.card > * { position: absolute; }
+.frame { left: 50%; top: 50%; width: 1920px; height: 1080px; margin: -540px 0 0 -960px; }
+.frame .art { position: absolute; inset: 0; }
+.frame .art .live { position: absolute; inset: 0; }
+.frame .art img, .shape img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.words { position: absolute; inset: 0; }
+.title { position: absolute; display: flex; font: 700 113px/1.04 var(--display); letter-spacing: -0.035em; text-wrap: balance; text-shadow: 0 0 0.5em var(--ground), 0 0 0.16em var(--ground); }
+.title > span { display: block; max-width: 100%; }
+.title .caret { display: inline-block; width: 0; height: 0.96em; vertical-align: -0.12em; position: relative; }
+.title .caret::after { content: ""; position: absolute; left: 0.02em; top: 0; width: 0.055em; height: 100%; background: currentColor; }
+.shape { inset: 0; }
+.shape .on { position: absolute; display: flex; align-items: flex-end; font-weight: 700; line-height: 1.05; letter-spacing: -0.03em; text-wrap: balance; text-shadow: 0 0 0.5em var(--ground), 0 0 0.16em var(--ground); }
+.label { left: 0; right: 0; display: flex; justify-content: center; align-items: baseline; gap: 1.2cqw; font: 600 2.5cqw/1 var(--display); letter-spacing: -0.02em; }
+.label i { font: 500 1.6cqw/1 var(--mono); font-style: normal; letter-spacing: 0; color: var(--quiet); }
+
+/* The menu of styles. */
+.menu { right: 3cqw; top: 50%; translate: 0 -50%; width: 15cqw; height: 30.6cqw; padding: 1.2cqw 0.9cqw 0.9cqw; border-radius: 1.5cqw; background: rgb(18 17 16 / 0.97); border: 0.08cqw solid var(--line); box-shadow: 0 1.6cqw 5cqw rgb(0 0 0 / 0.5); overflow: hidden; }
+.menu .head { display: flex; justify-content: space-between; padding: 0 0.9cqw 1cqw; font: 500 1.2cqw/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--quiet); }
+.menu .window { position: relative; height: 26cqw; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 12%, #000 80%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 12%, #000 80%, transparent 100%); }
+.menu .bar { position: absolute; left: 0; right: 0; top: 6.6cqw; height: 3.3cqw; border-radius: 0.75cqw; background: var(--type); }
+.menu .list { position: absolute; left: 0; right: 0; top: 6.6cqw; }
+.menu .row { display: flex; align-items: center; height: 3.3cqw; padding: 0 0.9cqw; font: 600 1.9cqw/1 var(--display); letter-spacing: -0.02em; color: var(--type); }
+.menu .row.on { color: var(--panel); }
+
+/* The end card, over the wall come back. */
+.end { inset: 0; display: grid; place-items: center; }
+.end .panel { display: flex; flex-direction: column; align-items: center; gap: 1.5cqw; padding: 3.8cqw 6cqw 3.4cqw; border-radius: 2.4cqw; background: #0d0d0c; border: 0.08cqw solid var(--line); text-align: center; }
+.end .lockup { width: 31cqw; }
+.end .line { font: 500 2.7cqw/1.2 var(--display); letter-spacing: -0.015em; }
+.end .cmd { margin-block: 1cqw 0.6cqw; padding: 1.35cqw 2.8cqw; border-radius: 1.2cqw; background: rgb(255 255 255 / 0.06); border: 0.08cqw solid var(--line); color: var(--type); font: 500 2.6cqw/1 var(--mono); white-space: pre; }
+.end .cmd span { opacity: 0.45; }
+.end .cmd b { font-weight: inherit; }
+.end .cmd i { display: inline-block; width: 0; height: 2.7cqw; margin: -0.4cqw 0 -0.5cqw; vertical-align: baseline; position: relative; }
+.end .cmd i::after { content: ""; position: absolute; left: 0.25cqw; top: 0; width: 1.2cqw; height: 100%; background: var(--type); }
+.end .small { font: 400 1.9cqw/1.55 var(--display); color: var(--quiet); }

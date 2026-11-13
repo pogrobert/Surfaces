@@ -6,3 +6,5 @@ sheet
 .DS_Store
 *.log
 .env*
+# The launch film: baked pictures, frames and the mp4, made by video/*.mjs.
+video/out
