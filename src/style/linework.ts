@@ -7,6 +7,8 @@ import type { Brand, BrandChoices } from "../brand.ts"
 import { generateWith } from "../core/generate.ts"
 import type { SurfaceInput } from "../core/generate.ts"
 import type { Scene } from "../core/scene.ts"
+import { surfaceHtmlWith } from "../html.ts"
+import type { SurfaceHtmlOptions } from "../html.ts"
 import { lineworkStyle as linework } from "../styles/linework.ts"
 
 const recipes = { linework }
@@ -16,5 +18,8 @@ export const generate = (input: SurfaceInput & { style: "linework" }): Scene => 
 
 /** A site's brand, in linework: `createBrand({ name, color })`. Its covers draw with linework alone. */
 export const createBrand = (choices: BrandChoices & { style?: "linework" }): Brand => createBrandWith(recipes, choices)
+
+/** One exact linework cover as HTML, with the page's own HTML in its areas, as <Surface> renders it. */
+export const surfaceHtml = (options: SurfaceHtmlOptions & { style: "linework" }): string => surfaceHtmlWith((input) => generateWith(recipes, input), options)
 
 export * from "../shared.ts"

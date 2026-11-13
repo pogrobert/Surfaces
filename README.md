@@ -97,9 +97,17 @@ it:
 import { Cover } from "@pogrobert/surfaces/react"
 
 <Cover brand={brand} title={post.title} />                 // the title, set on the art
-<Cover brand={brand} title={post.title}><h1>{post.title}</h1></Cover>  // as the page's heading, styled your way
+<Cover brand={brand} title={post.title} heading="h1" />    // as the page's heading
+<Cover brand={brand} title={post.title}><h1>{post.title}</h1></Cover>  // a heading styled your way
 <Cover brand={brand} title={post.title} text="none" />     // the art alone, beside a heading the page has
 <Cover brand={brand} title={post.title} use="card" />      // a card in a list: art alone
+```
+
+Not React? `coverHtml` is the same markup as a string, for Vue's `v-html`,
+Svelte's `{@html}`, Astro's `set:html` or any template:
+
+```vue
+<div v-html="coverHtml({ brand, title: post.title })" />
 ```
 
 Words over art are measured, not assumed. Where the art under them is calm

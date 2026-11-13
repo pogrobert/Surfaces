@@ -7,6 +7,8 @@ import type { Brand, BrandChoices } from "../brand.ts"
 import { generateWith } from "../core/generate.ts"
 import type { SurfaceInput } from "../core/generate.ts"
 import type { Scene } from "../core/scene.ts"
+import { surfaceHtmlWith } from "../html.ts"
+import type { SurfaceHtmlOptions } from "../html.ts"
 import { engraving } from "../styles/engraving.ts"
 
 const recipes = { engraving }
@@ -16,5 +18,8 @@ export const generate = (input: SurfaceInput & { style: "engraving" }): Scene =>
 
 /** A site's brand, in engraving: `createBrand({ name, color })`. Its covers draw with engraving alone. */
 export const createBrand = (choices: BrandChoices & { style?: "engraving" }): Brand => createBrandWith(recipes, choices)
+
+/** One exact engraving cover as HTML, with the page's own HTML in its areas, as <Surface> renders it. */
+export const surfaceHtml = (options: SurfaceHtmlOptions & { style: "engraving" }): string => surfaceHtmlWith((input) => generateWith(recipes, input), options)
 
 export * from "../shared.ts"

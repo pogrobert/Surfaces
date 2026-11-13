@@ -7,6 +7,8 @@ import type { Brand, BrandChoices } from "../brand.ts"
 import { generateWith } from "../core/generate.ts"
 import type { SurfaceInput } from "../core/generate.ts"
 import type { Scene } from "../core/scene.ts"
+import { surfaceHtmlWith } from "../html.ts"
+import type { SurfaceHtmlOptions } from "../html.ts"
 import { dashes } from "../styles/dashes.ts"
 
 const recipes = { dashes }
@@ -16,5 +18,8 @@ export const generate = (input: SurfaceInput & { style: "dashes" }): Scene => ge
 
 /** A site's brand, in dashes: `createBrand({ name, color })`. Its covers draw with dashes alone. */
 export const createBrand = (choices: BrandChoices & { style?: "dashes" }): Brand => createBrandWith(recipes, choices)
+
+/** One exact dashes cover as HTML, with the page's own HTML in its areas, as <Surface> renders it. */
+export const surfaceHtml = (options: SurfaceHtmlOptions & { style: "dashes" }): string => surfaceHtmlWith((input) => generateWith(recipes, input), options)
 
 export * from "../shared.ts"

@@ -438,6 +438,13 @@ function build(draw: (input: SurfaceInput) => Scene, name: string, given: Brand[
 // drawn again in one theme with both, as the HTTP handler's ?theme= does.
 const made = new WeakMap<Brand, { draw: (input: SurfaceInput) => Scene; logo?: Logo }>()
 
+/** What a brand draws with: its import's styles, so a cover drawn from it carries no others. */
+export function drawOf(brand: Brand, called: string): (input: SurfaceInput) => Scene {
+  const own = typeof brand === "object" && brand !== null ? made.get(brand) : undefined
+  if (!own) throw new Error(called)
+  return own.draw
+}
+
 /** The same brand in one theme, its logo and its import's styles kept. */
 export function inTheme(brand: Brand, theme: Theme): Brand {
   const own = made.get(brand)

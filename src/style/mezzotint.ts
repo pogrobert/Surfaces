@@ -7,6 +7,8 @@ import type { Brand, BrandChoices } from "../brand.ts"
 import { generateWith } from "../core/generate.ts"
 import type { SurfaceInput } from "../core/generate.ts"
 import type { Scene } from "../core/scene.ts"
+import { surfaceHtmlWith } from "../html.ts"
+import type { SurfaceHtmlOptions } from "../html.ts"
 import { mezzotintStyle as mezzotint } from "../styles/mezzotint.ts"
 
 const recipes = { mezzotint }
@@ -16,5 +18,8 @@ export const generate = (input: SurfaceInput & { style: "mezzotint" }): Scene =>
 
 /** A site's brand, in mezzotint: `createBrand({ name, color })`. Its covers draw with mezzotint alone. */
 export const createBrand = (choices: BrandChoices & { style?: "mezzotint" }): Brand => createBrandWith(recipes, choices)
+
+/** One exact mezzotint cover as HTML, with the page's own HTML in its areas, as <Surface> renders it. */
+export const surfaceHtml = (options: SurfaceHtmlOptions & { style: "mezzotint" }): string => surfaceHtmlWith((input) => generateWith(recipes, input), options)
 
 export * from "../shared.ts"

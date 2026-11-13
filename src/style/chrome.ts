@@ -7,6 +7,8 @@ import type { Brand, BrandChoices } from "../brand.ts"
 import { generateWith } from "../core/generate.ts"
 import type { SurfaceInput } from "../core/generate.ts"
 import type { Scene } from "../core/scene.ts"
+import { surfaceHtmlWith } from "../html.ts"
+import type { SurfaceHtmlOptions } from "../html.ts"
 import { chrome } from "../styles/chrome.ts"
 
 const recipes = { chrome }
@@ -16,5 +18,8 @@ export const generate = (input: SurfaceInput & { style: "chrome" }): Scene => ge
 
 /** A site's brand, in chrome: `createBrand({ name, color })`. Its covers draw with chrome alone. */
 export const createBrand = (choices: BrandChoices & { style?: "chrome" }): Brand => createBrandWith(recipes, choices)
+
+/** One exact chrome cover as HTML, with the page's own HTML in its areas, as <Surface> renders it. */
+export const surfaceHtml = (options: SurfaceHtmlOptions & { style: "chrome" }): string => surfaceHtmlWith((input) => generateWith(recipes, input), options)
 
 export * from "../shared.ts"

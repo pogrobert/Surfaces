@@ -163,3 +163,24 @@ test("a Surface given frames draws one per shape, its content once, switched by 
   assert.match(html, /@container \(min-width:720px\)\{[^}]*aspect-ratio:2400\/800/)
   assert.throws(() => renderToString(createElement(Surface, { style: "riso", seed: "x", frames: [{ width: 10, height: 10, from: 5 }] })), /leave its "from" out/)
 })
+
+test("coverHtml and surfaceHtml are <Cover> and <Surface> as a string, byte for byte", async () => {
+  const { Cover } = await import("../src/react.ts")
+  const { createBrand, coverHtml, surfaceHtml } = await import("../src/index.ts")
+  const brand = createBrand({ name: "acme.dev", color: "#635bff" })
+  const frames = [{ width: 1600, height: 1000 }, { width: 2400, height: 800, from: 720 }]
+  const same = (element: Parameters<typeof renderToString>[0], html: string) => assert.equal(html, renderToString(element))
+  same(createElement(Cover, { brand, title: "Launch week & friends" }), coverHtml({ brand, title: "Launch week & friends" }))
+  same(createElement(Cover, { brand, title: "Launch", heading: "h1" }), coverHtml({ brand, title: "Launch", heading: "h1" }))
+  same(createElement(Cover, { brand, title: "Launch", use: "card" }), coverHtml({ brand, title: "Launch", use: "card" }))
+  same(createElement(Cover, { brand, title: "Launch", use: "hero", paused: true }), coverHtml({ brand, title: "Launch", use: "hero", paused: true }))
+  same(
+    createElement(Cover, { brand, title: "Launch", frames, fill: true, className: "x", css: { borderRadius: "12px" } }),
+    coverHtml({ brand, title: "Launch", frames, fill: true, className: "x", css: "border-radius:12px" })
+  )
+  same(createElement(Surface, { style: "riso", seed: "a", label: "Cover" }, "Title"), surfaceHtml({ style: "riso", seed: "a", label: "Cover", content: "Title" }))
+  assert.match(coverHtml({ brand, title: "<b>" }), /&lt;b&gt;/)
+  assert.throws(() => coverHtml({ brand, title: "x", children: "y" } as never), /takes "content"/)
+  assert.throws(() => coverHtml({ brand, title: "x", style: "riso" } as never), /no "style"/)
+  assert.throws(() => coverHtml({ title: "x" } as never), /coverHtml takes "brand"/)
+})

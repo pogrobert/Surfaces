@@ -7,6 +7,8 @@ import type { Brand, BrandChoices } from "../brand.ts"
 import { generateWith } from "../core/generate.ts"
 import type { SurfaceInput } from "../core/generate.ts"
 import type { Scene } from "../core/scene.ts"
+import { surfaceHtmlWith } from "../html.ts"
+import type { SurfaceHtmlOptions } from "../html.ts"
 import { underpaint } from "../styles/underpaint.ts"
 
 const recipes = { underpaint }
@@ -16,5 +18,8 @@ export const generate = (input: SurfaceInput & { style: "underpaint" }): Scene =
 
 /** A site's brand, in underpaint: `createBrand({ name, color })`. Its covers draw with underpaint alone. */
 export const createBrand = (choices: BrandChoices & { style?: "underpaint" }): Brand => createBrandWith(recipes, choices)
+
+/** One exact underpaint cover as HTML, with the page's own HTML in its areas, as <Surface> renders it. */
+export const surfaceHtml = (options: SurfaceHtmlOptions & { style: "underpaint" }): string => surfaceHtmlWith((input) => generateWith(recipes, input), options)
 
 export * from "../shared.ts"

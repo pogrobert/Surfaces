@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- **`coverHtml` and `surfaceHtml`**: `<Cover>` and `<Surface>` as a string
+  of HTML, the same markup byte for byte, for any page that can place HTML:
+  Vue's `v-html`, Svelte's `{@html}`, Astro's `set:html`, a template or a
+  build script. The title, `fill`, `frames`, `label` and `paused` all work
+  as they do in React. They come from the root import and every style's own;
+  `coverHtml` draws with the styles its brand was made with.
+- **`heading` on `<Cover>`** (and `coverHtml`) sets the title as that
+  heading, `"h1"` to `"h6"`, at the same size, so the page's heading needs no
+  children. The title's block has `margin: 0`, so a heading's own margins
+  never move it.
+
 ## 0.1.2
 
 - **`frames` on `<Cover>` and `<Surface>`**: a box that changes shape as it

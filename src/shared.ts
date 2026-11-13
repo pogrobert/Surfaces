@@ -1,5 +1,5 @@
 // What every import of Surfaces offers alike, whichever styles it draws:
-// all of the public API but `generate`, `createBrand` and `directions`,
+// all of the public API but `generate`, `surfaceHtml`, `createBrand` and `directions`,
 // which index.ts gives for every style and each style's own import for its
 // one. See docs/api.md.
 export type { SurfaceInput } from "./core/generate.ts"
@@ -21,6 +21,9 @@ export type { Scene, SceneArea } from "./core/scene.ts"
 export { toSvg } from "./render/svg.ts"
 export type { RenderOptions as SvgOptions } from "./render/svg.ts"
 export { toHtml } from "./render/layers.ts"
+export { coverHtml } from "./html.ts"
+export type { CoverHtmlOptions, SurfaceHtmlArea, SurfaceHtmlOptions } from "./html.ts"
+export type { Frame, Heading } from "./layout.ts"
 export type { HtmlOptions } from "./render/layers.ts"
 export type { StyleName } from "./styles/names.ts"
 export { loadFont, MOST_FONT_BYTES } from "./type/fontfile.ts"

@@ -7,6 +7,8 @@ import type { Brand, BrandChoices } from "../brand.ts"
 import { generateWith } from "../core/generate.ts"
 import type { SurfaceInput } from "../core/generate.ts"
 import type { Scene } from "../core/scene.ts"
+import { surfaceHtmlWith } from "../html.ts"
+import type { SurfaceHtmlOptions } from "../html.ts"
 import { papercut } from "../styles/papercut.ts"
 
 const recipes = { papercut }
@@ -16,5 +18,8 @@ export const generate = (input: SurfaceInput & { style: "papercut" }): Scene => 
 
 /** A site's brand, in papercut: `createBrand({ name, color })`. Its covers draw with papercut alone. */
 export const createBrand = (choices: BrandChoices & { style?: "papercut" }): Brand => createBrandWith(recipes, choices)
+
+/** One exact papercut cover as HTML, with the page's own HTML in its areas, as <Surface> renders it. */
+export const surfaceHtml = (options: SurfaceHtmlOptions & { style: "papercut" }): string => surfaceHtmlWith((input) => generateWith(recipes, input), options)
 
 export * from "../shared.ts"

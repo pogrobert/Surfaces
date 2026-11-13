@@ -422,8 +422,12 @@ gzipped, depending on the style.
   }
   ```
 
-- **A static site or a build script** (Vite, Astro, Eleventy): write each
-  cover as a file with `toSvg` and show it with `<img loading="lazy" alt="">`.
+- **A server-rendered or static page in any framework** (Astro, Nuxt,
+  SvelteKit, Eleventy): `coverHtml({ brand, title })` in the frontmatter, the
+  server route or the build, placed with `set:html`, `v-html` or `{@html}`
+  (see "Any framework" below).
+- **A build script**: write each cover as a file with `toSvg` and show it
+  with `<img loading="lazy" alt="">`.
 
 Draw in the browser only what has to be drawn there, as a cover whose
 title is typed in.
@@ -435,8 +439,9 @@ A brand's cover with its title on: `<Cover brand={brand} title={post.title} />`.
 over the art where the cover keeps room for it, a post's at its foot, in the
 page's own font, at a size that follows its length and the cover's width, so
 the page adds no copy of it beside the cover. It is a plain block, not a
-heading: to make it the page's heading, or set it any other way, give it as
-`children`, `<Cover brand={brand} title={title}><h1>{title}</h1></Cover>`,
+heading: `heading="h1"` (to `"h6"`) sets it as that heading, at the same
+size. To set it any other way, give it as `children`,
+`<Cover brand={brand} title={title}><h1 className="mine">{title}</h1></Cover>`,
 which stand there instead. `text="none"` is the art alone, and a card shows
 no title either way. `motion` and `paused` are taken as `<Surface>` takes
 them. The rest of this section is the lower level, one exact cover:
@@ -481,13 +486,61 @@ shape and little is cropped.
 aligned to the side of its area it hangs from (a `top-left` area's content
 sits top left) and, in an `around` area, coloured with the area's `ink`.
 
+## Any framework
+
+`coverHtml` and `surfaceHtml` are `<Cover>` and `<Surface>` as a string of
+HTML, the same markup byte for byte, for Vue, Svelte, Astro, Solid, a
+template or a build script. They take the same options as the components,
+with two changes: `content`, a string of HTML, where React takes
+`children` (and each area's `content` is a string too), and `css`, CSS as a
+style attribute says it, such as `"border-radius:12px"`. The title, `use`,
+`heading`, `text`, `fill`, `frames`, `label`, `paused` and `motion` work as
+they do in React.
+
+```ts
+import { coverHtml, surfaceHtml } from "@pogrobert/surfaces"   // or a style's own import
+
+coverHtml({ brand, title: post.title })                        // the title, set on the art
+coverHtml({ brand, title: post.title, heading: "h1" })         // as the page's heading
+coverHtml({ brand, title: post.title, use: "card" })           // a card in a list: art alone
+surfaceHtml({ style: "riso", seed: "pricing", color: "#2b59c3", areas: [
+  { place: "bottom-left", size: "lg", content: "<h1>Pricing</h1>" },
+] })
+```
+
+```vue
+<!-- Vue, Nuxt -->
+<div v-html="coverHtml({ brand, title: post.title })" />
+```
+
+```svelte
+<!-- Svelte, SvelteKit -->
+{@html coverHtml({ brand, title: post.title })}
+```
+
+```astro
+---
+// Astro: drawn at build time, no drawing code on the page
+import { coverHtml } from "@pogrobert/surfaces"
+import { brand } from "../surfaces"
+---
+<Fragment set:html={coverHtml({ brand, title: post.title })} />
+```
+
+The title is escaped; `content` is placed as given, so escape what readers
+wrote before it goes in. `coverHtml` draws with the styles its brand was made
+with, so a brand from `@pogrobert/surfaces/<style>` keeps the page to that
+style. A moving cover plays as soon as it loads; `watch(element)` from
+`@pogrobert/surfaces/dom` keeps it to when it can be seen. Each component in
+a framework is a few lines over these, if a page wants one.
+
 ## One style alone
 
 Each style has an import of its own, `@pogrobert/surfaces/<style>`, with the
 same functions as the package's (all but `directions`) drawing only that
 style, and `@pogrobert/surfaces/<style>/react` for `<Cover>` and
 `<Surface>`. A page that draws in the browser with one style carries that
-style alone: a `<Cover>` adds about 45–55 KB gzipped, depending on the style,
+style alone (its `coverHtml` and `surfaceHtml` too): a `<Cover>` adds about 45–55 KB gzipped, depending on the style,
 instead of about 120, and `generate` about 30–50 KB instead of 105.
 
 ```tsx
