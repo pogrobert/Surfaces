@@ -6,7 +6,7 @@ import { cn } from "cn"
 
 import { Button } from "@/components/ui/button"
 import { copyText, SAID } from "@/lib/copy"
-import { CheckIcon, CopyIcon } from "lucide-react"
+import { Check, Copy } from "@phosphor-icons/react"
 
 const codeBlockVariants = cva(
   "group/code-block relative flex w-full min-w-0 flex-col overflow-hidden rounded-lg text-sm has-[>[data-slot=code-block-content]:focus-visible]:ring-3 has-[>[data-slot=code-block-content]:focus-visible]:ring-ring/50 data-[size=sm]:text-xs",
@@ -123,8 +123,8 @@ function CodeBlockCopyButton({
             as it fades and the one coming grows in, so the swap reads as an
             answer and not a flicker. Asked for less motion, only the fade. */}
         <span className="grid *:col-start-1 *:row-start-1 *:transition-[opacity,scale] *:duration-150 *:ease-out motion-reduce:*:scale-100!">
-          <CopyIcon aria-hidden className={copied ? "scale-90 opacity-0" : undefined} />
-          <CheckIcon aria-hidden className={copied ? undefined : "scale-90 opacity-0"} />
+          <Copy aria-hidden className={copied ? "scale-90 opacity-0" : undefined} />
+          <Check aria-hidden className={copied ? undefined : "scale-90 opacity-0"} />
         </span>
       </Button>
       <span aria-live="polite" className="sr-only">

@@ -5,7 +5,7 @@ import type { Root } from "react-dom/client"
 import { createBrand } from "@pogrobert/surfaces"
 import type { StyleName } from "@pogrobert/surfaces"
 import { Surface } from "@pogrobert/surfaces/react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { CaretLeft, CaretRight } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { Kbd } from "@/components/ui/kbd"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
@@ -355,12 +355,12 @@ function Plate() {
           style={narrow ? undefined : ({ "--on": ink.on, "--off": ink.off } as CSSProperties)}
         >
           <Step by={-1} label="The style before" keyName="←">
-            <ChevronLeft />
+            <CaretLeft aria-hidden />
           </Step>
           {/* As wide as the longest name, so the arrows never move under the pointer. */}
           <span className="w-[19ch] text-center font-mono text-[13px] whitespace-pre max-[860px]:w-[16ch] max-[860px]:text-[12px]">{`${NAME(ORDER[at]!)}  ${String(at + 1).padStart(2, "0")}/${ORDER.length}`}</span>
           <Step by={1} label="The next style" keyName="→">
-            <ChevronRight />
+            <CaretRight aria-hidden />
           </Step>
         </div>
       </div>

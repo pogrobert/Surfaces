@@ -4,7 +4,7 @@ import type { Root } from "react-dom/client"
 import { createBrand } from "@pogrobert/surfaces"
 import type { Grain, Mood, MotionLevel, StyleName, Theme, Use } from "@pogrobert/surfaces"
 import { Cover, Surface } from "@pogrobert/surfaces/react"
-import { Dices, Shuffle } from "lucide-react"
+import { DiceFive, Shuffle } from "@phosphor-icons/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -369,7 +369,7 @@ function Studio() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button type="button" variant="secondary" size="icon" aria-label="Another title" onClick={anotherTitle} className="pointer-coarse:size-11">
-                    <Dices />
+                    <DiceFive aria-hidden />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Another title</TooltipContent>
@@ -382,7 +382,7 @@ function Studio() {
             <span className="text-[13px] text-quiet">Drawing</span>
             <div className="flex flex-wrap items-center gap-2">
               <Button type="button" variant="secondary" size="sm" onClick={() => set({ seed: Math.random().toString(36).slice(2, 8) })} className="gap-2 pointer-coarse:h-10">
-                <Shuffle />
+                <Shuffle aria-hidden />
                 Shuffle
               </Button>
               {look.seed ? (
